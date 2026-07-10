@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 
 import { NavMain } from "@workspace/ui/components/admin/nav-main"
 import { NavSecondary } from "@workspace/ui/components/admin/nav-secondary"
@@ -15,91 +16,36 @@ import {
   SidebarMenuItem,
 } from "@workspace/ui/components/sidebar"
 import { HugeiconsIcon } from "@hugeicons/react"
-import {
-  DashboardSquare01Icon,
-  UserGroupIcon,
-  Shield01Icon,
-  MusicNote01Icon,
-  OfficeIcon,
-  Settings05Icon,
-  HelpCircleIcon,
-  Mail01Icon,
-  CommandIcon,
-} from "@hugeicons/core-free-icons"
+import { CommandIcon } from "@hugeicons/core-free-icons"
 import { useGetMeQuery } from "@workspace/store/reducers/authApi"
 
-const navData = {
-  navSections: [
-    {
-      title: "Overview",
-      items: [
-        {
-          title: "Dashboard",
-          url: "/admin",
-          icon: <HugeiconsIcon icon={DashboardSquare01Icon} strokeWidth={2} />,
-        },
-      ],
-    },
-    {
-      title: "Management",
-      items: [
-        {
-          title: "Users",
-          url: "/admin/users",
-          icon: <HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} />,
-        },
-        {
-          title: "Roles & Permissions",
-          url: "#",
-          icon: <HugeiconsIcon icon={Shield01Icon} strokeWidth={2} />,
-          items: [
-            { title: "Roles", url: "/admin/roles" },
-            { title: "Permissions", url: "/admin/permissions" },
-          ],
-        },
-        {
-          title: "Events",
-          url: "#",
-          icon: <HugeiconsIcon icon={MusicNote01Icon} strokeWidth={2} />,
-          items: [
-            { title: "Categories", url: "/admin/categories" },
-            { title: "Venues", url: "/admin/venues" },
-            { title: "Artists", url: "/admin/artists" },
-          ],
-        },
-        {
-          title: "Organizations",
-          url: "/admin/organizations",
-          icon: <HugeiconsIcon icon={OfficeIcon} strokeWidth={2} />,
-        },
-      ],
-    },
-    {
-      title: "System",
-      items: [
-        {
-          title: "Settings",
-          url: "/admin/settings",
-          icon: <HugeiconsIcon icon={Settings05Icon} strokeWidth={2} />,
-        },
-      ],
-    },
-  ],
-  navSecondary: [
-    {
-      title: "Support",
-      url: "#",
-      icon: <HugeiconsIcon icon={HelpCircleIcon} strokeWidth={2} />,
-    },
-    {
-      title: "Feedback",
-      url: "#",
-      icon: <HugeiconsIcon icon={Mail01Icon} strokeWidth={2} />,
-    },
-  ],
+export type NavSection = {
+  title: string
+  items: {
+    title: string
+    url: string
+    icon: React.ReactNode
+    items?: {
+      title: string
+      url: string
+    }[]
+  }[]
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export type NavSecondaryItem = {
+  title: string
+  url: string
+  icon: React.ReactNode
+}
+
+export function AppSidebar({
+  sections,
+  secondaryItems,
+  ...props
+}: {
+  sections: NavSection[]
+  secondaryItems: NavSecondaryItem[]
+} & React.ComponentProps<typeof Sidebar>) {
   const { data } = useGetMeQuery()
   const me = data?.data?.user
 
@@ -112,7 +58,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <a href="#">
+              <Link href="/admin">
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-lime-500 text-sidebar-primary-foreground">
                   <HugeiconsIcon
                     icon={CommandIcon}
@@ -126,14 +72,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     Admin Dashboard
                   </span>
                 </div>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain sections={navData.navSections} />
-        <NavSecondary items={navData.navSecondary} className="mt-auto" />
+        <NavMain sections={sections} />
+        <NavSecondary items={secondaryItems} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
         <NavUser

@@ -3,6 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react"
 import type { HugeiconsIconProps } from "@hugeicons/react"
 import { cn } from "@workspace/ui/lib/utils"
+import { Area, AreaChart } from "recharts"
 
 interface StatsCardProps {
   title: string
@@ -12,10 +13,14 @@ interface StatsCardProps {
     value: string
     positive: boolean
   }
+  sparklineData?: number[]
+  sparklineColor?: string
   className?: string
 }
 
-export function StatsCard({ title, value, icon, trend, className }: StatsCardProps) {
+export function StatsCard({ title, value, icon, trend, sparklineData, sparklineColor = "var(--chart-2)", className }: StatsCardProps) {
+  const chartData = sparklineData?.map((v, i) => ({ i, v }))
+
   return (
     <div
       className={cn(
@@ -59,6 +64,26 @@ export function StatsCard({ title, value, icon, trend, className }: StatsCardPro
           </span>
         )}
       </div>
+      {chartData && (
+        <div className="mt-3 h-8">
+          <AreaChart width={200} height={32} data={chartData} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+            <defs>
+              <linearGradient id={`sparkline-${title.replace(/\s+/g, "-")}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={sparklineColor} stopOpacity={0.3} />
+                <stop offset="100%" stopColor={sparklineColor} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <Area
+              dataKey="v"
+              stroke={sparklineColor}
+              fill={`url(#sparkline-${title.replace(/\s+/g, "-")})`}
+              strokeWidth={1.5}
+              dot={false}
+              isAnimationActive={false}
+            />
+          </AreaChart>
+        </div>
+      )}
     </div>
   )
 }

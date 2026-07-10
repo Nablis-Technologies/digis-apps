@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { cn } from "@workspace/ui/lib/utils"
 
 export function NavSecondary({
@@ -20,7 +21,7 @@ export function NavSecondary({
       </p>
       <nav className="flex flex-col gap-0.5">
         {items.map((item) => (
-          <a
+          <Link
             key={item.title}
             href={item.url}
             className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/60 transition-all duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
@@ -29,7 +30,7 @@ export function NavSecondary({
               {item.icon}
             </span>
             <span>{item.title}</span>
-          </a>
+          </Link>
         ))}
       </nav>
     </div>

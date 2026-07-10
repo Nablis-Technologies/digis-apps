@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@workspace/ui/lib/utils"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -68,7 +69,7 @@ function NavItem({
   // Leaf item — single link
   if (!hasSubItems) {
     return (
-      <a
+      <Link
         href={item.url}
         data-active={isActive}
         className={cn(
@@ -82,7 +83,7 @@ function NavItem({
           {item.icon}
         </span>
         <span>{item.title}</span>
-      </a>
+      </Link>
     )
   }
 
@@ -127,7 +128,7 @@ function NavItem({
           {item.items!.map((sub) => {
             const isSubActive = pathname.startsWith(sub.url)
             return (
-              <a
+              <Link
                 key={sub.title}
                 href={sub.url}
                 data-active={isSubActive}
@@ -139,7 +140,7 @@ function NavItem({
                 )}
               >
                 {sub.title}
-              </a>
+              </Link>
             )
           })}
         </div>
