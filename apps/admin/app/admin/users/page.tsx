@@ -70,22 +70,31 @@ function UserActions({ user, onEdit, onView, onRoles, onDeactivate, onReactivate
 }) {
   const active = isActive(user)
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild><button type="button" className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"><HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} className="size-4" /></button></DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-44">
-        <DropdownMenuItem onClick={() => onView(user)}><HugeiconsIcon icon={EyeIcon} strokeWidth={2} />View Details</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onEdit(user)}><HugeiconsIcon icon={Edit01Icon} strokeWidth={2} />Edit User</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onRoles(user)}><HugeiconsIcon icon={ShieldUserIcon} strokeWidth={2} />Manage Roles</DropdownMenuItem>
-        <DropdownMenuSeparator />
-        {active ? (
-          <DropdownMenuItem variant="destructive" onClick={() => onDeactivate(user)}><HugeiconsIcon icon={UserBlock01Icon} strokeWidth={2} />Deactivate</DropdownMenuItem>
-        ) : (
-          <DropdownMenuItem onClick={() => onReactivate(user)}><HugeiconsIcon icon={UserCheck01Icon} strokeWidth={2} />Reactivate</DropdownMenuItem>
-        )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={() => onDelete(user)}><HugeiconsIcon icon={Delete01Icon} strokeWidth={2} />Delete User</DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div className="flex items-center gap-1">
+      <button type="button" onClick={() => onView(user)} className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
+        <HugeiconsIcon icon={EyeIcon} strokeWidth={2} className="size-4" />
+      </button>
+      <button type="button" onClick={() => onEdit(user)} className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
+        <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} className="size-4" />
+      </button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button type="button" className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
+            <HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} className="size-4" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-44">
+          <DropdownMenuItem onClick={() => onRoles(user)}><HugeiconsIcon icon={ShieldUserIcon} strokeWidth={2} />Manage Roles</DropdownMenuItem>
+          {active ? (
+            <DropdownMenuItem variant="destructive" onClick={() => onDeactivate(user)}><HugeiconsIcon icon={UserBlock01Icon} strokeWidth={2} />Deactivate</DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem onClick={() => onReactivate(user)}><HugeiconsIcon icon={UserCheck01Icon} strokeWidth={2} />Reactivate</DropdownMenuItem>
+          )}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem variant="destructive" onClick={() => onDelete(user)}><HugeiconsIcon icon={Delete01Icon} strokeWidth={2} />Delete User</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   )
 }
 

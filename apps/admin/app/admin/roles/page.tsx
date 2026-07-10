@@ -7,7 +7,6 @@ import {
   ShieldPlusIcon,
   ShieldBlockchainIcon,
   ShieldQuestionMarkIcon,
-  MoreHorizontalIcon,
   Edit01Icon,
   Delete01Icon,
   PlusSignCircleIcon,
@@ -16,13 +15,6 @@ import {
 import { cn } from "@/lib/utils"
 import { DataTable, type Column, type SortConfig } from "@/components/ui/data-table"
 import { StatsCard } from "@/components/dashboard/stats-card"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { RoleDialog } from "@/components/forms/role-dialog"
 import { ConfirmDialog } from "@/components/forms/confirm-dialog"
 import {
@@ -58,22 +50,14 @@ function ActiveBadge({ active }: { active: boolean }) {
 
 function RoleActions({ role, onEdit, onDelete }: { role: Role; onEdit: (r: Role) => void; onDelete: (r: Role) => void }) {
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button type="button" className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
-          <HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} className="size-4" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-44">
-        <DropdownMenuItem onClick={() => onEdit(role)}>
-          <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} />Edit Role
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={() => onDelete(role)}>
-          <HugeiconsIcon icon={Delete01Icon} strokeWidth={2} />Delete Role
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div className="flex items-center gap-1">
+      <button type="button" onClick={() => onEdit(role)} className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
+        <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} className="size-4" />
+      </button>
+      <button type="button" onClick={() => onDelete(role)} className="flex size-8 items-center justify-center rounded-md text-destructive transition-colors hover:bg-destructive/10">
+        <HugeiconsIcon icon={Delete01Icon} strokeWidth={2} className="size-4" />
+      </button>
+    </div>
   )
 }
 

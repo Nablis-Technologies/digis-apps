@@ -25,7 +25,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -60,19 +59,26 @@ function TypeBadge({ type }: { type: string }) {
 
 function OrgActions({ org, onEdit, onTransfer, onDelete }: { org: Organization; onEdit: (o: Organization) => void; onTransfer: (o: Organization) => void; onDelete: (o: Organization) => void }) {
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button type="button" className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
-          <HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} className="size-4" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-52">
-        <DropdownMenuItem onClick={() => onEdit(org)}><HugeiconsIcon icon={Edit01Icon} strokeWidth={2} />Edit Organization</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onTransfer(org)}><HugeiconsIcon icon={Share01Icon} strokeWidth={2} />Transfer Ownership</DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={() => onDelete(org)}><HugeiconsIcon icon={Delete01Icon} strokeWidth={2} />Delete Organization</DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div className="flex items-center gap-1">
+      <button type="button" onClick={() => onEdit(org)} className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
+        <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} className="size-4" />
+      </button>
+      <button type="button" onClick={() => onTransfer(org)} className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
+        <HugeiconsIcon icon={Share01Icon} strokeWidth={2} className="size-4" />
+      </button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button type="button" className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
+            <HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} className="size-4" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-44">
+          <DropdownMenuItem variant="destructive" onClick={() => onDelete(org)}>
+            <HugeiconsIcon icon={Delete01Icon} strokeWidth={2} />Delete Organization
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   )
 }
 

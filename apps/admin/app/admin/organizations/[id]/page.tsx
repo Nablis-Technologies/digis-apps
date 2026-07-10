@@ -376,17 +376,14 @@ function OverviewTab({ org }: { org: Organization }) {
           keyExtractor={(row) => row.id}
           pagination={{ page: 1, totalPages: 1, total: mockEvents.length, perPage: 10 }}
           renderActions={() => (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
-                  <HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} className="size-4" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40">
-                <DropdownMenuItem><HugeiconsIcon icon={Edit01Icon} strokeWidth={2} />Edit</DropdownMenuItem>
-                <DropdownMenuItem><HugeiconsIcon icon={Calendar01Icon} strokeWidth={2} />View Details</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex items-center gap-1">
+              <button className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
+                <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} className="size-4" />
+              </button>
+              <button className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
+                <HugeiconsIcon icon={Calendar01Icon} strokeWidth={2} className="size-4" />
+              </button>
+            </div>
           )}
         />
       </div>

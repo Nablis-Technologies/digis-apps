@@ -8,7 +8,6 @@ import {
   CheckmarkCircle01Icon,
   MapsLocation01Icon,
   StarIcon,
-  MoreHorizontalIcon,
   Edit01Icon,
   Delete01Icon,
   PlusSignCircleIcon,
@@ -19,13 +18,6 @@ import { DataTable, type Column, type SortConfig } from "@/components/ui/data-ta
 import { StatsCard } from "@/components/dashboard/stats-card"
 import { ConfirmDialog } from "@/components/forms/confirm-dialog"
 import { VenueDialog } from "@/components/forms/venue-dialog"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
   useListVenuesQuery,
   useDeleteVenueMutation,
@@ -55,18 +47,14 @@ function formatCapacity(capacity: number | null) {
 
 function VenueActions({ venue, onEdit, onDelete }: { venue: Venue; onEdit: (v: Venue) => void; onDelete: (v: Venue) => void }) {
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button type="button" className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
-          <HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} className="size-4" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-44">
-        <DropdownMenuItem onClick={() => onEdit(venue)}><HugeiconsIcon icon={Edit01Icon} strokeWidth={2} />Edit Venue</DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={() => onDelete(venue)}><HugeiconsIcon icon={Delete01Icon} strokeWidth={2} />Delete Venue</DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div className="flex items-center gap-1">
+      <button type="button" onClick={() => onEdit(venue)} className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
+        <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} className="size-4" />
+      </button>
+      <button type="button" onClick={() => onDelete(venue)} className="flex size-8 items-center justify-center rounded-md text-destructive transition-colors hover:bg-destructive/10">
+        <HugeiconsIcon icon={Delete01Icon} strokeWidth={2} className="size-4" />
+      </button>
+    </div>
   )
 }
 

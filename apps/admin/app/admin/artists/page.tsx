@@ -8,7 +8,6 @@ import {
   CheckmarkCircle01Icon,
   StarIcon,
   Tag02Icon,
-  MoreHorizontalIcon,
   Edit01Icon,
   Delete01Icon,
   PlusSignCircleIcon,
@@ -19,13 +18,6 @@ import { DataTable, type Column, type SortConfig } from "@/components/ui/data-ta
 import { StatsCard } from "@/components/dashboard/stats-card"
 import { ConfirmDialog } from "@/components/forms/confirm-dialog"
 import { ArtistDialog } from "@/components/forms/artist-dialog"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
   useListArtistsQuery,
   useDeleteArtistMutation,
@@ -71,18 +63,14 @@ function GenreBadge({ genre }: { genre: string }) {
 
 function ArtistActions({ artist, onEdit, onDelete }: { artist: Artist; onEdit: (a: Artist) => void; onDelete: (a: Artist) => void }) {
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button type="button" className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
-          <HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} className="size-4" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-44">
-        <DropdownMenuItem onClick={() => onEdit(artist)}><HugeiconsIcon icon={Edit01Icon} strokeWidth={2} />Edit Artist</DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={() => onDelete(artist)}><HugeiconsIcon icon={Delete01Icon} strokeWidth={2} />Delete Artist</DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div className="flex items-center gap-1">
+      <button type="button" onClick={() => onEdit(artist)} className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
+        <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} className="size-4" />
+      </button>
+      <button type="button" onClick={() => onDelete(artist)} className="flex size-8 items-center justify-center rounded-md text-destructive transition-colors hover:bg-destructive/10">
+        <HugeiconsIcon icon={Delete01Icon} strokeWidth={2} className="size-4" />
+      </button>
+    </div>
   )
 }
 

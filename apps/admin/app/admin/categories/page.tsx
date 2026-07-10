@@ -6,7 +6,6 @@ import {
   Tag01Icon,
   CheckmarkCircle01Icon,
   SquareIcon,
-  MoreHorizontalIcon,
   Edit01Icon,
   Delete01Icon,
   PlusSignCircleIcon,
@@ -17,13 +16,6 @@ import { DataTable, type Column, type SortConfig } from "@/components/ui/data-ta
 import { StatsCard } from "@/components/dashboard/stats-card"
 import { ConfirmDialog } from "@/components/forms/confirm-dialog"
 import { CategoryDialog } from "@/components/forms/category-dialog"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
   useListCategoriesQuery,
   useDeleteCategoryMutation,
@@ -45,22 +37,14 @@ function ColorDot({ color }: { color: string | null }) {
 
 function CategoryActions({ category, onEdit, onDelete }: { category: Category; onEdit: (c: Category) => void; onDelete: (c: Category) => void }) {
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button type="button" className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
-          <HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} className="size-4" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-44">
-        <DropdownMenuItem onClick={() => onEdit(category)}>
-          <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} />Edit Category
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={() => onDelete(category)}>
-          <HugeiconsIcon icon={Delete01Icon} strokeWidth={2} />Delete Category
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div className="flex items-center gap-1">
+      <button type="button" onClick={() => onEdit(category)} className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
+        <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} className="size-4" />
+      </button>
+      <button type="button" onClick={() => onDelete(category)} className="flex size-8 items-center justify-center rounded-md text-destructive transition-colors hover:bg-destructive/10">
+        <HugeiconsIcon icon={Delete01Icon} strokeWidth={2} className="size-4" />
+      </button>
+    </div>
   )
 }
 
