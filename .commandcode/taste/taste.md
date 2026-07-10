@@ -9,3 +9,6 @@
 # ui-patterns
 - Detail pages (e.g., organizations, artists, venues) should follow the same layout pattern: back-link header with name + badges, stats cards row, tab navigation, then tab content. Confidence: 0.70
 - Tabs and action buttons should include Hugeicons icons for visual clarity. Confidence: 0.70
+
+# workflow
+- Run typecheck, lint, and build locally and verify they all pass before pushing commits. Confidence: 0.70
