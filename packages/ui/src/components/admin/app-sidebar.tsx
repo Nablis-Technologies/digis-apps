@@ -2,9 +2,9 @@
 
 import * as React from "react"
 
-import { NavMain } from "@/components/nav-main"
-import { NavSecondary } from "@/components/nav-secondary"
-import { NavUser } from "@/components/nav-user"
+import { NavMain } from "@workspace/ui/components/admin/nav-main"
+import { NavSecondary } from "@workspace/ui/components/admin/nav-secondary"
+import { NavUser } from "@workspace/ui/components/admin/nav-user"
 import {
   Sidebar,
   SidebarContent,
@@ -13,7 +13,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"
+} from "@workspace/ui/components/sidebar"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   DashboardSquare01Icon,
@@ -26,7 +26,7 @@ import {
   Mail01Icon,
   CommandIcon,
 } from "@hugeicons/core-free-icons"
-import { useGetMeQuery } from "@/store/reducers/authApi"
+import { useGetMeQuery } from "@workspace/store/reducers/authApi"
 
 const navData = {
   navSections: [

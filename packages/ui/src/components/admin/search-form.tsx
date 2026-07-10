@@ -1,7 +1,7 @@
 "use client"
 
-import { Label } from "@/components/ui/label"
-import { SidebarInput } from "@/components/ui/sidebar"
+import { Label } from "@workspace/ui/components/label"
+import { SidebarInput } from "@workspace/ui/components/sidebar"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { SearchIcon } from "@hugeicons/core-free-icons"
 

@@ -8,11 +8,11 @@ import {
   DialogTitle,
   DialogDescription,
   DialogClose,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { useAssignRoleMutation } from "@/store/reducers/usersApi"
-import { useListRolesQuery } from "@/store/reducers/rolesApi"
+} from "@workspace/ui/components/dialog"
+import { Button } from "@workspace/ui/components/button"
+import { Label } from "@workspace/ui/components/label"
+import { useAssignRoleMutation } from "@workspace/store/reducers/usersApi"
+import { useListRolesQuery } from "@workspace/store/reducers/rolesApi"
 
 export function AssignRoleDialog({
   open,

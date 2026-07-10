@@ -1,7 +1,7 @@
 "use client"
 
-import { useGetMeQuery } from "@/store/reducers/authApi"
-import { getAccessToken } from "@/store/api"
+import { useGetMeQuery } from "@workspace/store/reducers/authApi"
+import { getAccessToken } from "@workspace/store/api"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 

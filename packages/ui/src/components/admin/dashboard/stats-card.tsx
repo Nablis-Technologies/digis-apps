@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react"
 import type { HugeiconsIconProps } from "@hugeicons/react"
-import { cn } from "@/lib/utils"
+import { cn } from "@workspace/ui/lib/utils"
 
 interface StatsCardProps {
   title: string

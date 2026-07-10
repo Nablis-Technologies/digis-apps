@@ -8,11 +8,11 @@ import {
   DialogTitle,
   DialogDescription,
   DialogClose,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { useCreateOrganizationMutation, useUpdateOrganizationMutation } from "@/store/reducers/organizationsApi"
+} from "@workspace/ui/components/dialog"
+import { Button } from "@workspace/ui/components/button"
+import { Input } from "@workspace/ui/components/input"
+import { Label } from "@workspace/ui/components/label"
+import { useCreateOrganizationMutation, useUpdateOrganizationMutation } from "@workspace/store/reducers/organizationsApi"
 
 const typeOptions = ["individual", "company"] as const
 const categoryOptions = ["conference", "music", "community", "sports", "arts"] as const

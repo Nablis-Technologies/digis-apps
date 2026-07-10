@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { cn } from "@/lib/utils"
+import { cn } from "@workspace/ui/lib/utils"
 import {
   Dialog,
   DialogContent,
@@ -9,11 +9,11 @@ import {
   DialogTitle,
   DialogDescription,
   DialogClose,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { useCreateUserMutation, useUpdateUserMutation } from "@/store/reducers/usersApi"
+} from "@workspace/ui/components/dialog"
+import { Button } from "@workspace/ui/components/button"
+import { Input } from "@workspace/ui/components/input"
+import { Label } from "@workspace/ui/components/label"
+import { useCreateUserMutation, useUpdateUserMutation } from "@workspace/store/reducers/usersApi"
 
 type UserFormData = {
   email: string

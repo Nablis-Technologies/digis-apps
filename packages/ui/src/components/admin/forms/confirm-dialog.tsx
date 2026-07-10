@@ -8,8 +8,8 @@ import {
   DialogTitle,
   DialogDescription,
   DialogClose,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
+} from "@workspace/ui/components/dialog"
+import { Button } from "@workspace/ui/components/button"
 
 interface ConfirmDialogProps {
   open: boolean

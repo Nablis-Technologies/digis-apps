@@ -1,12 +1,12 @@
 "use client"
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
+import { cn } from "@workspace/ui/lib/utils"
+import { Button } from "@workspace/ui/components/button"
+import { Field, FieldGroup, FieldLabel } from "@workspace/ui/components/field"
+import { Input } from "@workspace/ui/components/input"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { useLoginMutation } from "@/store/reducers/authApi"
+import { useLoginMutation } from "@workspace/store/reducers/authApi"
 
 export function LoginForm({
   className,
