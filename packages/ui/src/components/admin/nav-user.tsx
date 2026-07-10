@@ -1,32 +1,14 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@workspace/ui/components/dropdown-menu"
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar,
 } from "@workspace/ui/components/sidebar"
-import { useTheme } from "next-themes"
 import { HugeiconsIcon } from "@hugeicons/react"
-import {
-  Moon01Icon,
-  Sun02Icon,
-  UnfoldMoreIcon,
-  NotificationIcon,
-  LogoutIcon,
-} from "@hugeicons/core-free-icons"
+import { LogoutIcon } from "@hugeicons/core-free-icons"
 import { useLogoutMutation } from "@workspace/store/reducers/authApi"
 
 export function NavUser({
@@ -37,9 +19,6 @@ export function NavUser({
     email: string
   }
 }) {
-  const { isMobile } = useSidebar()
-  const { resolvedTheme, setTheme } = useTheme()
-  const isDark = resolvedTheme === "dark"
   const router = useRouter()
   const [logout, { isLoading: isLoggingOut }] = useLogoutMutation()
 
@@ -66,85 +45,29 @@ export function NavUser({
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-            >
-              <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarFallback className="rounded-lg text-xs font-medium">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">
-                  {user.email}
-                </span>
-                <span className="truncate text-xs">
-                  {user.phone ? user.phone : ""}
-                </span>
-              </div>
-              <HugeiconsIcon
-                icon={UnfoldMoreIcon}
-                strokeWidth={2}
-                className="ml-auto size-4"
-              />
-            </SidebarMenuButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-            side={isMobile ? "bottom" : "right"}
-            align="end"
-            sideOffset={4}
+        <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
+          <Avatar className="h-8 w-8 rounded-lg">
+            <AvatarFallback className="rounded-lg text-xs font-medium">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+          <div className="grid flex-1 text-left text-sm leading-tight">
+            <span className="truncate font-medium">
+              {user.email}
+            </span>
+            <span className="truncate text-xs">
+              {user.phone ? user.phone : ""}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
           >
-            <DropdownMenuLabel className="p-0 font-normal">
-              <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarFallback className="rounded-lg text-xs font-medium">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">
-                    {user.email}
-                  </span>
-                  <span className="truncate text-xs">
-                    {user.phone ? user.phone : ""}
-                  </span>
-                </div>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <Link href="/admin/notifications">
-                <DropdownMenuItem className="justify-between">
-                  <span className="flex items-center gap-2">
-                    <HugeiconsIcon icon={NotificationIcon} strokeWidth={2} />
-                    Notifications
-                  </span>
-                  <span className="flex size-5 items-center justify-center rounded-full bg-lime-500 text-[11px] font-semibold text-white">
-                    3
-                  </span>
-                </DropdownMenuItem>
-              </Link>
-              <DropdownMenuItem
-                onSelect={() => setTheme(isDark ? "light" : "dark")}
-              >
-                <HugeiconsIcon
-                  icon={isDark ? Sun02Icon : Moon01Icon}
-                  strokeWidth={2}
-                />
-                {isDark ? "Light mode" : "Dark mode"}
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={handleLogout} disabled={isLoggingOut}>
-              <HugeiconsIcon icon={LogoutIcon} strokeWidth={2} />
-              {isLoggingOut ? "Logging out..." : "Log out"}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            <HugeiconsIcon icon={LogoutIcon} strokeWidth={2} className="size-4" />
+          </button>
+        </SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarMenu>
   )

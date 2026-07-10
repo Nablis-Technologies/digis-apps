@@ -1,7 +1,6 @@
 "use client"
 
 import { usePathname } from "next/navigation"
-import { SearchForm } from "@workspace/ui/components/admin/search-form"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -13,8 +12,10 @@ import {
 import { Button } from "@workspace/ui/components/button"
 import { Separator } from "@workspace/ui/components/separator"
 import { useSidebar } from "@workspace/ui/components/sidebar"
+import { NotificationsPopover } from "@workspace/ui/components/admin/notifications-popover"
+import { useTheme } from "next-themes"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { SidebarLeftIcon } from "@hugeicons/core-free-icons"
+import { SidebarLeftIcon, Moon01Icon, Sun02Icon } from "@hugeicons/core-free-icons"
 
 const labelMap: Record<string, string> = {
   admin: "Admin",
@@ -34,6 +35,8 @@ const labelMap: Record<string, string> = {
 export function SiteHeader() {
   const { toggleSidebar } = useSidebar()
   const pathname = usePathname()
+  const { resolvedTheme, setTheme } = useTheme()
+  const isDark = resolvedTheme === "dark"
 
   const segments = pathname
     .split("/")
@@ -59,7 +62,7 @@ export function SiteHeader() {
           orientation="vertical"
           className="mr-2 data-vertical:h-4 data-vertical:self-auto"
         />
-        <Breadcrumb className="hidden sm:block">
+        <Breadcrumb className="hidden sm:block flex-1">
           <BreadcrumbList>
             {segments.map((seg) => (
               <BreadcrumbItem key={seg.href}>
@@ -75,7 +78,17 @@ export function SiteHeader() {
             ))}
           </BreadcrumbList>
         </Breadcrumb>
-        <SearchForm className="w-full sm:ml-auto sm:w-auto" />
+        <div className="ml-auto flex items-center gap-1">
+          <NotificationsPopover />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setTheme(isDark ? "light" : "dark")}
+          >
+            <HugeiconsIcon icon={isDark ? Sun02Icon : Moon01Icon} strokeWidth={2} />
+          </Button>
+        </div>
       </div>
     </header>
   )
