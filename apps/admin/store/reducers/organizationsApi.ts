@@ -1,0 +1,123 @@
+import { createApi } from "@reduxjs/toolkit/query/react"
+import { baseQueryWithReauth } from "../api"
+
+export interface Organization {
+  id: string
+  name: string
+  description: string | null
+  owner_id: string
+  organizer_type: "individual" | "company"
+  category: string | null
+  contact_phone: string | null
+  contact_email: string | null
+  city: string | null
+  region: string | null
+  country: string | null
+  website_url: string | null
+  verified: boolean
+  active: boolean
+  tin_number?: string | null
+  estimated_audience?: string | null
+  event_frequency?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+interface ListOrgsParams {
+  page?: number
+  per_page?: number
+  order_by?: string
+  order_direction?: "asc" | "desc"
+}
+
+interface PaginatedResponse<T> {
+  success: boolean
+  data: T[]
+  pagination: {
+    current_page: number
+    per_page: number
+    total_count: number
+    total_pages: number
+  }
+}
+
+interface SingleResponse<T> {
+  success: boolean
+  data: T
+}
+
+interface CreateOrgPayload {
+  organization: {
+    name: string
+    description?: string
+    owner_id: string
+    organizer_type: "individual" | "company"
+    category?: string
+    contact_phone?: string
+    contact_email?: string
+    city?: string
+    region?: string
+    country?: string
+    website_url?: string
+  }
+}
+
+interface UpdateOrgPayload {
+  organization: Partial<CreateOrgPayload["organization"]>
+}
+
+export const organizationsApi = createApi({
+  reducerPath: "organizationsApi",
+  baseQuery: baseQueryWithReauth,
+  tagTypes: ["Organizations"],
+  endpoints: (builder) => ({
+    listOrganizations: builder.query<PaginatedResponse<Organization>, ListOrgsParams | void>({
+      query: (params) => ({
+        url: "/admin/organizations",
+        params: params ?? undefined,
+      }),
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.data.map(({ id }) => ({ type: "Organizations" as const, id })),
+              { type: "Organizations", id: "LIST" },
+            ]
+          : [{ type: "Organizations", id: "LIST" }],
+    }),
+    getOrganization: builder.query<SingleResponse<Organization>, string>({
+      query: (id) => `/admin/organizations/${id}`,
+      providesTags: (_result, _error, id) => [{ type: "Organizations", id }],
+    }),
+    createOrganization: builder.mutation<SingleResponse<Organization>, CreateOrgPayload>({
+      query: (body) => ({
+        url: "/admin/organizations",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: [{ type: "Organizations", id: "LIST" }],
+    }),
+    updateOrganization: builder.mutation<SingleResponse<Organization>, { id: string; body: UpdateOrgPayload }>({
+      query: ({ id, body }) => ({
+        url: `/admin/organizations/${id}`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { id }) => [{ type: "Organizations", id }],
+    }),
+    deleteOrganization: builder.mutation<void, string>({
+      query: (id) => ({
+        url: `/admin/organizations/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: [{ type: "Organizations", id: "LIST" }],
+    }),
+  }),
+})
+
+export const {
+  useListOrganizationsQuery,
+  useGetOrganizationQuery,
+  useCreateOrganizationMutation,
+  useUpdateOrganizationMutation,
+  useDeleteOrganizationMutation,
+} = organizationsApi
