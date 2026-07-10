@@ -146,10 +146,10 @@ export default function UsersPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Total Users" value={stats.total} icon={UserGroupIcon} trend={{ value: "8.4%", positive: true }} />
-        <StatsCard title="Active" value={stats.active} icon={UserCheck01Icon} trend={{ value: "12.5%", positive: true }} />
-        <StatsCard title="Deactivated" value={stats.deactivated} icon={UserBlock01Icon} trend={{ value: "2.1%", positive: false }} />
-        <StatsCard title="Unverified" value={stats.unverified} icon={UserAdd01Icon} />
+        <StatsCard title="Total Users" value={stats.total} icon={UserGroupIcon} trend={{ value: "8.4%", positive: true }} sparklineData={[1800, 2000, 2100, 2250, 2350, 2420, stats.total]} sparklineColor="var(--chart-1)" />
+        <StatsCard title="Active" value={stats.active} icon={UserCheck01Icon} trend={{ value: "12.5%", positive: true }} sparklineData={[1500, 1700, 1850, 2000, 2150, 2280, stats.active]} sparklineColor="var(--chart-2)" />
+        <StatsCard title="Deactivated" value={stats.deactivated} icon={UserBlock01Icon} trend={{ value: "2.1%", positive: false }} sparklineData={[35, 42, 40, 38, 45, 48, stats.deactivated]} sparklineColor="var(--chart-3)" />
+        <StatsCard title="Unverified" value={stats.unverified} icon={UserAdd01Icon} sparklineData={[280, 260, 240, 220, 200, 180, stats.unverified]} sparklineColor="var(--chart-4)" />
       </div>
 
       <DataTable

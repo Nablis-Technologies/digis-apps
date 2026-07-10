@@ -245,24 +245,32 @@ export default function DashboardPage() {
           value={mockStats.totalUsers.toLocaleString()}
           icon={UserGroupIcon}
           trend={mockStats.userTrend}
+          sparklineData={[1800, 2000, 2100, 2200, 2300, 2400, 2483]}
+          sparklineColor="var(--chart-1)"
         />
         <StatsCard
           title="Organizations"
           value={mockStats.totalOrganizations.toLocaleString()}
           icon={OfficeIcon}
           trend={mockStats.orgTrend}
+          sparklineData={[110, 118, 125, 132, 140, 148, 156]}
+          sparklineColor="var(--chart-2)"
         />
         <StatsCard
           title="Venues"
           value={mockStats.totalVenues.toLocaleString()}
           icon={Building01Icon}
           trend={mockStats.venueTrend}
+          sparklineData={[260, 275, 290, 305, 320, 330, 342]}
+          sparklineColor="var(--chart-3)"
         />
         <StatsCard
           title="Artists"
           value={mockStats.totalArtists.toLocaleString()}
           icon={MusicNote01Icon}
           trend={mockStats.artistTrend}
+          sparklineData={[600, 650, 700, 750, 800, 850, 891]}
+          sparklineColor="var(--chart-4)"
         />
       </div>
 

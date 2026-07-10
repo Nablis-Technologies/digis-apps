@@ -140,10 +140,10 @@ export default function RolesPage() {
         </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Total Roles" value={stats.total} icon={Shield01Icon} />
-        <StatsCard title="Active" value={stats.active} icon={ShieldPlusIcon} trend={{ value: "83%", positive: true }} />
-        <StatsCard title="Inactive" value={stats.inactive} icon={ShieldBlockchainIcon} />
-        <StatsCard title="With Permissions" value={stats.withPermissions} icon={ShieldQuestionMarkIcon} />
+        <StatsCard title="Total Roles" value={stats.total} icon={Shield01Icon} sparklineData={[4, 5, 5, 6, 6, 6, stats.total]} sparklineColor="var(--chart-1)" />
+        <StatsCard title="Active" value={stats.active} icon={ShieldPlusIcon} trend={{ value: "83%", positive: true }} sparklineData={[3, 4, 4, 5, 5, 5, stats.active]} sparklineColor="var(--chart-2)" />
+        <StatsCard title="Inactive" value={stats.inactive} icon={ShieldBlockchainIcon} sparklineData={[1, 1, 1, 1, 1, 1, stats.inactive]} sparklineColor="var(--chart-3)" />
+        <StatsCard title="With Permissions" value={stats.withPermissions} icon={ShieldQuestionMarkIcon} sparklineData={[3, 4, 4, 5, 5, 5, stats.withPermissions]} sparklineColor="var(--chart-4)" />
       </div>
       <DataTable
         columns={columns}

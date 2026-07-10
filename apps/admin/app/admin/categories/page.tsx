@@ -162,9 +162,9 @@ export default function CategoriesPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatsCard title="Total Categories" value={stats.total} icon={Tag01Icon} />
-        <StatsCard title="Active" value={stats.active} icon={CheckmarkCircle01Icon} trend={{ value: stats.total > 0 ? `${Math.round((stats.active / stats.total) * 100)}%` : "0%", positive: true }} />
-        <StatsCard title="Inactive" value={stats.inactive} icon={SquareIcon} />
+        <StatsCard title="Total Categories" value={stats.total} icon={Tag01Icon} sparklineData={[8, 10, 11, 12, 13, 14, stats.total]} sparklineColor="var(--chart-1)" />
+        <StatsCard title="Active" value={stats.active} icon={CheckmarkCircle01Icon} trend={{ value: stats.total > 0 ? `${Math.round((stats.active / stats.total) * 100)}%` : "0%", positive: true }} sparklineData={[6, 7, 8, 9, 10, 11, stats.active]} sparklineColor="var(--chart-2)" />
+        <StatsCard title="Inactive" value={stats.inactive} icon={SquareIcon} sparklineData={[3, 4, 3, 3, 2, 3, stats.inactive]} sparklineColor="var(--chart-3)" />
       </div>
 
       <DataTable

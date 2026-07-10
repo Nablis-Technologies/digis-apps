@@ -184,10 +184,10 @@ export default function ArtistsPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Total Artists" value={stats.total} icon={MusicNote01Icon} />
-        <StatsCard title="Active" value={stats.active} icon={CheckmarkCircle01Icon} trend={{ value: stats.total > 0 ? `${Math.round((stats.active / stats.total) * 100)}%` : "0%", positive: true }} />
-        <StatsCard title="Verified" value={stats.verified} icon={StarIcon} trend={{ value: stats.total > 0 ? `${Math.round((stats.verified / stats.total) * 100)}%` : "0%", positive: true }} />
-        <StatsCard title="Genres" value={stats.genresCount} icon={Tag02Icon} />
+        <StatsCard title="Total Artists" value={stats.total} icon={MusicNote01Icon} sparklineData={[620, 680, 720, 780, 830, 860, stats.total]} sparklineColor="var(--chart-1)" />
+        <StatsCard title="Active" value={stats.active} icon={CheckmarkCircle01Icon} trend={{ value: stats.total > 0 ? `${Math.round((stats.active / stats.total) * 100)}%` : "0%", positive: true }} sparklineData={[500, 550, 600, 650, 700, 720, stats.active]} sparklineColor="var(--chart-2)" />
+        <StatsCard title="Verified" value={stats.verified} icon={StarIcon} trend={{ value: stats.total > 0 ? `${Math.round((stats.verified / stats.total) * 100)}%` : "0%", positive: true }} sparklineData={[200, 240, 280, 320, 360, 400, stats.verified]} sparklineColor="var(--chart-3)" />
+        <StatsCard title="Genres" value={stats.genresCount} icon={Tag02Icon} sparklineData={[18, 20, 22, 24, 26, 28, stats.genresCount]} sparklineColor="var(--chart-4)" />
       </div>
 
       <DataTable

@@ -177,10 +177,10 @@ export default function OrganizationsPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Total Orgs" value={stats.total} icon={OfficeIcon} />
-        <StatsCard title="Active" value={stats.active} icon={CheckmarkCircle01Icon} trend={{ value: stats.total > 0 ? `${Math.round((stats.active / stats.total) * 100)}%` : "0%", positive: true }} />
-        <StatsCard title="Verified" value={stats.verified} icon={Building01Icon} trend={{ value: stats.total > 0 ? `${Math.round((stats.verified / stats.total) * 100)}%` : "0%", positive: true }} />
-        <StatsCard title="Companies" value={stats.companies} icon={SquareIcon} />
+        <StatsCard title="Total Orgs" value={stats.total} icon={OfficeIcon} sparklineData={[98, 112, 120, 134, 142, 150, 156]} sparklineColor="var(--chart-1)" />
+        <StatsCard title="Active" value={stats.active} icon={CheckmarkCircle01Icon} trend={{ value: stats.total > 0 ? `${Math.round((stats.active / stats.total) * 100)}%` : "0%", positive: true }} sparklineData={[80, 88, 95, 105, 112, 118, stats.active]} sparklineColor="var(--chart-2)" />
+        <StatsCard title="Verified" value={stats.verified} icon={Building01Icon} trend={{ value: stats.total > 0 ? `${Math.round((stats.verified / stats.total) * 100)}%` : "0%", positive: true }} sparklineData={[45, 52, 58, 65, 72, 78, stats.verified]} sparklineColor="var(--chart-3)" />
+        <StatsCard title="Companies" value={stats.companies} icon={SquareIcon} sparklineData={[30, 34, 38, 42, 46, 50, stats.companies]} sparklineColor="var(--chart-4)" />
       </div>
 
       <DataTable

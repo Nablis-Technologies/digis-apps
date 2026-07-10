@@ -169,10 +169,10 @@ export default function VenuesPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Total Venues" value={stats.total} icon={Building01Icon} />
-        <StatsCard title="Active" value={stats.active} icon={CheckmarkCircle01Icon} trend={{ value: stats.total > 0 ? `${Math.round((stats.active / stats.total) * 100)}%` : "0%", positive: true }} />
-        <StatsCard title="Verified" value={stats.verified} icon={StarIcon} trend={{ value: stats.total > 0 ? `${Math.round((stats.verified / stats.total) * 100)}%` : "0%", positive: true }} />
-        <StatsCard title="Total Capacity" value={stats.totalCapacity.toLocaleString()} icon={MapsLocation01Icon} />
+        <StatsCard title="Total Venues" value={stats.total} icon={Building01Icon} sparklineData={[260, 280, 300, 310, 325, 335, stats.total]} sparklineColor="var(--chart-1)" />
+        <StatsCard title="Active" value={stats.active} icon={CheckmarkCircle01Icon} trend={{ value: stats.total > 0 ? `${Math.round((stats.active / stats.total) * 100)}%` : "0%", positive: true }} sparklineData={[230, 250, 260, 275, 290, 300, stats.active]} sparklineColor="var(--chart-2)" />
+        <StatsCard title="Verified" value={stats.verified} icon={StarIcon} trend={{ value: stats.total > 0 ? `${Math.round((stats.verified / stats.total) * 100)}%` : "0%", positive: true }} sparklineData={[120, 140, 160, 180, 190, 200, stats.verified]} sparklineColor="var(--chart-3)" />
+        <StatsCard title="Total Capacity" value={stats.totalCapacity.toLocaleString()} icon={MapsLocation01Icon} sparklineData={[45000, 52000, 58000, 62000, 68000, 72000, stats.totalCapacity]} sparklineColor="var(--chart-4)" />
       </div>
 
       <DataTable

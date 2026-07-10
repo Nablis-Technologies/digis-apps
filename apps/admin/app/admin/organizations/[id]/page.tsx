@@ -124,6 +124,14 @@ const verificationItems = [
 
 type Tab = "overview" | "verification" | "members" | "activity" | "documents"
 
+const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
+  { key: "overview", label: "Overview", icon: <HugeiconsIcon icon={Building01Icon} strokeWidth={2} className="size-3.5" /> },
+  { key: "verification", label: "Verification", icon: <HugeiconsIcon icon={CheckmarkBadge01Icon} strokeWidth={2} className="size-3.5" /> },
+  { key: "members", label: "Members", icon: <HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} className="size-3.5" /> },
+  { key: "activity", label: "Activity", icon: <HugeiconsIcon icon={ChartBarLineIcon} strokeWidth={2} className="size-3.5" /> },
+  { key: "documents", label: "Documents", icon: <HugeiconsIcon icon={File01Icon} strokeWidth={2} className="size-3.5" /> },
+]
+
 // ─── Main Page Component ────────────────────────────────────────────────────
 
 export default function OrgDetailPage() {
@@ -247,16 +255,17 @@ export default function OrgDetailPage() {
 
       {/* ── Tabs ── */}
       <div className="flex gap-1 border-b border-border/50">
-        {(["overview", "verification", "members", "activity", "documents"] as Tab[]).map((t) => (
+        {tabs.map((t) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
+            key={t.key}
+            onClick={() => setTab(t.key)}
             className={cn(
-              "px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px capitalize",
-              tab === t ? "border-lime-500 text-lime-600" : "border-transparent text-muted-foreground hover:text-foreground"
+              "px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px capitalize inline-flex items-center gap-1.5",
+              tab === t.key ? "border-lime-500 text-lime-600" : "border-transparent text-muted-foreground hover:text-foreground"
             )}
           >
-            {t}
+            <span className="flex items-center">{t.icon}</span>
+            {t.label}
           </button>
         ))}
       </div>

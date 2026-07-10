@@ -29,6 +29,11 @@ const sparklineD = [60, 68, 62, 75, 70, 82, 79]
 
 type Tab = "overview" | "events"
 
+const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
+  { key: "overview", label: "Overview", icon: <HugeiconsIcon icon={Building01Icon} strokeWidth={2} className="size-3.5" /> },
+  { key: "events", label: "Events", icon: <HugeiconsIcon icon={Calendar01Icon} strokeWidth={2} className="size-3.5" /> },
+]
+
 function fmt(iso: string) { return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" }) }
 
 export default function VenueDetailPage() {
@@ -133,16 +138,17 @@ export default function VenueDetailPage() {
       </div>
 
       <div className="flex gap-1 border-b border-border/50">
-        {(["overview", "events"] as Tab[]).map((t) => (
+        {tabs.map((t) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
+            key={t.key}
+            onClick={() => setTab(t.key)}
             className={cn(
-              "px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px capitalize",
-              tab === t ? "border-lime-500 text-lime-600" : "border-transparent text-muted-foreground hover:text-foreground"
+              "px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px capitalize inline-flex items-center gap-1.5",
+              tab === t.key ? "border-lime-500 text-lime-600" : "border-transparent text-muted-foreground hover:text-foreground"
             )}
           >
-            {t}
+            <span className="flex items-center">{t.icon}</span>
+            {t.label}
           </button>
         ))}
       </div>

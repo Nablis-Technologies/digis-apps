@@ -196,10 +196,10 @@ export default function PermissionsPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Total Permissions" value={stats.total} icon={CheckmarkBadge01Icon} />
-        <StatsCard title="Active" value={stats.active} icon={CheckmarkCircle01Icon} trend={{ value: stats.total > 0 ? `${Math.round((stats.active / stats.total) * 100)}%` : "0%", positive: true }} />
-        <StatsCard title="Inactive" value={stats.inactive} icon={FileBlockIcon} />
-        <StatsCard title="Resources" value={stats.resources} icon={FileLockIcon} />
+        <StatsCard title="Total Permissions" value={stats.total} icon={CheckmarkBadge01Icon} sparklineData={[20, 22, 24, 26, 28, 30, stats.total]} sparklineColor="var(--chart-1)" />
+        <StatsCard title="Active" value={stats.active} icon={CheckmarkCircle01Icon} trend={{ value: stats.total > 0 ? `${Math.round((stats.active / stats.total) * 100)}%` : "0%", positive: true }} sparklineData={[16, 18, 20, 22, 24, 26, stats.active]} sparklineColor="var(--chart-2)" />
+        <StatsCard title="Inactive" value={stats.inactive} icon={FileBlockIcon} sparklineData={[5, 4, 4, 4, 4, 4, stats.inactive]} sparklineColor="var(--chart-3)" />
+        <StatsCard title="Resources" value={stats.resources} icon={FileLockIcon} sparklineData={[6, 7, 7, 8, 8, 8, stats.resources]} sparklineColor="var(--chart-4)" />
       </div>
 
       <DataTable
