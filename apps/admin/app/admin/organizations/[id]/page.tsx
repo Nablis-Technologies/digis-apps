@@ -366,7 +366,7 @@ function OverviewTab({ org }: { org: Organization }) {
           data={mockEvents}
           keyExtractor={(row) => row.id}
           pagination={{ page: 1, totalPages: 1, total: mockEvents.length, perPage: 10 }}
-          renderActions={(_row) => (
+          renderActions={() => (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
