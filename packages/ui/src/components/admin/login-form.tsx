@@ -8,10 +8,13 @@ import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { useLoginMutation } from "@workspace/store/reducers/authApi"
 
+type LoginFormProps = React.ComponentProps<"form"> & { redirectTo?: string }
+
 export function LoginForm({
+  redirectTo = "/admin",
   className,
   ...props
-}: React.ComponentProps<"form">) {
+}: LoginFormProps) {
   const router = useRouter()
   const [identifier, setIdentifier] = useState("")
   const [password, setPassword] = useState("")
@@ -21,7 +24,7 @@ export function LoginForm({
     e.preventDefault()
     try {
       await login({ identifier, password }).unwrap()
-      router.replace("/admin")
+      router.replace(redirectTo)
     } catch {
       // error handled via `error` state
     }
