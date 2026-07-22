@@ -44,6 +44,7 @@ export function EventDetailCard({ event }: EventDetailCardProps) {
               alt={event.name}
               fill
               className="object-cover object-top"
+              placeholder="empty"
             />
           </div>
 

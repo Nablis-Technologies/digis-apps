@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
-import Vibrant from "node-vibrant"
+import { Vibrant } from "node-vibrant/browser"
 
 export type PaletteKey = "vibrant" | "darkVibrant" | "muted" | "brand"
 
@@ -10,6 +10,16 @@ export interface ColorPalette {
   darkVibrant: string
   muted: string
   brand: string
+}
+
+// Define the palette type based on node-vibrant's API
+type VibrantPalette = {
+  Vibrant?: { hex: string } | null
+  DarkVibrant?: { hex: string } | null
+  Muted?: { hex: string } | null
+  LightVibrant?: { hex: string } | null
+  DarkMuted?: { hex: string } | null
+  LightMuted?: { hex: string } | null
 }
 
 const BRAND_COLOR = "#10b981" // Emerald brand color
@@ -46,6 +56,8 @@ export function useColorPalette(imageUrl: string) {
   const extractionIdRef = useRef<number>(0)
 
   useEffect(() => {
+    let active = true
+    
     // ✅ Increment extraction ID for this run
     const extractionId = ++extractionIdRef.current
     
@@ -54,17 +66,20 @@ export function useColorPalette(imageUrl: string) {
     
     setLoading(true)
     setPalette(getDefaultPalette()) // Reset palette on URL change
-
-    // ✅ Add timestamp to prevent browser caching
-    const urlWithCacheBuster = `${imageUrl}?v=${Date.now()}`
     
     console.log(`🎨 [${extractionId}] Starting extraction for:`, imageUrl)
 
-    Vibrant.from(urlWithCacheBuster)
-      .maxColorCount(128)
-      .quality(5)
+    // ✅ Use the REAL node-vibrant with sophisticated color theory
+    Vibrant.from(imageUrl)
+      .maxColorCount(128) // Higher = more accurate
+      .quality(5) // Lower = better quality (1-10)
       .getPalette()
-      .then((result) => {
+      .then((result: VibrantPalette) => {
+        if (!active) {
+          console.log(`⏭️ [${extractionId}] Component unmounted, skipping:`, imageUrl)
+          return
+        }
+        
         // ✅ CRITICAL: Check if this is still the current extraction
         if (extractionId !== extractionIdRef.current) {
           console.log(`⏭️ [${extractionId}] Skipping extraction (newer extraction started):`, imageUrl)
@@ -78,14 +93,15 @@ export function useColorPalette(imageUrl: string) {
         }
 
         console.log(`✅ [${extractionId}] Extraction complete for:`, imageUrl, {
-          vibrant: result.Vibrant?.hex,
-          darkVibrant: result.DarkVibrant?.hex,
-          lightVibrant: result.LightVibrant?.hex,
-          muted: result.Muted?.hex,
-          darkMuted: result.DarkMuted?.hex,
-          lightMuted: result.LightMuted?.hex,
+          Vibrant: result.Vibrant?.hex,
+          DarkVibrant: result.DarkVibrant?.hex,
+          LightVibrant: result.LightVibrant?.hex,
+          Muted: result.Muted?.hex,
+          DarkMuted: result.DarkMuted?.hex,
+          LightMuted: result.LightMuted?.hex,
         })
 
+        // ✅ node-vibrant returns Swatch objects with .hex property
         // Try multiple swatches in order of preference
         const vibrant =
           result.Vibrant?.hex ||
@@ -95,8 +111,7 @@ export function useColorPalette(imageUrl: string) {
 
         const darkVibrant =
           result.DarkVibrant?.hex ||
-          (result.Vibrant?.hex ? darkenHex(result.Vibrant.hex, 35) : null) ||
-          "#c2410c"
+          darkenHex(vibrant, 35)
 
         const muted =
           result.Muted?.hex ||
@@ -111,24 +126,13 @@ export function useColorPalette(imageUrl: string) {
           brand: BRAND_COLOR,
         }
 
-        // Check if extraction actually worked (not all the same)
-        const uniqueColors = new Set([
-          finalPalette.vibrant,
-          finalPalette.darkVibrant,
-          finalPalette.muted,
-        ])
-
-        if (uniqueColors.size < 2) {
-          console.warn(`⚠️ [${extractionId}] Not enough color variety for`, imageUrl, "using defaults")
-          setPalette(getDefaultPalette())
-        } else {
-          console.log(`✅ [${extractionId}] Setting palette for`, imageUrl, ":", finalPalette)
-          setPalette(finalPalette)
-        }
-
+        console.log(`✅ [${extractionId}] Setting palette for`, imageUrl, ":", finalPalette)
+        setPalette(finalPalette)
         setLoading(false)
       })
       .catch((error) => {
+        if (!active) return
+        
         // Only handle error if this is still the current extraction
         if (extractionId !== extractionIdRef.current) {
           console.log(`⏭️ [${extractionId}] Skipping error (newer extraction started):`, imageUrl)
@@ -136,12 +140,15 @@ export function useColorPalette(imageUrl: string) {
         }
         
         console.error(`❌ [${extractionId}] Extraction failed for`, imageUrl, ":", error)
+        
+        // Fallback if extraction fails
         setPalette(getDefaultPalette())
         setLoading(false)
       })
 
     // Cleanup: Mark this extraction as stale if component unmounts or imageUrl changes
     return () => {
+      active = false
       if (extractionId === extractionIdRef.current) {
         console.log(`🧹 [${extractionId}] Cleanup for:`, imageUrl)
       }

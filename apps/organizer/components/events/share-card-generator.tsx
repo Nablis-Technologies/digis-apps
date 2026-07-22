@@ -194,18 +194,34 @@ export function ShareCardGenerator({ event }: ShareCardGeneratorProps) {
                 <button
                   key={key}
                   onClick={() => setSelectedPalette(key)}
-                  className={`relative size-12 rounded-full transition-all hover:scale-110 ${
-                    selectedPalette === key ? "scale-110" : ""
-                  }`}
+                  className="group relative size-10 rounded-full transition-all hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
                   disabled={isRendering}
                   title={PALETTE_LABELS[key]}
                 >
+                  {/* Color swatch with border */}
                   <div
-                    className="size-full rounded-full shadow-md"
+                    className="size-full rounded-full border-2 border-border/20 transition-all group-hover:border-border/40"
                     style={{ backgroundColor: palette[key] }}
                   />
+                  
+                  {/* Checkmark for selected state - Spotify style */}
                   {selectedPalette === key && (
-                    <div className="absolute inset-0 rounded-full border-[3px] border-foreground" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <svg
+                        className="size-4 drop-shadow-lg"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          fill="currentColor"
+                          className="text-white drop-shadow-md"
+                          strokeWidth="0.5"
+                          stroke="rgba(0,0,0,0.2)"
+                        />
+                      </svg>
+                    </div>
                   )}
                 </button>
               ))}

@@ -4,20 +4,14 @@ import { motion } from "framer-motion"
 import { use } from "react"
 import { notFound } from "next/navigation"
 import Image from "next/image"
-import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
-  ArrowLeft01Icon,
-  Calendar03Icon,
-  Location01Icon,
   TicketIcon,
-  Share01Icon,
   Edit01Icon,
-  Mail01Icon,
 } from "@hugeicons/core-free-icons"
 import { sampleEvents } from "@/lib/sample-data"
 import { formatDate, formatCurrency, formatNumber, calculatePercentage } from "@/lib/utils"
@@ -40,7 +34,6 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
   const totalTickets = event.tiers.reduce((sum, tier) => sum + tier.total, 0)
   const soldTickets = event.tiers.reduce((sum, tier) => sum + tier.sold, 0)
-  const soldPercentage = calculatePercentage(soldTickets, totalTickets)
   const totalRevenue = event.tiers.reduce(
     (sum, tier) => sum + tier.sold * tier.price,
     0
@@ -72,6 +65,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             alt={event.name}
             fill
             className="object-cover object-top"
+            placeholder="empty"
           />
         </div>
         <div className="flex-1">

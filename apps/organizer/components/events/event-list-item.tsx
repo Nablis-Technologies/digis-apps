@@ -45,6 +45,7 @@ export function EventListItem({ event, index = 0 }: EventListItemProps) {
               alt={event.name}
               fill
               className="object-cover object-top"
+              placeholder="empty"
             />
           </div>
 

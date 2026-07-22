@@ -45,6 +45,7 @@ export function EventCard({ event, index = 0 }: EventCardProps) {
               alt={event.name}
               fill
               className="object-cover object-top transition-transform group-hover:scale-105"
+              placeholder="empty"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0" />
             <div className="absolute right-2 top-2">
