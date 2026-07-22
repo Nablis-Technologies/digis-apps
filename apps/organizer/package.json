@@ -12,17 +12,28 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@hookform/resolvers": "^3.9.1",
     "@hugeicons/core-free-icons": "^4.2.2",
     "@hugeicons/react": "^1.1.9",
     "@workspace/store": "workspace:*",
     "@workspace/ui": "workspace:*",
+    "date-fns": "^4.1.0",
+    "framer-motion": "^11.11.17",
     "next": "16.2.6",
+    "node-vibrant": "^3.2.1-alpha.1",
+    "qrcode": "^1.5.4",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "react-hook-form": "^7.54.2",
+    "recharts": "^2.15.0",
+    "sonner": "^1.7.2",
+    "vaul": "^1.0.0",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/qrcode": "^1.5.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@workspace/eslint-config": "workspace:^",
