@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { motion } from "framer-motion"
 import { StatsCard } from "@/components/dashboard/stats-card"
 import { Button } from "@/components/ui/button"
@@ -21,6 +22,7 @@ import {
   LayoutTopIcon,
 } from "@hugeicons/core-free-icons"
 import Link from "next/link"
+import { CreateEventDialog } from "../../components/events/create-event-dialog"
 import {
   sampleKPIs,
   sampleTopEvents,
@@ -135,6 +137,8 @@ function StatsGrid() {
 // ─── Page ───────────────────────────────────────────────────────────────────
 
 export default function OrganizerDashboard() {
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+
   return (
     <div className="flex flex-col gap-4">
       {/* Header */}
@@ -145,12 +149,11 @@ export default function OrganizerDashboard() {
             Welcome back! Here's an overview of your events
           </p>
         </div>
-        <Link href="/organizer/events/new">
-          <Button size="lg" className="gap-2">
-            <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-4" />
-            Create Event
-          </Button>
-        </Link>
+        <Button size="lg" className="gap-2" onClick={() => setCreateDialogOpen(true)}>
+          <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-4" />
+          Create Event
+        </Button>
+        <CreateEventDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
       </div>
 
       <Tabs defaultValue="overview">
@@ -181,14 +184,12 @@ export default function OrganizerDashboard() {
                 <p className="text-xs text-muted-foreground">Common tasks</p>
               </div>
               <div className="grid gap-4 md:grid-cols-3">
-                <Link href="/organizer/events/new">
-                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                    <Button variant="outline" className="h-24 w-full flex-col gap-2">
-                      <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className="size-6" />
-                      <span>Create Event</span>
-                    </Button>
-                  </motion.div>
-                </Link>
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button variant="outline" className="h-24 w-full flex-col gap-2" onClick={() => setCreateDialogOpen(true)}>
+                    <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className="size-6" />
+                    <span>Create Event</span>
+                  </Button>
+                </motion.div>
                 <Link href="/organizer/events">
                   <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                     <Button variant="outline" className="h-24 w-full flex-col gap-2">

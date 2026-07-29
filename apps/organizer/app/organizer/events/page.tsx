@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Add01Icon, Search01Icon } from "@hugeicons/core-free-icons"
-import Link from "next/link"
+import { CreateEventDialog } from "../../../components/events/create-event-dialog"
 import { sampleEvents } from "@/lib/sample-data"
 import { EventCard } from "../../../components/events/event-card"
 import { EventListItem } from "../../../components/events/event-list-item"
@@ -23,6 +23,7 @@ export default function EventsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("grid")
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
 
   // Filter events based on search and status
   const filteredEvents = sampleEvents.filter((event) => {
@@ -43,12 +44,11 @@ export default function EventsPage() {
             Create and manage your events
           </p>
         </div>
-        <Link href="/organizer/events/new">
-          <Button size="lg" className="gap-2">
-            <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-5" />
-            Create Event
-          </Button>
-        </Link>
+        <Button size="lg" className="gap-2" onClick={() => setCreateDialogOpen(true)}>
+          <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-5" />
+          Create Event
+        </Button>
+        <CreateEventDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
       </div>
 
       {/* Filters and Search */}
