@@ -71,7 +71,7 @@ const ENTRY_TYPES: { value: EntryType; label: string; desc: string; icon: React.
     label: "Ticketed",
     desc: "Paid entry — sell General, VIP, VVIP tiers",
     icon: <HugeiconsIcon icon={TicketIcon} strokeWidth={2} className="size-5" />,
-    color: "border-primary/50 bg-primary/8",
+    color: "border-chart-2/50 bg-chart-2/8",
   },
   {
     value: "rsvp",
@@ -360,10 +360,10 @@ export default function CreateEvent() {
                   key={et.value}
                   onClick={() => setEntryType(et.value)}
                   className={`text-left p-4 rounded-2xl border-2 transition-all ${
-                    entryType === et.value ? et.color + " border-opacity-100" : "border-border/40 hover:border-border bg-card/50"
+                    entryType === et.value ? "border-chart-2 bg-chart-2/5" : "border-border/40 hover:border-border bg-card/50"
                   }`}
                 >
-                  <div className={`mb-2 ${entryType === et.value ? "text-primary" : "text-muted-foreground"}`}>
+                  <div className={`mb-2 ${entryType === et.value ? "text-chart-2" : "text-muted-foreground"}`}>
                     {et.icon}
                   </div>
                   <div className="font-semibold text-sm">{et.label}</div>
@@ -381,10 +381,10 @@ export default function CreateEvent() {
                     key={v.value}
                     onClick={() => setVisibility(v.value)}
                     className={`w-full text-left px-4 py-3 rounded-xl border transition-all flex items-start gap-3 ${
-                      visibility === v.value ? "border-primary bg-primary/8" : "border-border/40 hover:border-border bg-card/50"
+                      visibility === v.value ? "border-chart-2 bg-chart-2/5" : "border-border/40 hover:border-border bg-card/50"
                     }`}
                   >
-                    <div className={`mt-0.5 ${visibility === v.value ? "text-primary" : "text-muted-foreground"}`}>
+                    <div className={`mt-0.5 ${visibility === v.value ? "text-chart-2" : "text-muted-foreground"}`}>
                       {v.icon}
                     </div>
                     <div>
@@ -670,11 +670,11 @@ export default function CreateEvent() {
                       type="button"
                       onClick={() => { setUsePaidTickets(true); if (ticketTypes.length === 0) addTicketType() }}
                       className={`flex items-center gap-3 px-3 py-3 rounded-xl border text-left transition-all ${
-                        usePaidTickets ? "border-amber-500/60 bg-amber-500/8 text-amber-500" : "border-border/40 text-muted-foreground hover:border-border"
+                        usePaidTickets ? "border-chart-2 bg-chart-2/5 text-chart-2" : "border-border/40 text-muted-foreground hover:border-border"
                       }`}
                     >
-                      <div className={`size-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${usePaidTickets ? "border-amber-500" : "border-muted-foreground/40"}`}>
-                        {usePaidTickets && <div className="size-2 rounded-full bg-amber-500" />}
+                      <div className={`size-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${usePaidTickets ? "border-chart-2" : "border-muted-foreground/40"}`}>
+                        {usePaidTickets && <div className="size-2 rounded-full bg-chart-2" />}
                       </div>
                       <div>
                         <p className="text-sm font-medium leading-none">Paid</p>
@@ -1243,20 +1243,20 @@ export default function CreateEvent() {
               type="button"
               onClick={() => setIsRecurring(false)}
               className={`w-full text-left p-4 rounded-2xl border-2 transition-all ${
-                !isRecurring ? "border-primary bg-primary/8" : "border-border/40 hover:border-border bg-card/50"
+                !isRecurring ? "border-chart-2 bg-chart-2/5" : "border-border/40 hover:border-border bg-card/50"
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-xl flex-shrink-0 ${!isRecurring ? "bg-primary/15" : "bg-muted"}`}>
-                  <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className={`size-5 ${!isRecurring ? "text-primary" : "text-muted-foreground"}`} />
+                <div className={`p-2 rounded-xl flex-shrink-0 ${!isRecurring ? "bg-chart-2/15" : "bg-muted"}`}>
+                  <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className={`size-5 ${!isRecurring ? "text-chart-2" : "text-muted-foreground"}`} />
                 </div>
                 <div>
                   <div className="font-semibold text-sm">Single event</div>
                   <div className="text-xs text-muted-foreground mt-0.5">One date, one event — standard mode</div>
                 </div>
                 {!isRecurring && (
-                  <div className="ml-auto size-5 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
-                    <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-3 text-primary-foreground" />
+                  <div className="ml-auto size-5 bg-chart-2 rounded-full flex items-center justify-center flex-shrink-0">
+                    <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-3 text-white" />
                   </div>
                 )}
               </div>
