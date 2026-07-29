@@ -61,6 +61,8 @@ export const authApi = createApi({
       async onQueryStarted(_, { queryFulfilled }) {
         try {
           await queryFulfilled
+        } catch {
+          // logout may fail if session already expired — tokens cleared regardless
         } finally {
           clearTokens()
         }
