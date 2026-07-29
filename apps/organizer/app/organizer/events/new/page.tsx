@@ -71,21 +71,21 @@ const ENTRY_TYPES: { value: EntryType; label: string; desc: string; icon: React.
     label: "Ticketed",
     desc: "Paid entry — sell General, VIP, VVIP tiers",
     icon: <HugeiconsIcon icon={TicketIcon} strokeWidth={2} className="size-5" />,
-    color: "border-lime-500/50 bg-chart-2/8",
+    color: "border-lime-500/50 bg-lime-500/8",
   },
   {
     value: "rsvp",
     label: "RSVP",
     desc: "Free registration, optional approval queue",
     icon: <HugeiconsIcon icon={CalendarCheckIcon} strokeWidth={2} className="size-5" />,
-    color: "border-lime-500/50 bg-chart-2/8",
+    color: "border-lime-500/50 bg-lime-500/8",
   },
   {
     value: "free",
     label: "Free Entry",
     desc: "No tickets, no registration — just show up",
     icon: <HugeiconsIcon icon={GiftIcon} strokeWidth={2} className="size-5" />,
-    color: "border-chart-3/50 bg-chart-3/8",
+    color: "border-lime-500/50 bg-lime-500/8",
   },
   {
     value: "invite_only",
@@ -360,10 +360,10 @@ export default function CreateEvent() {
                   key={et.value}
                   onClick={() => setEntryType(et.value)}
                   className={`text-left p-4 rounded-2xl border-2 transition-all ${
-                    entryType === et.value ? "border-lime-500 bg-chart-2/5" : "border-border/40 hover:border-border bg-card/50"
+                    entryType === et.value ? "border-lime-500 bg-lime-500/5" : "border-border/40 hover:border-border bg-card/50"
                   }`}
                 >
-                  <div className={`mb-2 ${entryType === et.value ? "text-chart-2" : "text-muted-foreground"}`}>
+                  <div className={`mb-2 ${entryType === et.value ? "text-lime-500" : "text-muted-foreground"}`}>
                     {et.icon}
                   </div>
                   <div className="font-semibold text-sm">{et.label}</div>
@@ -381,10 +381,10 @@ export default function CreateEvent() {
                     key={v.value}
                     onClick={() => setVisibility(v.value)}
                     className={`w-full text-left px-4 py-3 rounded-xl border transition-all flex items-start gap-3 ${
-                      visibility === v.value ? "border-lime-500 bg-chart-2/5" : "border-border/40 hover:border-border bg-card/50"
+                      visibility === v.value ? "border-lime-500 bg-lime-500/5" : "border-border/40 hover:border-border bg-card/50"
                     }`}
                   >
-                    <div className={`mt-0.5 ${visibility === v.value ? "text-chart-2" : "text-muted-foreground"}`}>
+                    <div className={`mt-0.5 ${visibility === v.value ? "text-lime-500" : "text-muted-foreground"}`}>
                       {v.icon}
                     </div>
                     <div>
@@ -670,11 +670,11 @@ export default function CreateEvent() {
                       type="button"
                       onClick={() => { setUsePaidTickets(true); if (ticketTypes.length === 0) addTicketType() }}
                       className={`flex items-center gap-3 px-3 py-3 rounded-xl border text-left transition-all ${
-                        usePaidTickets ? "border-lime-500 bg-chart-2/5 text-chart-2" : "border-border/40 text-muted-foreground hover:border-border"
+                        usePaidTickets ? "border-lime-500 bg-lime-500/5 text-lime-500" : "border-border/40 text-muted-foreground hover:border-border"
                       }`}
                     >
                       <div className={`size-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${usePaidTickets ? "border-lime-500" : "border-muted-foreground/40"}`}>
-                        {usePaidTickets && <div className="size-2 rounded-full bg-chart-2" />}
+                        {usePaidTickets && <div className="size-2 rounded-full bg-lime-500" />}
                       </div>
                       <div>
                         <p className="text-sm font-medium leading-none">Paid</p>
@@ -878,7 +878,7 @@ export default function CreateEvent() {
                 </div>
 
                 {/* Guest List toggle */}
-                <div className={`rounded-2xl border transition-colors ${useGuestSection ? "border-lime-500/40 bg-chart-2/5" : "border-border/50 bg-card/50"}`}>
+                <div className={`rounded-2xl border transition-colors ${useGuestSection ? "border-lime-500/40 bg-lime-500/5" : "border-border/50 bg-card/50"}`}>
                   <div
                     role="button"
                     tabIndex={0}
@@ -886,8 +886,8 @@ export default function CreateEvent() {
                     onClick={() => setUseGuestSection((v) => !v)}
                     onKeyDown={(e) => e.key === "Enter" && setUseGuestSection((v) => !v)}
                   >
-                    <div className={`p-2 rounded-xl flex-shrink-0 transition-colors ${useGuestSection ? "bg-chart-2/15" : "bg-muted"}`}>
-                      <HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} className={`size-4 ${useGuestSection ? "text-chart-2" : "text-muted-foreground"}`} />
+                    <div className={`p-2 rounded-xl flex-shrink-0 transition-colors ${useGuestSection ? "bg-lime-500/15" : "bg-muted"}`}>
+                      <HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} className={`size-4 ${useGuestSection ? "text-lime-500" : "text-muted-foreground"}`} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
@@ -954,7 +954,7 @@ export default function CreateEvent() {
                                   onClick={() => setNewGuest((p) => ({ ...p, allowedGuests: n }))}
                                   className={`h-7 px-2.5 rounded-lg text-xs font-medium border transition-colors ${
                                     newGuest.allowedGuests === n
-                                      ? "bg-chart-2/20 text-chart-2 border-lime-500/40"
+                                      ? "bg-lime-500/20 text-lime-500 border-lime-500/40"
                                       : "bg-muted/50 text-muted-foreground border-border/40 hover:border-border"
                                   }`}
                                 >
@@ -1057,7 +1057,7 @@ export default function CreateEvent() {
                                           onClick={() => setEditGuestForm((p) => ({ ...p, allowedGuests: n }))}
                                           className={`h-6 px-2 rounded text-[10px] font-medium border transition-colors ${
                                             editGuestForm.allowedGuests === n
-                                              ? "bg-chart-2/20 text-chart-2 border-lime-500/40"
+                                              ? "bg-lime-500/20 text-lime-500 border-lime-500/40"
                                               : "bg-muted/50 text-muted-foreground border-border/40 hover:border-border"
                                           }`}
                                         >
@@ -1092,13 +1092,13 @@ export default function CreateEvent() {
                                   </div>
                                 ) : (
                                   <div key={g._id} className="flex items-center gap-2 px-3 py-2 bg-background border border-border/40 rounded-xl group">
-                                    <HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} className="size-3.5 text-chart-2 flex-shrink-0" />
+                                    <HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} className="size-3.5 text-lime-500 flex-shrink-0" />
                                     <div className="flex-1 min-w-0">
                                       {g.name && <div className="text-sm font-medium truncate">{g.name}</div>}
                                       <div className="text-xs text-muted-foreground truncate">{g.contact}</div>
                                     </div>
                                     {g.allowedGuests > 0 && (
-                                      <span className="text-[10px] font-semibold text-chart-2 bg-chart-2/10 border border-lime-500/20 rounded px-1.5 py-0.5 flex-shrink-0">
+                                      <span className="text-[10px] font-semibold text-lime-500 bg-lime-500/10 border border-lime-500/20 rounded px-1.5 py-0.5 flex-shrink-0">
                                         +{g.allowedGuests}
                                       </span>
                                     )}
@@ -1188,8 +1188,8 @@ export default function CreateEvent() {
 
             {/* Free */}
             {entryType === "free" && (
-              <div className="bg-card border border-chart-3/30 rounded-2xl p-5 text-center space-y-2">
-                <HugeiconsIcon icon={GiftIcon} strokeWidth={2} className="size-8 text-chart-3 mx-auto" />
+              <div className="bg-card border border-lime-500/30 rounded-2xl p-5 text-center space-y-2">
+                <HugeiconsIcon icon={GiftIcon} strokeWidth={2} className="size-8 text-lime-500 mx-auto" />
                 <h3 className="font-semibold">Free entry — no registration</h3>
                 <p className="text-sm text-muted-foreground">
                   The event page shows date, time and location. Attendees just show up.
@@ -1243,19 +1243,19 @@ export default function CreateEvent() {
               type="button"
               onClick={() => setIsRecurring(false)}
               className={`w-full text-left p-4 rounded-2xl border-2 transition-all ${
-                !isRecurring ? "border-lime-500 bg-chart-2/5" : "border-border/40 hover:border-border bg-card/50"
+                !isRecurring ? "border-lime-500 bg-lime-500/5" : "border-border/40 hover:border-border bg-card/50"
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-xl flex-shrink-0 ${!isRecurring ? "bg-chart-2/15" : "bg-muted"}`}>
-                  <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className={`size-5 ${!isRecurring ? "text-chart-2" : "text-muted-foreground"}`} />
+                <div className={`p-2 rounded-xl flex-shrink-0 ${!isRecurring ? "bg-lime-500/15" : "bg-muted"}`}>
+                  <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className={`size-5 ${!isRecurring ? "text-lime-500" : "text-muted-foreground"}`} />
                 </div>
                 <div>
                   <div className="font-semibold text-sm">Single event</div>
                   <div className="text-xs text-muted-foreground mt-0.5">One date, one event — standard mode</div>
                 </div>
                 {!isRecurring && (
-                  <div className="ml-auto size-5 bg-chart-2 rounded-full flex items-center justify-center flex-shrink-0">
+                  <div className="ml-auto size-5 bg-lime-500 rounded-full flex items-center justify-center flex-shrink-0">
                     <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-3 text-white" />
                   </div>
                 )}
@@ -1263,7 +1263,7 @@ export default function CreateEvent() {
             </button>
 
             <div className={`rounded-2xl border-2 transition-all overflow-hidden ${
-              isRecurring ? "border-lime-500 bg-chart-2/5" : "border-border/40 bg-card/50"
+              isRecurring ? "border-lime-500 bg-lime-500/5" : "border-border/40 bg-card/50"
             }`}>
               <button
                 type="button"
@@ -1271,15 +1271,15 @@ export default function CreateEvent() {
                 className="w-full text-left p-4"
               >
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-xl flex-shrink-0 ${isRecurring ? "bg-chart-2/15" : "bg-muted"}`}>
-                    <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className={`size-5 ${isRecurring ? "text-chart-2" : "text-muted-foreground"}`} />
+                  <div className={`p-2 rounded-xl flex-shrink-0 ${isRecurring ? "bg-lime-500/15" : "bg-muted"}`}>
+                    <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className={`size-5 ${isRecurring ? "text-lime-500" : "text-muted-foreground"}`} />
                   </div>
                   <div>
                     <div className="font-semibold text-sm">Recurring series</div>
                     <div className="text-xs text-muted-foreground mt-0.5">All instances share the same details — attendees pick their date</div>
                   </div>
                   {isRecurring && (
-                    <div className="ml-auto size-5 bg-chart-2 rounded-full flex items-center justify-center flex-shrink-0">
+                    <div className="ml-auto size-5 bg-lime-500 rounded-full flex items-center justify-center flex-shrink-0">
                       <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-3 text-white" />
                     </div>
                   )}
@@ -1298,7 +1298,7 @@ export default function CreateEvent() {
                   >
                     <div className="p-4 space-y-4">
                       <div className="space-y-2">
-                        <Label className="text-xs font-bold text-chart-2 uppercase tracking-wider">Repeat every</Label>
+                        <Label className="text-xs font-bold text-lime-500 uppercase tracking-wider">Repeat every</Label>
                         <div className="grid grid-cols-4 gap-2">
                           {([
                             { value: "weekly", label: "1 week" },
@@ -1312,7 +1312,7 @@ export default function CreateEvent() {
                               onClick={() => setRecurrenceType(p.value)}
                               className={`py-2 px-2 rounded-xl border text-xs font-semibold transition-all ${
                                 recurrenceType === p.value
-                                  ? "border-lime-500/50 bg-chart-2/10 text-chart-2"
+                                  ? "border-lime-500/50 bg-lime-500/10 text-lime-500"
                                   : "border-border/40 text-muted-foreground hover:border-border"
                               }`}
                             >
@@ -1324,7 +1324,7 @@ export default function CreateEvent() {
 
                       {recurrenceType !== "custom" && (
                         <div className="space-y-2">
-                          <Label className="text-xs font-bold text-chart-2 uppercase tracking-wider">Occurrences</Label>
+                          <Label className="text-xs font-bold text-lime-500 uppercase tracking-wider">Occurrences</Label>
                           <div className="flex items-center gap-3">
                             <Button
                               variant="outline"
@@ -1357,7 +1357,7 @@ export default function CreateEvent() {
 
                       {recurrenceType === "custom" && (
                         <div className="space-y-2">
-                          <Label className="text-xs font-bold text-chart-2 uppercase tracking-wider">Add dates</Label>
+                          <Label className="text-xs font-bold text-lime-500 uppercase tracking-wider">Add dates</Label>
                           <div className="flex gap-2">
                             <Input
                               type="date"
@@ -1394,7 +1394,7 @@ export default function CreateEvent() {
 
                       {generatedDates.length > 0 && (
                         <div className="space-y-2">
-                          <Label className="text-xs font-bold text-chart-2 uppercase tracking-wider">
+                          <Label className="text-xs font-bold text-lime-500 uppercase tracking-wider">
                             {generatedDates.length} {generatedDates.length === 1 ? "date" : "dates"} in this series
                           </Label>
                           <div className="max-h-44 overflow-y-auto space-y-1.5 pr-0.5">
@@ -1402,11 +1402,11 @@ export default function CreateEvent() {
                               <div
                                 key={d}
                                 className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm ${
-                                  i === 0 ? "bg-chart-2/10 border border-lime-500/20" : "bg-muted/40"
+                                  i === 0 ? "bg-lime-500/10 border border-lime-500/20" : "bg-muted/40"
                                 }`}
                               >
                                 <span className={`size-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${
-                                  i === 0 ? "bg-chart-2 text-white" : "bg-muted text-muted-foreground"
+                                  i === 0 ? "bg-lime-500 text-white" : "bg-muted text-muted-foreground"
                                 }`}>
                                   {i + 1}
                                 </span>
@@ -1414,7 +1414,7 @@ export default function CreateEvent() {
                                   {new Date(d).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })} · {new Date(d).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
                                 </span>
                                 {i === 0 && (
-                                  <span className="text-[10px] text-chart-2 font-semibold flex-shrink-0">First</span>
+                                  <span className="text-[10px] text-lime-500 font-semibold flex-shrink-0">First</span>
                                 )}
                                 {recurrenceType === "custom" && (
                                   <button
