@@ -154,6 +154,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   const router = useRouter()
   const [step, setStep] = useState(0)
   const [error, setError] = useState("")
+  const [fieldErrors, setFieldErrors] = useState<{ title?: string; date?: string; location?: string }>({})
 
   const [entryType, setEntryType] = useState<EntryType>("ticketed")
   const [visibility, setVisibility] = useState<Visibility>("public")
@@ -433,10 +434,11 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                 id="title"
                 placeholder="e.g. Addis Jazz Festival 2026"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="h-11"
+                onChange={(e) => { setTitle(e.target.value); if (fieldErrors.title) setFieldErrors((p) => ({ ...p, title: undefined })) }}
+                className={`h-11 ${fieldErrors.title ? "border-destructive focus-visible:border-destructive" : ""}`}
                 autoFocus
               />
+              {fieldErrors.title && <p className="text-destructive text-xs">{fieldErrors.title}</p>}
             </div>
 
             <div className="space-y-2">
@@ -453,7 +455,8 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm font-semibold">Date <span className="text-destructive">*</span></Label>
-                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-11" />
+                <Input type="date" value={date} onChange={(e) => { setDate(e.target.value); if (fieldErrors.date) setFieldErrors((p) => ({ ...p, date: undefined })) }} className={`h-11 ${fieldErrors.date ? "border-destructive focus-visible:border-destructive" : ""}`} />
+                {fieldErrors.date && <p className="text-destructive text-xs">{fieldErrors.date}</p>}
               </div>
               <div className="space-y-2">
                 <Label className="text-sm font-semibold">Start Time <span className="text-destructive">*</span></Label>
@@ -477,9 +480,10 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                 id="location"
                 placeholder="e.g. Millennium Hall, Addis Ababa"
                 value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="h-11"
+                onChange={(e) => { setLocation(e.target.value); if (fieldErrors.location) setFieldErrors((p) => ({ ...p, location: undefined })) }}
+                className={`h-11 ${fieldErrors.location ? "border-destructive focus-visible:border-destructive" : ""}`}
               />
+              {fieldErrors.location && <p className="text-destructive text-xs">{fieldErrors.location}</p>}
             </div>
 
             <div className="space-y-2">
@@ -526,7 +530,12 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
               <Button
                 className="flex-1 h-11 font-semibold"
                 onClick={() => {
-                  if (!title || !date || !location) { setError("Fill in event name, date, and location."); return }
+                  const errors: { title?: string; date?: string; location?: string } = {}
+                  if (!title) errors.title = "Event name is required"
+                  if (!date) errors.date = "Date is required"
+                  if (!location) errors.location = "Location is required"
+                  setFieldErrors(errors)
+                  if (Object.keys(errors).length > 0) return
                   setError("")
                   setStep(2)
                 }}
