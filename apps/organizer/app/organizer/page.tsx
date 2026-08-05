@@ -1,15 +1,18 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { motion } from "framer-motion"
 import { StatsCard } from "@/components/dashboard/stats-card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
+import { DataTable, type Column } from "@/components/ui/data-table"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Calendar03Icon,
@@ -20,6 +23,9 @@ import {
   ArrowRight01Icon,
   BarChartIcon,
   LayoutTopIcon,
+  Search01Icon,
+  SlidersHorizontalIcon,
+  ChevronRightIcon,
 } from "@hugeicons/core-free-icons"
 import Link from "next/link"
 import { CreateEventDialog } from "../../components/events/create-event-dialog"
@@ -29,13 +35,10 @@ import {
   samplePerformanceData,
   sampleEvents,
 } from "@/lib/sample-data"
-import { formatCurrencyShort, formatNumber } from "@/lib/utils"
+import { formatCurrency, formatCurrencyShort, formatNumber, formatDateTime, calculatePercentage } from "@/lib/utils"
 import {
   Area,
   AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -89,24 +92,15 @@ const kpis = [
 
 // ─── Ticket breakdown data ──────────────────────────────────────────────────
 
-const ticketTypeData = sampleEvents.flatMap((event) =>
-  event.tiers.map((tier) => ({
-    name: `${tier.name} - ${event.name}`,
-    sold: tier.sold,
-    total: tier.total,
-    revenue: tier.sold * tier.price,
-  }))
-)
-
-const ticketsPerEvent = sampleEvents.map((event) => {
+const eventsForTable = sampleEvents.map((event) => {
   const totalSold = event.tiers.reduce((s, t) => s + t.sold, 0)
   const totalCapacity = event.tiers.reduce((s, t) => s + t.total, 0)
   const totalRevenue = event.tiers.reduce((s, t) => s + t.sold * t.price, 0)
   return {
-    name: event.name,
-    sold: totalSold,
-    capacity: totalCapacity,
-    revenue: totalRevenue,
+    ...event,
+    totalSold,
+    totalCapacity,
+    totalRevenue,
   }
 })
 
@@ -131,6 +125,242 @@ function StatsGrid() {
         </motion.div>
       ))}
     </div>
+  )
+}
+
+// ─── Tickets Table ─────────────────────────────────────────────────────────
+
+type StatusFilter = "all" | "Published" | "Draft" | "Live"
+
+type EventRow = (typeof eventsForTable)[number]
+
+type BadgeVariant =
+  | "default"
+  | "secondary"
+  | "destructive"
+  | "success"
+  | "warning"
+  | "info"
+  | "violet"
+  | "pink"
+  | "orange"
+  | "outline"
+
+function getStatusVariant(status: EventRow["status"]): BadgeVariant {
+  switch (status) {
+    case "Live":
+      return "success"
+    case "Published":
+      return "info"
+    case "Draft":
+      return "outline"
+  }
+}
+
+function getCategoryVariant(category: string): BadgeVariant {
+  const variants: BadgeVariant[] = [
+    "violet",
+    "pink",
+    "orange",
+    "info",
+    "success",
+    "warning",
+  ]
+  const hash = category
+    .split("")
+    .reduce((acc, ch) => acc + ch.charCodeAt(0), 0)
+  return variants[hash % variants.length]
+}
+
+const eventColumns: Column<EventRow>[] = [
+  {
+    header: "Event",
+    accessorKey: "name",
+    cell: (row: EventRow) => (
+      <div className="flex items-center gap-3">
+        <div className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-muted">
+          <img
+            src={row.bannerUrl}
+            alt={row.name}
+            className="h-full w-full object-cover"
+          />
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold">{row.name}</p>
+          <Badge variant={getCategoryVariant(row.category)} className="mt-1">
+            {row.category}
+          </Badge>
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+            {row.venue} - {row.city}
+          </p>
+        </div>
+      </div>
+    ),
+    sortable: true,
+  },
+  {
+    header: "Date & venue",
+    accessorKey: "startAt",
+    cell: (row: EventRow) => (
+      <div>
+        <p className="text-sm font-medium">{formatDateTime(row.startAt)}</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {row.venue} - {row.city}
+        </p>
+      </div>
+    ),
+  },
+  {
+    header: "Tickets",
+    cell: (row: EventRow) => {
+      const pct = calculatePercentage(row.totalSold, row.totalCapacity)
+      return (
+        <div className="flex items-center gap-3">
+          <div className="h-2 w-24 overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-lime-500 transition-all"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <span className="whitespace-nowrap text-xs text-muted-foreground">
+            {formatNumber(row.totalSold)} / {formatNumber(row.totalCapacity)} sold
+          </span>
+        </div>
+      )
+    },
+  },
+  {
+    header: "Revenue",
+    cell: (row: EventRow) => (
+      <div>
+        <p className="text-sm font-semibold">{formatCurrency(row.totalRevenue)}</p>
+        <p className="text-xs text-muted-foreground">
+          from {formatNumber(row.totalSold)} sales
+        </p>
+      </div>
+    ),
+  },
+  {
+    header: "Status",
+    accessorKey: "status",
+    cell: (row: EventRow) => (
+      <Badge variant={getStatusVariant(row.status)}>
+        {row.status}
+      </Badge>
+    ),
+  },
+]
+
+function TicketsTable() {
+  const [activeTab, setActiveTab] = useState<StatusFilter>("all")
+  const [search, setSearch] = useState("")
+
+  const filteredEvents = useMemo(() => {
+    let events = eventsForTable
+    if (activeTab !== "all") {
+      events = events.filter((e) => e.status === activeTab)
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      events = events.filter(
+        (e) =>
+          e.name.toLowerCase().includes(q) ||
+          e.category.toLowerCase().includes(q) ||
+          e.venue.toLowerCase().includes(q) ||
+          e.city.toLowerCase().includes(q)
+      )
+    }
+    return events
+  }, [activeTab, search])
+
+  const tabCounts = useMemo(() => {
+    const base = search.trim()
+      ? eventsForTable.filter((e) => {
+          const q = search.toLowerCase()
+          return (
+            e.name.toLowerCase().includes(q) ||
+            e.category.toLowerCase().includes(q) ||
+            e.venue.toLowerCase().includes(q) ||
+            e.city.toLowerCase().includes(q)
+          )
+        })
+      : eventsForTable
+    return {
+      all: base.length,
+      Published: base.filter((e) => e.status === "Published").length,
+      Draft: base.filter((e) => e.status === "Draft").length,
+      Live: base.filter((e) => e.status === "Live").length,
+    }
+  }, [search])
+
+  return (
+    <motion.div {...containerVariants(0.3)}>
+      {/* Filter tabs + search */}
+      <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              ["all", "All Events"],
+              ["Published", "Published"],
+              ["Draft", "Draft"],
+              ["Live", "Live"],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key)}
+              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                activeTab === key
+                  ? "bg-lime-500 text-white"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              {label} ({tabCounts[key]})
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <HugeiconsIcon
+              icon={Search01Icon}
+              strokeWidth={2}
+              className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              placeholder="Search events..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-9 w-48 pl-9 lg:w-64"
+            />
+          </div>
+          <Button variant="outline" size="sm" className="gap-2">
+            <HugeiconsIcon icon={SlidersHorizontalIcon} strokeWidth={2} className="size-4" />
+            Filters
+          </Button>
+        </div>
+      </div>
+
+      <DataTable
+        columns={eventColumns}
+        data={filteredEvents}
+        keyExtractor={(row: EventRow) => row.id}
+        emptyMessage="No events found."
+        onRowClick={(row: EventRow) => {
+          window.location.href = `/organizer/events/${row.id}`
+        }}
+        renderActions={(row: EventRow) => (
+          <Link href={`/organizer/events/${row.id}`}>
+            <div className="flex size-8 items-center justify-center rounded-full bg-lime-500/10 text-lime-500 transition-colors hover:bg-lime-500/20">
+              <HugeiconsIcon
+                icon={ChevronRightIcon}
+                strokeWidth={2.5}
+                className="size-4"
+              />
+            </div>
+          </Link>
+        )}
+      />
+    </motion.div>
   )
 }
 
@@ -214,92 +444,7 @@ export default function OrganizerDashboard() {
         {/* ─── TICKETS ────────────────────────────────────────────────────────── */}
         <TabsContent value="tickets" className="flex flex-col gap-4">
           <StatsGrid />
-
-          {/* Ticket breakdown */}
-          <motion.div {...containerVariants(0.3)}>
-            <div className="rounded-xl border border-border/50 bg-card p-6 shadow-xs">
-              <div className="mb-4">
-                <h3 className="font-semibold">Tickets Per Event</h3>
-                <p className="text-xs text-muted-foreground">Sold vs capacity by event</p>
-              </div>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={ticketsPerEvent} margin={{ left: -12, right: 12 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis
-                    dataKey="name"
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                  />
-                  <YAxis
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--popover))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "var(--radius)",
-                    }}
-                  />
-                  <Bar
-                    dataKey="sold"
-                    name="Sold"
-                    fill="var(--chart-2)"
-                    radius={[4, 4, 0, 0]}
-                    barSize={32}
-                  />
-                  <Bar
-                    dataKey="capacity"
-                    name="Capacity"
-                    fill="var(--chart-3)"
-                    radius={[4, 4, 0, 0]}
-                    barSize={32}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </motion.div>
-
-          {/* Ticket type breakdown */}
-          <motion.div {...containerVariants(0.4)}>
-            <div className="rounded-xl border border-border/50 bg-card p-6 shadow-xs">
-              <div className="mb-4">
-                <h3 className="font-semibold">Ticket Type Breakdown</h3>
-                <p className="text-xs text-muted-foreground">Sales by tier across all events</p>
-              </div>
-              <div className="space-y-3">
-                {ticketTypeData.map((tier, i) => (
-                  <div key={i} className="flex items-center gap-4">
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{tier.name}</p>
-                      <div className="mt-1 flex items-center gap-2">
-                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all"
-                            style={{ width: `${(tier.sold / tier.total) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <p className="text-sm font-medium">
-                        {formatNumber(tier.sold)} / {formatNumber(tier.total)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatCurrencyShort(tier.revenue)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
+          <TicketsTable />
         </TabsContent>
 
         {/* ─── SALES ──────────────────────────────────────────────────────────── */}
