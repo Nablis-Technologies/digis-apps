@@ -11,9 +11,18 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Add01Icon, Search01Icon } from "@hugeicons/core-free-icons"
+import {
+  Add01Icon,
+  Search01Icon,
+  Calendar03Icon,
+  TicketIcon,
+  Wallet01Icon,
+  UserGroupIcon,
+} from "@hugeicons/core-free-icons"
+import { StatsGrid } from "@/components/dashboard/stats-grid"
 import { CreateEventDialog } from "../../../components/events/create-event-dialog"
 import { sampleEvents } from "@/lib/sample-data"
+import { formatNumber, formatCurrencyShort } from "@/lib/utils"
 import { EventCard } from "../../../components/events/event-card"
 import { EventListItem } from "../../../components/events/event-list-item"
 import { ViewToggle, type ViewMode } from "../../../components/events/view-toggle"
@@ -34,6 +43,63 @@ export default function EventsPage() {
 
   const hasFilters = searchQuery !== "" || statusFilter !== "all"
 
+  // Analytics across all events
+  const ticketsSold = sampleEvents.reduce(
+    (sum, event) => sum + event.tiers.reduce((s, tier) => s + tier.sold, 0),
+    0
+  )
+  const totalCapacity = sampleEvents.reduce(
+    (sum, event) => sum + event.tiers.reduce((s, tier) => s + tier.total, 0),
+    0
+  )
+  const totalRevenue = sampleEvents.reduce(
+    (sum, event) =>
+      sum + event.tiers.reduce((s, tier) => s + tier.sold * tier.price, 0),
+    0
+  )
+
+  const statsCards = [
+    {
+      key: "total-events",
+      title: "Total Events",
+      value: formatNumber(sampleEvents.length),
+      icon: Calendar03Icon,
+      trend: { value: "+12%", positive: true },
+      sparklineData: [16, 18, 19, 21, 22, 23, sampleEvents.length],
+      sparklineColor: "var(--chart-1)",
+    },
+    {
+      key: "tickets-sold",
+      title: "Tickets Sold",
+      value: formatNumber(ticketsSold),
+      icon: TicketIcon,
+      trend: { value: "+18%", positive: true },
+      sparklineData: [1800, 2200, 2600, 3000, 3400, 3600, ticketsSold],
+      sparklineColor: "var(--chart-2)",
+    },
+    {
+      key: "total-revenue",
+      title: "Total Revenue",
+      value: formatCurrencyShort(totalRevenue),
+      icon: Wallet01Icon,
+      trend: { value: "+25%", positive: true },
+      sparklineData: [2400, 2800, 3200, 3600, 4100, 4400, totalRevenue / 1000],
+      sparklineColor: "var(--chart-3)",
+    },
+    {
+      key: "total-capacity",
+      title: "Total Capacity",
+      value: formatNumber(totalCapacity),
+      icon: UserGroupIcon,
+      trend: {
+        value: `${Math.round((ticketsSold / totalCapacity) * 100)}% sold`,
+        positive: true,
+      },
+      sparklineData: [2200, 2400, 2600, 2700, 2800, 2900, totalCapacity],
+      sparklineColor: "var(--chart-4)",
+    },
+  ]
+
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
@@ -50,6 +116,9 @@ export default function EventsPage() {
         </Button>
         <CreateEventDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
       </div>
+
+      {/* Top Analytics */}
+      <StatsGrid cards={statsCards} />
 
       {/* Filters and Search */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">

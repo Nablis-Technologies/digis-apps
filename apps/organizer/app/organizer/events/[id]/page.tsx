@@ -12,7 +12,11 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import {
   TicketIcon,
   Edit01Icon,
+  Wallet01Icon,
+  UserGroupIcon,
+  Ticket01Icon,
 } from "@hugeicons/core-free-icons"
+import { StatsGrid } from "@/components/dashboard/stats-grid"
 import { sampleEvents } from "@/lib/sample-data"
 import { formatDate, formatCurrency, formatNumber, calculatePercentage } from "@/lib/utils"
 import { QRCodeGenerator } from "@/organizer-components/events/qr-code-generator"
@@ -38,6 +42,45 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     (sum, tier) => sum + tier.sold * tier.price,
     0
   )
+  const remainingTickets = totalTickets - soldTickets
+  const sellThrough = calculatePercentage(soldTickets, totalTickets)
+
+  const statsCards = [
+    {
+      key: "tickets-sold",
+      title: "Tickets Sold",
+      value: formatNumber(soldTickets),
+      icon: TicketIcon,
+      trend: { value: `${sellThrough}%`, positive: true },
+      sparklineData: [40, 80, 120, 160, 200, 240, soldTickets],
+      sparklineColor: "var(--chart-1)",
+    },
+    {
+      key: "revenue",
+      title: "Revenue",
+      value: formatCurrency(totalRevenue),
+      icon: Wallet01Icon,
+      trend: { value: "+18%", positive: true },
+      sparklineData: [120, 160, 200, 240, 280, 320, totalRevenue / 1000],
+      sparklineColor: "var(--chart-2)",
+    },
+    {
+      key: "total-capacity",
+      title: "Total Capacity",
+      value: formatNumber(totalTickets),
+      icon: UserGroupIcon,
+      sparklineData: [2200, 2400, 2600, 2700, 2800, 2900, totalTickets],
+      sparklineColor: "var(--chart-3)",
+    },
+    {
+      key: "remaining",
+      title: "Tickets Remaining",
+      value: formatNumber(remainingTickets),
+      icon: Ticket01Icon,
+      sparklineData: [360, 320, 280, 240, 200, 160, remainingTickets],
+      sparklineColor: "var(--chart-4)",
+    },
+  ]
 
   const getStatusColor = (status: typeof event.status) => {
     switch (status) {
@@ -87,6 +130,9 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           </Button>
         </div>
       </div>
+
+      {/* Top Analytics */}
+      <StatsGrid cards={statsCards} />
 
       {/* Main Content Grid */}
       <div className="grid gap-6 lg:grid-cols-2">
