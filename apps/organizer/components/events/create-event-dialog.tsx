@@ -12,7 +12,7 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-6xl"
+        className="sm:max-w-4xl"
         showCloseButton
       >
         <div className="pr-1">

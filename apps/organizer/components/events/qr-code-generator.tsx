@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -64,13 +63,13 @@ export function QRCodeGenerator({ eventId, eventName }: QRCodeGeneratorProps) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Smart link & QR</CardTitle>
+    <div className="space-y-4">
+      <div>
+        <h3 className="font-heading text-base font-medium">Smart link &amp; QR</h3>
         <p className="text-sm text-muted-foreground">Share your public event link anywhere.</p>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Public Event Link */}
+      </div>
+
+      {/* Public Event Link */}
         <div className="space-y-2">
           <Label className="text-sm font-medium">Public event link</Label>
           <div className="flex gap-2">
@@ -135,7 +134,6 @@ export function QRCodeGenerator({ eventId, eventName }: QRCodeGeneratorProps) {
           <p className="text-xs text-muted-foreground">1,203 link opens this week</p>
           <p className="text-xs text-muted-foreground">Average 18% conversion to ticket purchase</p>
         </div>
-      </CardContent>
-    </Card>
+    </div>
   )
 }

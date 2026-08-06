@@ -1,26 +1,41 @@
 "use client"
 
+import { use, useState } from "react"
 import { motion } from "framer-motion"
-import { use } from "react"
 import { notFound } from "next/navigation"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import { DataTable, type Column } from "@/components/ui/data-table"
 import { HugeiconsIcon } from "@hugeicons/react"
+import type { HugeiconsIconProps } from "@hugeicons/react"
 import {
   TicketIcon,
   Edit01Icon,
   Wallet01Icon,
   UserGroupIcon,
   Ticket01Icon,
+  Share01Icon,
+  ChartBarLineIcon,
+  BarChartIcon,
+  GlobeIcon,
+  Store01Icon,
 } from "@hugeicons/core-free-icons"
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts"
 import { StatsGrid } from "@/components/dashboard/stats-grid"
 import { sampleEvents } from "@/lib/sample-data"
-import { formatDate, formatCurrency, formatNumber, calculatePercentage } from "@/lib/utils"
-import { QRCodeGenerator } from "@/organizer-components/events/qr-code-generator"
-import { ShareCardGenerator } from "@/organizer-components/events/share-card-generator"
+import { formatDate, formatCurrency, formatCurrencyShort, formatNumber, calculatePercentage } from "@/lib/utils"
+import { ShareEventDialog } from "@/organizer-components/events/share-event-dialog"
 
 interface EventDetailPageProps {
   params: Promise<{
@@ -28,8 +43,83 @@ interface EventDetailPageProps {
   }>
 }
 
+// ─── Analytics data config ──────────────────────────────────────────────────
+
+const SALE_CHANNELS: {
+  name: string
+  icon: HugeiconsIconProps["icon"]
+  weight: number
+}[] = [
+  { name: "Online", icon: GlobeIcon, weight: 0.62 },
+  { name: "At Gate", icon: Ticket01Icon, weight: 0.23 },
+  { name: "Resellers", icon: Store01Icon, weight: 0.15 },
+]
+
+/** Percentage of total sales/revenue per day (last 7 days). */
+const SALES_WEIGHTS = [6, 10, 14, 18, 22, 16, 14]
+
+type ChannelRow = {
+  name: string
+  icon: HugeiconsIconProps["icon"]
+  tickets: number
+  share: number
+  revenue: number
+}
+
+// ─── Sales & Revenue Chart Tooltip ───────────────────────────────────────────
+
+function SalesTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean
+  payload?: Array<{
+    dataKey?: string
+    value?: number
+    color?: string
+  }>
+  label?: string
+}) {
+  if (!active || !payload?.length) return null
+
+  const items = payload.filter(
+    (item) => item.dataKey === "sales" || item.dataKey === "revenue"
+  )
+
+  return (
+    <div className="grid min-w-32 items-start gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl">
+      <div className="font-medium">{label}</div>
+      <div className="grid gap-1.5">
+        {items.map((item) => {
+          const isSales = item.dataKey === "sales"
+          return (
+            <div key={item.dataKey} className="flex w-full items-center gap-2">
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
+                style={{ backgroundColor: item.color }}
+              />
+              <div className="flex flex-1 items-center justify-between gap-4">
+                <span className="text-muted-foreground">
+                  {isSales ? "Tickets sold" : "Revenue"}
+                </span>
+                <span className="font-mono font-medium text-foreground tabular-nums">
+                  {isSales
+                    ? formatNumber(Number(item.value))
+                    : formatCurrency(Number(item.value))}
+                </span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function EventDetailPage({ params }: EventDetailPageProps) {
   const { id } = use(params)
+  const [shareDialogOpen, setShareDialogOpen] = useState(false)
   const event = sampleEvents.find((e) => e.id === id)
 
   if (!event) {
@@ -82,6 +172,65 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     },
   ]
 
+  // Sales & revenue overview (7 days leading up to the event start)
+  const salesOverviewData = SALES_WEIGHTS.map((weight, index) => {
+    const date = new Date(event.startAt)
+    date.setDate(date.getDate() - (SALES_WEIGHTS.length - 1 - index))
+    return {
+      date: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      sales: Math.round((soldTickets * weight) / 100),
+      revenue: Math.round((totalRevenue * weight) / 100),
+    }
+  })
+
+  // Sale channel breakdown
+  const saleChannelRows: ChannelRow[] = SALE_CHANNELS.map((channel) => ({
+    name: channel.name,
+    icon: channel.icon,
+    tickets: Math.round(soldTickets * channel.weight),
+    share: Math.round(channel.weight * 100),
+    revenue: Math.round(totalRevenue * channel.weight),
+  }))
+
+  const channelColumns: Column<ChannelRow>[] = [
+    {
+      header: "Channel",
+      accessorKey: "name",
+      cell: (row) => (
+        <div className="flex items-center gap-3">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-lime-500/10 text-lime-500">
+            <HugeiconsIcon icon={row.icon} strokeWidth={2} className="size-4" />
+          </div>
+          <span className="font-medium">{row.name}</span>
+        </div>
+      ),
+    },
+    {
+      header: "Tickets sold",
+      cell: (row) => <span className="font-medium">{formatNumber(row.tickets)}</span>,
+    },
+    {
+      header: "Share",
+      cell: (row) => (
+        <div className="flex items-center gap-3">
+          <div className="h-2 w-28 overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-lime-500"
+              style={{ width: `${row.share}%` }}
+            />
+          </div>
+          <span className="whitespace-nowrap text-xs text-muted-foreground">
+            {row.share}%
+          </span>
+        </div>
+      ),
+    },
+    {
+      header: "Revenue",
+      cell: (row) => <p className="font-semibold">{formatCurrency(row.revenue)}</p>,
+    },
+  ]
+
   const getStatusColor = (status: typeof event.status) => {
     switch (status) {
       case "Live":
@@ -124,6 +273,10 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             <HugeiconsIcon icon={TicketIcon} strokeWidth={2} className="size-4" />
             Gift tickets
           </Button>
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => setShareDialogOpen(true)}>
+            <HugeiconsIcon icon={Share01Icon} strokeWidth={2} className="size-4" />
+            Share
+          </Button>
           <Button size="sm" className="gap-2">
             <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} className="size-4" />
             View event page
@@ -134,31 +287,114 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       {/* Top Analytics */}
       <StatsGrid cards={statsCards} />
 
-      {/* Main Content Grid */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Left Column - Share Card Generator */}
+      {/* Analytics & Share Tools */}
+      <div className="grid gap-6">
+        {/* Sales & Revenue Overview - full row */}
         <motion.div
-          key={event.id} // Force re-mount on event change
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.4 }}
         >
-          <ShareCardGenerator event={event} />
-        </motion.div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <HugeiconsIcon icon={ChartBarLineIcon} strokeWidth={2} className="size-5" />
+                Sales & revenue overview
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Ticket sales and revenue over the last 7 days
+              </p>
+            </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={280}>
+                  <AreaChart data={salesOverviewData} margin={{ left: -12, right: 12 }}>
+                    <defs>
+                      <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="oklch(0.623 0.214 259.815)" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="oklch(0.623 0.214 259.815)" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="oklch(0.769 0.188 70.08)" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="oklch(0.769 0.188 70.08)" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="hsl(var(--border))"
+                      vertical={false}
+                    />
+                    <XAxis
+                      dataKey="date"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                    />
+                    <YAxis
+                      yAxisId="sales"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                      tickFormatter={(value) => formatNumber(value)}
+                    />
+                    <YAxis
+                      yAxisId="revenue"
+                      orientation="right"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                      tickFormatter={(value) => formatCurrencyShort(value)}
+                    />
+                    <Tooltip cursor={false} content={<SalesTooltip />} />
+                    <Area
+                      yAxisId="sales"
+                      type="monotone"
+                      dataKey="sales"
+                      name="Tickets sold"
+                      stroke="oklch(0.623 0.214 259.815)"
+                      strokeWidth={2}
+                      fillOpacity={1}
+                      fill="url(#salesGradient)"
+                    />
+                    <Area
+                      yAxisId="revenue"
+                      type="monotone"
+                      dataKey="revenue"
+                      name="Revenue"
+                      stroke="oklch(0.769 0.188 70.08)"
+                      strokeWidth={2}
+                      fillOpacity={1}
+                      fill="url(#revenueGradient)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
 
-        {/* Right Column - QR Code & Ticket Tiers */}
-        <div className="space-y-6">
-          {/* Smart Link & QR */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.4 }}
-          >
-            <QRCodeGenerator eventId={event.id} eventName={event.name} />
+                {/* Legend */}
+                <div className="flex items-center justify-center gap-4 pt-3">
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-[2px]"
+                      style={{ backgroundColor: "oklch(0.623 0.214 259.815)" }}
+                    />
+                    <span className="text-xs">Tickets sold</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-[2px]"
+                      style={{ backgroundColor: "oklch(0.769 0.188 70.08)" }}
+                    />
+                    <span className="text-xs">Revenue</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </motion.div>
 
-          {/* Ticket Tiers */}
-          <motion.div
+          {/* Right Column - Inventory & Sales */}
+          <div className="space-y-6">
+          {/* Ticket Tiers */}          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.4 }}
@@ -195,7 +431,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                         </div>
                         <div className="h-2 overflow-hidden rounded-full bg-muted">
                           <div
-                            className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all"
+                            className="h-full rounded-full bg-lime-500"
                             style={{ width: `${tierPercentage}%` }}
                           />
                         </div>
@@ -207,8 +443,42 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               </CardContent>
             </Card>
           </motion.div>
+
+          {/* Sale Channel */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.4 }}
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <HugeiconsIcon icon={BarChartIcon} strokeWidth={2} className="size-5" />
+                  Sale channel
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Where your tickets are being sold.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <DataTable
+                  columns={channelColumns}
+                  data={saleChannelRows}
+                  keyExtractor={(row) => row.name}
+                  emptyMessage="No sales channels found."
+                />
+              </CardContent>
+            </Card>
+          </motion.div>
         </div>
       </div>
+
+      {/* Social Share Card Dialog */}
+      <ShareEventDialog
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        event={event}
+      />
     </motion.div>
   )
 }

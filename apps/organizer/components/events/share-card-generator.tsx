@@ -3,12 +3,10 @@
 import { useEffect, useRef, useState } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Download01Icon,
-  Image02Icon,
   Copy01Icon,
   Share01Icon,
 } from "@hugeicons/core-free-icons"
@@ -146,22 +144,7 @@ export function ShareCardGenerator({ event }: ShareCardGeneratorProps) {
   const previewMaxWidth = orientation === "landscape" ? 720 : 420
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <HugeiconsIcon icon={Image02Icon} strokeWidth={2} className="size-5" />
-              Social share card
-            </CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Design and download a shareable image for your event
-            </p>
-          </div>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-6">
+    <div className="space-y-6">
         {/* Orientation Toggle */}
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium">Orientation</span>
@@ -290,7 +273,6 @@ export function ShareCardGenerator({ event }: ShareCardGeneratorProps) {
           Perfect for Instagram, Facebook, Twitter, and LinkedIn. Choose your preferred color
           from the extracted palette.
         </p>
-      </CardContent>
-    </Card>
+    </div>
   )
 }

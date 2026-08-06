@@ -39,6 +39,7 @@ import { formatCurrency, formatCurrencyShort, formatNumber, formatDateTime, calc
 import {
   Area,
   AreaChart,
+  CartesianGrid,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -459,32 +460,41 @@ export default function OrganizerDashboard() {
                 <p className="text-xs text-muted-foreground">Monthly revenue trends</p>
               </div>
               <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={samplePerformanceData}>
+                <AreaChart data={samplePerformanceData} margin={{ left: -12, right: 12 }}>
                   <defs>
                     <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0} />
+                      <stop offset="5%" stopColor="oklch(0.623 0.214 259.815)" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="oklch(0.623 0.214 259.815)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="hsl(var(--border))"
+                    vertical={false}
+                  />
                   <XAxis
                     dataKey="date"
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
                     tickLine={false}
                     axisLine={false}
+                    tickMargin={8}
+                    tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
                   />
                   <YAxis
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
                     tickLine={false}
                     axisLine={false}
+                    tickMargin={8}
+                    tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
                     tickFormatter={(value) => `${value / 1000}K`}
                   />
                   <Tooltip
+                    cursor={false}
                     contentStyle={{
-                      backgroundColor: "hsl(var(--popover))",
+                      backgroundColor: "hsl(var(--background))",
                       border: "1px solid hsl(var(--border))",
                       borderRadius: "var(--radius)",
+                      fontSize: "12px",
+                      boxShadow:
+                        "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
                     }}
                     formatter={(value: number) => [
                       formatCurrencyShort(value),
@@ -494,7 +504,7 @@ export default function OrganizerDashboard() {
                   <Area
                     type="monotone"
                     dataKey="value"
-                    stroke="hsl(var(--chart-1))"
+                    stroke="oklch(0.623 0.214 259.815)"
                     strokeWidth={2}
                     fillOpacity={1}
                     fill="url(#colorValue)"
