@@ -398,10 +398,6 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
               </div>
             </div>
 
-            <Button className="w-full h-11 font-semibold" onClick={() => { setError(""); setStep(1) }}>
-              Next: Event Details
-              <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="ml-2 size-4" />
-            </Button>
           </motion.div>
         )}
 
@@ -523,28 +519,6 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
               )}
             </div>
 
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1 h-11" onClick={() => setStep(0)}>
-                <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4 mr-2" /> Back
-              </Button>
-              <Button
-                className="flex-1 h-11 font-semibold"
-                onClick={() => {
-                  const errors: { title?: string; date?: string; location?: string } = {}
-                  if (!title) errors.title = "Event name is required"
-                  if (!date) errors.date = "Date is required"
-                  if (!location) errors.location = "Location is required"
-                  setFieldErrors(errors)
-                  if (Object.keys(errors).length > 0) return
-                  setError("")
-                  setStep(2)
-                }}
-              >
-                Next: Entry Settings
-                <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="ml-2 size-4" />
-              </Button>
-            </div>
-            {error && <p className="text-destructive text-sm">{error}</p>}
           </motion.div>
         )}
 
@@ -1215,17 +1189,6 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
               </div>
             )}
 
-            {error && <p className="text-destructive text-sm">{error}</p>}
-
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1 h-11" onClick={() => setStep(1)}>
-                <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4 mr-2" /> Back
-              </Button>
-              <Button className="flex-1 h-11 font-semibold" onClick={() => { setError(""); setStep(3) }}>
-                Recurring
-                <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="ml-2 size-4" />
-              </Button>
-            </div>
           </motion.div>
         )}
 
@@ -1441,17 +1404,6 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
               </AnimatePresence>
             </div>
 
-            {error && <p className="text-destructive text-sm">{error}</p>}
-
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1 h-11" onClick={() => { setError(""); setStep(2) }}>
-                <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4 mr-2" /> Back
-              </Button>
-              <Button className="flex-1 h-11 font-semibold" onClick={() => { setError(""); setStep(4) }}>
-                Next: Review
-                <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="ml-2 size-4" />
-              </Button>
-            </div>
           </motion.div>
         )}
 
@@ -1683,43 +1635,102 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
               )}
             </div>
 
-            {error && <p className="text-destructive text-sm">{error}</p>}
+          </motion.div>
+        )}
+      </AnimatePresence>
+      </div>
 
-            <div className="space-y-3">
-              <Button
-                className="w-full h-12 font-bold text-base"
-                onClick={() => handleCreate(true)}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <HugeiconsIcon icon={Loading01Icon} strokeWidth={2} className="size-4 animate-spin" />
-                ) : (
-                  <>
-                    <HugeiconsIcon icon={Rocket01Icon} strokeWidth={2} className="size-4 mr-2" />
-                    {entryType === "ticketed" ? "Publish — Start Selling Now"
-                      : entryType === "rsvp" ? "Publish — Open RSVP"
-                      : entryType === "free" ? "Publish Event"
-                      : "Publish — Share Invite Link"}
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full h-11 border-border/50"
-                onClick={() => handleCreate(false)}
-                disabled={isLoading}
-              >
-                Save as Draft
-              </Button>
-            </div>
+      <div className="sticky bottom-0 z-10 bg-popover pt-3 border-t border-border/60">
+        {error && <p className="text-destructive text-sm mb-2">{error}</p>}
 
+        {step === 0 && (
+          <Button className="w-full h-11 font-semibold" onClick={() => { setError(""); setStep(1) }}>
+            Next: Event Details
+            <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="ml-2 size-4" />
+          </Button>
+        )}
+
+        {step === 1 && (
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1 h-11" onClick={() => setStep(0)}>
+              <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4 mr-2" /> Back
+            </Button>
+            <Button
+              className="flex-1 h-11 font-semibold"
+              onClick={() => {
+                const errors: { title?: string; date?: string; location?: string } = {}
+                if (!title) errors.title = "Event name is required"
+                if (!date) errors.date = "Date is required"
+                if (!location) errors.location = "Location is required"
+                setFieldErrors(errors)
+                if (Object.keys(errors).length > 0) return
+                setError("")
+                setStep(2)
+              }}
+            >
+              Next: Entry Settings
+              <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="ml-2 size-4" />
+            </Button>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1 h-11" onClick={() => setStep(1)}>
+              <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4 mr-2" /> Back
+            </Button>
+            <Button className="flex-1 h-11 font-semibold" onClick={() => { setError(""); setStep(3) }}>
+              Recurring
+              <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="ml-2 size-4" />
+            </Button>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1 h-11" onClick={() => { setError(""); setStep(2) }}>
+              <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4 mr-2" /> Back
+            </Button>
+            <Button className="flex-1 h-11 font-semibold" onClick={() => { setError(""); setStep(4) }}>
+              Next: Review
+              <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="ml-2 size-4" />
+            </Button>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div className="space-y-3">
+            <Button
+              className="w-full h-12 font-bold text-base"
+              onClick={() => handleCreate(true)}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <HugeiconsIcon icon={Loading01Icon} strokeWidth={2} className="size-4 animate-spin" />
+              ) : (
+                <>
+                  <HugeiconsIcon icon={Rocket01Icon} strokeWidth={2} className="size-4 mr-2" />
+                  {entryType === "ticketed" ? "Publish — Start Selling Now"
+                    : entryType === "rsvp" ? "Publish — Open RSVP"
+                    : entryType === "free" ? "Publish Event"
+                    : "Publish — Share Invite Link"}
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full h-11 border-border/50"
+              onClick={() => handleCreate(false)}
+              disabled={isLoading}
+            >
+              Save as Draft
+            </Button>
             <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={() => setStep(3)}>
               <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4 mr-1.5" />
               Back
             </Button>
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
       </div>
     </div>
   )
