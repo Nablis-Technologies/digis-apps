@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
 import {
   Select,
   SelectContent,
@@ -10,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { DataTable, type Column } from "@/components/ui/data-table"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Add01Icon,
@@ -18,15 +20,70 @@ import {
   TicketIcon,
   Wallet01Icon,
   UserGroupIcon,
+  ChevronRightIcon,
 } from "@hugeicons/core-free-icons"
 import { StatsGrid } from "@/components/dashboard/stats-grid"
 import { CreateEventDialog } from "../../../components/events/create-event-dialog"
 import { sampleEvents } from "@/lib/sample-data"
-import { formatNumber, formatCurrencyShort } from "@/lib/utils"
+import { formatNumber, formatCurrencyShort, formatCurrency, formatDateTime, calculatePercentage } from "@/lib/utils"
 import { EventCard } from "../../../components/events/event-card"
 import { EventListItem } from "../../../components/events/event-list-item"
 import { ViewToggle, type ViewMode } from "../../../components/events/view-toggle"
 import { EmptyState } from "../../../components/events/empty-state"
+import Link from "next/link"
+
+// Event row type for DataTable
+type EventRow = {
+  id: string
+  name: string
+  bannerUrl: string
+  category: string
+  venue: string
+  city: string
+  startAt: string
+  status: "Live" | "Published" | "Draft"
+  totalSold: number
+  totalCapacity: number
+  totalRevenue: number
+}
+
+type BadgeVariant =
+  | "default"
+  | "secondary"
+  | "destructive"
+  | "success"
+  | "warning"
+  | "info"
+  | "violet"
+  | "pink"
+  | "orange"
+  | "outline"
+
+function getStatusVariant(status: EventRow["status"]): BadgeVariant {
+  switch (status) {
+    case "Live":
+      return "success"
+    case "Published":
+      return "info"
+    case "Draft":
+      return "outline"
+  }
+}
+
+function getCategoryVariant(category: string): BadgeVariant {
+  const variants: BadgeVariant[] = [
+    "violet",
+    "pink",
+    "orange",
+    "info",
+    "success",
+    "warning",
+  ]
+  const hash = category
+    .split("")
+    .reduce((acc, ch) => acc + ch.charCodeAt(0), 0)
+  return variants[hash % variants.length]
+}
 
 export default function EventsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("grid")
@@ -34,12 +91,47 @@ export default function EventsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
 
+  // Prepare event data for table
+  const eventsForTable: EventRow[] = useMemo(
+    () =>
+      sampleEvents.map((event) => {
+        const totalSold = event.tiers.reduce((s, t) => s + t.sold, 0)
+        const totalCapacity = event.tiers.reduce((s, t) => s + t.total, 0)
+        const totalRevenue = event.tiers.reduce((s, t) => s + t.sold * t.price, 0)
+        return {
+          id: event.id,
+          name: event.name,
+          bannerUrl: event.bannerUrl,
+          category: event.category,
+          venue: event.venue,
+          city: event.city,
+          startAt: event.startAt,
+          status: event.status,
+          totalSold,
+          totalCapacity,
+          totalRevenue,
+        }
+      }),
+    []
+  )
+
   // Filter events based on search and status
-  const filteredEvents = sampleEvents.filter((event) => {
-    const matchesSearch = event.name.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesStatus = statusFilter === "all" || event.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
+  const filteredEvents = useMemo(() => {
+    return sampleEvents.filter((event) => {
+      const matchesSearch = event.name.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesStatus = statusFilter === "all" || event.status === statusFilter
+      return matchesSearch && matchesStatus
+    })
+  }, [searchQuery, statusFilter])
+
+  // Filter table events
+  const filteredTableEvents = useMemo(() => {
+    return eventsForTable.filter((event) => {
+      const matchesSearch = event.name.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesStatus = statusFilter === "all" || event.status === statusFilter
+      return matchesSearch && matchesStatus
+    })
+  }, [eventsForTable, searchQuery, statusFilter])
 
   const hasFilters = searchQuery !== "" || statusFilter !== "all"
 
@@ -100,6 +192,86 @@ export default function EventsPage() {
     },
   ]
 
+  // Table columns (same as dashboard)
+  const eventColumns: Column<EventRow>[] = [
+    {
+      header: "Event",
+      accessorKey: "name",
+      cell: (row: EventRow) => (
+        <div className="flex items-center gap-3">
+          <div className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-muted">
+            <img
+              src={row.bannerUrl}
+              alt={row.name}
+              className="h-full w-full object-cover"
+            />
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold">{row.name}</p>
+            <Badge variant={getCategoryVariant(row.category)} className="mt-1">
+              {row.category}
+            </Badge>
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+              {row.venue} - {row.city}
+            </p>
+          </div>
+        </div>
+      ),
+      sortable: true,
+    },
+    {
+      header: "Date & venue",
+      accessorKey: "startAt",
+      cell: (row: EventRow) => (
+        <div>
+          <p className="text-sm font-medium">{formatDateTime(row.startAt)}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {row.venue} - {row.city}
+          </p>
+        </div>
+      ),
+    },
+    {
+      header: "Tickets",
+      cell: (row: EventRow) => {
+        const pct = calculatePercentage(row.totalSold, row.totalCapacity)
+        return (
+          <div className="flex items-center gap-3">
+            <div className="h-2 w-24 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-lime-500 transition-all"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <span className="whitespace-nowrap text-xs text-muted-foreground">
+              {formatNumber(row.totalSold)} / {formatNumber(row.totalCapacity)} sold
+            </span>
+          </div>
+        )
+      },
+    },
+    {
+      header: "Revenue",
+      cell: (row: EventRow) => (
+        <div>
+          <p className="text-sm font-semibold">{formatCurrency(row.totalRevenue)}</p>
+          <p className="text-xs text-muted-foreground">
+            from {formatNumber(row.totalSold)} sales
+          </p>
+        </div>
+      ),
+    },
+    {
+      header: "Status",
+      accessorKey: "status",
+      cell: (row: EventRow) => (
+        <Badge variant={getStatusVariant(row.status)}>
+          {row.status}
+        </Badge>
+      ),
+    },
+  ]
+
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
@@ -154,18 +326,49 @@ export default function EventsPage() {
       {/* Events Display */}
       {filteredEvents.length === 0 ? (
         <EmptyState hasFilters={hasFilters} />
-      ) : viewMode === "grid" ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredEvents.map((event, index) => (
-            <EventCard key={event.id} event={event} index={index} />
-          ))}
-        </div>
       ) : (
-        <div className="space-y-4">
-          {filteredEvents.map((event, index) => (
-            <EventListItem key={event.id} event={event} index={index} />
-          ))}
-        </div>
+        <>
+          {/* Mobile: List View */}
+          <div className="block md:hidden">
+            {viewMode === "grid" ? (
+              <div className="grid gap-6 sm:grid-cols-2">
+                {filteredEvents.map((event, index) => (
+                  <EventCard key={event.id} event={event} index={index} />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredEvents.map((event, index) => (
+                  <EventListItem key={event.id} event={event} index={index} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Desktop: Table View */}
+          <div className="hidden md:block">
+            <DataTable
+              columns={eventColumns}
+              data={filteredTableEvents}
+              keyExtractor={(row: EventRow) => row.id}
+              emptyMessage="No events found."
+              onRowClick={(row: EventRow) => {
+                window.location.href = `/organizer/events/${row.id}`
+              }}
+              renderActions={(row: EventRow) => (
+                <Link href={`/organizer/events/${row.id}`}>
+                  <div className="flex size-8 items-center justify-center rounded-full bg-lime-500/10 text-lime-500 transition-colors hover:bg-lime-500/20">
+                    <HugeiconsIcon
+                      icon={ChevronRightIcon}
+                      strokeWidth={2.5}
+                      className="size-4"
+                    />
+                  </div>
+                </Link>
+              )}
+            />
+          </div>
+        </>
       )}
     </div>
   )
