@@ -9,6 +9,12 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { DataTable, type Column } from "@/components/ui/data-table"
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs"
 import { HugeiconsIcon } from "@hugeicons/react"
 import type { HugeiconsIconProps } from "@hugeicons/react"
 import {
@@ -22,6 +28,8 @@ import {
   BarChartIcon,
   GlobeIcon,
   Store01Icon,
+  LayoutTopIcon,
+  SettingsIcon,
 } from "@hugeicons/core-free-icons"
 import {
   Area,
@@ -192,6 +200,87 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     revenue: Math.round(totalRevenue * channel.weight),
   }))
 
+  // Ticket tier rows for DataTable
+  type TierRow = {
+    id: string
+    name: string
+    price: number
+    sold: number
+    total: number
+    remaining: number
+    revenue: number
+    sellThrough: number
+  }
+
+  const tierRows: TierRow[] = event.tiers.map((tier) => ({
+    id: tier.id,
+    name: tier.name,
+    price: tier.price,
+    sold: tier.sold,
+    total: tier.total,
+    remaining: tier.total - tier.sold,
+    revenue: tier.sold * tier.price,
+    sellThrough: calculatePercentage(tier.sold, tier.total),
+  }))
+
+  const tierColumns: Column<TierRow>[] = [
+    {
+      header: "Tier",
+      accessorKey: "name",
+      cell: (row) => (
+        <div>
+          <p className="font-semibold">{row.name}</p>
+          <p className="text-xs text-muted-foreground">
+            {formatCurrency(row.price)} per ticket
+          </p>
+        </div>
+      ),
+      sortable: true,
+    },
+    {
+      header: "Sold / Total",
+      cell: (row) => (
+        <div>
+          <p className="font-medium">
+            {formatNumber(row.sold)} / {formatNumber(row.total)}
+          </p>
+          <div className="mt-1.5 flex items-center gap-2">
+            <div className="h-2 w-24 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-lime-500 transition-all"
+                style={{ width: `${row.sellThrough}%` }}
+              />
+            </div>
+            <span className="whitespace-nowrap text-xs text-muted-foreground">
+              {row.sellThrough}%
+            </span>
+          </div>
+        </div>
+      ),
+    },
+    {
+      header: "Remaining",
+      cell: (row) => (
+        <div className="flex items-center gap-2">
+          <Badge variant={row.remaining === 0 ? "secondary" : "outline"} className="text-xs">
+            {formatNumber(row.remaining)} left
+          </Badge>
+        </div>
+      ),
+    },
+    {
+      header: "Revenue",
+      cell: (row) => (
+        <div>
+          <p className="font-semibold">{formatCurrency(row.revenue)}</p>
+          <p className="text-xs text-muted-foreground">
+            from {formatNumber(row.sold)} sales
+          </p>
+        </div>
+      ),
+    },
+  ]
+
   const channelColumns: Column<ChannelRow>[] = [
     {
       header: "Channel",
@@ -243,14 +332,14 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="flex flex-col gap-6"
-    >
+    <div className="flex flex-col gap-4">
       {/* Header Section */}
-      <div className="flex items-start gap-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="flex items-start gap-4"
+      >
         <div className="relative size-20 overflow-hidden rounded-lg">
           <Image
             src={event.bannerUrl}
@@ -282,29 +371,117 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             View event page
           </Button>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Top Analytics */}
-      <StatsGrid cards={statsCards} />
+      <Tabs defaultValue="overview">
+        <TabsList>
+          <TabsTrigger value="overview">
+            <HugeiconsIcon icon={LayoutTopIcon} strokeWidth={2} className="size-4" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="analytics">
+            <HugeiconsIcon icon={ChartBarLineIcon} strokeWidth={2} className="size-4" />
+            Analytics
+          </TabsTrigger>
+          <TabsTrigger value="tickets">
+            <HugeiconsIcon icon={Ticket01Icon} strokeWidth={2} className="size-4" />
+            Tickets
+          </TabsTrigger>
+          <TabsTrigger value="sales">
+            <HugeiconsIcon icon={BarChartIcon} strokeWidth={2} className="size-4" />
+            Sales
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Analytics & Share Tools */}
-      <div className="grid gap-6">
-        {/* Sales & Revenue Overview - full row */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.4 }}
-        >
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <HugeiconsIcon icon={ChartBarLineIcon} strokeWidth={2} className="size-5" />
-                Sales & revenue overview
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Ticket sales and revenue over the last 7 days
-              </p>
-            </CardHeader>
+        {/* ─── OVERVIEW TAB ──────────────────────────────────────────────────── */}
+        <TabsContent value="overview" className="flex flex-col gap-4">
+          {/* Top Analytics */}
+          <StatsGrid cards={statsCards} />
+
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Ticket Tiers */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1, duration: 0.4 }}
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle>Ticket tiers</CardTitle>
+                  <p className="text-sm text-muted-foreground">Inventory and pricing overview.</p>
+                </CardHeader>
+                <CardContent>
+                  <DataTable
+                    columns={tierColumns}
+                    data={tierRows}
+                    keyExtractor={(row) => row.id}
+                    emptyMessage="No ticket tiers found."
+                  />
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Quick Stats Summary */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.4 }}
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle>Quick Stats</CardTitle>
+                  <p className="text-sm text-muted-foreground">Event performance at a glance.</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Total Revenue</span>
+                      <span className="text-lg font-bold">{formatCurrency(totalRevenue)}</span>
+                    </div>
+                    <Separator />
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Sell-through Rate</span>
+                      <span className="text-lg font-bold">{sellThrough}%</span>
+                    </div>
+                    <Separator />
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Average Ticket Price</span>
+                      <span className="text-lg font-bold">
+                        {formatCurrency(totalRevenue / soldTickets)}
+                      </span>
+                    </div>
+                    <Separator />
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Event Capacity</span>
+                      <span className="text-lg font-bold">{formatNumber(totalTickets)}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+        </TabsContent>
+
+        {/* ─── ANALYTICS TAB ─────────────────────────────────────────────────── */}
+        <TabsContent value="analytics" className="flex flex-col gap-4">
+          <StatsGrid cards={statsCards} />
+
+          {/* Sales & Revenue Overview - full row */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1, duration: 0.4 }}
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <HugeiconsIcon icon={ChartBarLineIcon} strokeWidth={2} className="size-5" />
+                  Sales & revenue overview
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Ticket sales and revenue over the last 7 days
+                </p>
+              </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={280}>
                   <AreaChart data={salesOverviewData} margin={{ left: -12, right: 12 }}>
@@ -391,13 +568,17 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               </CardContent>
             </Card>
           </motion.div>
+        </TabsContent>
 
-          {/* Right Column - Inventory & Sales */}
-          <div className="space-y-6">
-          {/* Ticket Tiers */}          <motion.div
+        {/* ─── TICKETS TAB ───────────────────────────────────────────────────── */}
+        <TabsContent value="tickets" className="flex flex-col gap-4">
+          <StatsGrid cards={statsCards} />
+
+          {/* Ticket Tiers */}
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.4 }}
+            transition={{ delay: 0.1, duration: 0.4 }}
           >
             <Card>
               <CardHeader>
@@ -405,50 +586,26 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 <p className="text-sm text-muted-foreground">Inventory and pricing overview.</p>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {event.tiers.map((tier) => {
-                    const tierPercentage = calculatePercentage(tier.sold, tier.total)
-                    return (
-                      <div key={tier.id} className="space-y-3">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <p className="font-semibold">{tier.name}</p>
-                            <div className="mt-1 flex items-center gap-2">
-                              <Badge variant="secondary" className="text-xs">
-                                {formatNumber(tier.sold)} sold
-                              </Badge>
-                              <Badge variant="outline" className="text-xs">
-                                {formatNumber(tier.total - tier.sold)} remaining
-                              </Badge>
-                            </div>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              Sales window: May 12, 2026 - Jun 18, 2026
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-lg font-bold">{formatCurrency(tier.price)}</p>
-                          </div>
-                        </div>
-                        <div className="h-2 overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="h-full rounded-full bg-lime-500"
-                            style={{ width: `${tierPercentage}%` }}
-                          />
-                        </div>
-                        {tier !== event.tiers[event.tiers.length - 1] && <Separator />}
-                      </div>
-                    )
-                  })}
-                </div>
+                <DataTable
+                  columns={tierColumns}
+                  data={tierRows}
+                  keyExtractor={(row) => row.id}
+                  emptyMessage="No ticket tiers found."
+                />
               </CardContent>
             </Card>
           </motion.div>
+        </TabsContent>
+
+        {/* ─── SALES TAB ─────────────────────────────────────────────────────── */}
+        <TabsContent value="sales" className="flex flex-col gap-4">
+          <StatsGrid cards={statsCards} />
 
           {/* Sale Channel */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.4 }}
+            transition={{ delay: 0.1, duration: 0.4 }}
           >
             <Card>
               <CardHeader>
@@ -470,8 +627,8 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               </CardContent>
             </Card>
           </motion.div>
-        </div>
-      </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Social Share Card Dialog */}
       <ShareEventDialog
@@ -479,6 +636,6 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         onOpenChange={setShareDialogOpen}
         event={event}
       />
-    </motion.div>
+    </div>
   )
 }
