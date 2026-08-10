@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { DataTable, type Column } from "@/components/ui/data-table"
+import { DataTable, type Column, type RowAction } from "@/components/ui/data-table"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Add01Icon,
@@ -20,17 +20,21 @@ import {
   TicketIcon,
   Wallet01Icon,
   UserGroupIcon,
-  ChevronRightIcon,
+  Edit01Icon,
+  ViewIcon,
+  Share01Icon,
+  Copy01Icon,
+  Delete02Icon,
 } from "@hugeicons/core-free-icons"
 import { StatsGrid } from "@/components/dashboard/stats-grid"
 import { CreateEventDialog } from "../../../components/events/create-event-dialog"
+import { ShareEventDialog } from "../../../components/events/share-event-dialog"
 import { sampleEvents } from "@/lib/sample-data"
 import { formatNumber, formatCurrencyShort, formatCurrency, formatDateTime, calculatePercentage } from "@/lib/utils"
 import { EventCard } from "../../../components/events/event-card"
 import { EventListItem } from "../../../components/events/event-list-item"
 import { ViewToggle, type ViewMode } from "../../../components/events/view-toggle"
 import { EmptyState } from "../../../components/events/empty-state"
-import Link from "next/link"
 
 // Event row type for DataTable
 type EventRow = {
@@ -90,6 +94,8 @@ export default function EventsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [shareDialogOpen, setShareDialogOpen] = useState(false)
+  const [selectedEventForShare, setSelectedEventForShare] = useState<typeof sampleEvents[0] | null>(null)
 
   // Prepare event data for table
   const eventsForTable: EventRow[] = useMemo(
@@ -272,6 +278,61 @@ export default function EventsPage() {
     },
   ]
 
+  // Define actions for each row
+  const eventActions: RowAction<EventRow>[] = [
+    {
+      label: "View",
+      icon: ViewIcon,
+      primary: true,
+      iconOnly: true,
+      onClick: (row) => {
+        window.location.href = `/organizer/events/${row.id}`
+      },
+    },
+    {
+      label: "Edit",
+      icon: Edit01Icon,
+      primary: true,
+      iconOnly: true,
+      onClick: (row) => {
+        // TODO: Open edit dialog
+        console.log("Edit event", row.id)
+      },
+    },
+    {
+      label: "Share",
+      icon: Share01Icon,
+      primary: true,
+      iconOnly: true,
+      onClick: (row) => {
+        const event = sampleEvents.find((e) => e.id === row.id)
+        if (event) {
+          setSelectedEventForShare(event)
+          setShareDialogOpen(true)
+        }
+      },
+    },
+    {
+      label: "Duplicate",
+      icon: Copy01Icon,
+      onClick: (row) => {
+        // TODO: Duplicate event
+        console.log("Duplicate event", row.id)
+      },
+    },
+    {
+      label: "Delete",
+      icon: Delete02Icon,
+      variant: "destructive",
+      onClick: (row) => {
+        // TODO: Confirm and delete
+        if (confirm(`Are you sure you want to delete "${row.name}"?`)) {
+          console.log("Delete event", row.id)
+        }
+      },
+    },
+  ]
+
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
@@ -328,7 +389,7 @@ export default function EventsPage() {
         <EmptyState hasFilters={hasFilters} />
       ) : (
         <>
-          {/* Mobile: List View */}
+          {/* Mobile: List/Grid View */}
           <div className="block md:hidden">
             {viewMode === "grid" ? (
               <div className="grid gap-6 sm:grid-cols-2">
@@ -345,30 +406,37 @@ export default function EventsPage() {
             )}
           </div>
 
-          {/* Desktop: Table View */}
+          {/* Desktop: Table or Grid View */}
           <div className="hidden md:block">
-            <DataTable
-              columns={eventColumns}
-              data={filteredTableEvents}
-              keyExtractor={(row: EventRow) => row.id}
-              emptyMessage="No events found."
-              onRowClick={(row: EventRow) => {
-                window.location.href = `/organizer/events/${row.id}`
-              }}
-              renderActions={(row: EventRow) => (
-                <Link href={`/organizer/events/${row.id}`}>
-                  <div className="flex size-8 items-center justify-center rounded-full bg-lime-500/10 text-lime-500 transition-colors hover:bg-lime-500/20">
-                    <HugeiconsIcon
-                      icon={ChevronRightIcon}
-                      strokeWidth={2.5}
-                      className="size-4"
-                    />
-                  </div>
-                </Link>
-              )}
-            />
+            {viewMode === "list" ? (
+              <DataTable
+                columns={eventColumns}
+                data={filteredTableEvents}
+                keyExtractor={(row: EventRow) => row.id}
+                emptyMessage="No events found."
+                onRowClick={(row: EventRow) => {
+                  window.location.href = `/organizer/events/${row.id}`
+                }}
+                actions={eventActions}
+              />
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {filteredEvents.map((event, index) => (
+                  <EventCard key={event.id} event={event} index={index} />
+                ))}
+              </div>
+            )}
           </div>
         </>
+      )}
+
+      {/* Share Event Dialog */}
+      {selectedEventForShare && (
+        <ShareEventDialog
+          open={shareDialogOpen}
+          onOpenChange={setShareDialogOpen}
+          event={selectedEventForShare}
+        />
       )}
     </div>
   )

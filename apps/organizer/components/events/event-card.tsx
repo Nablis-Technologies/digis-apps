@@ -30,6 +30,33 @@ export function EventCard({ event, index = 0 }: EventCardProps) {
     }
   }
 
+  type BadgeVariant =
+    | "default"
+    | "secondary"
+    | "destructive"
+    | "success"
+    | "warning"
+    | "info"
+    | "violet"
+    | "pink"
+    | "orange"
+    | "outline"
+
+  const getCategoryVariant = (category: string): BadgeVariant => {
+    const variants: BadgeVariant[] = [
+      "violet",
+      "pink",
+      "orange",
+      "info",
+      "success",
+      "warning",
+    ]
+    const hash = category
+      .split("")
+      .reduce((acc, ch) => acc + ch.charCodeAt(0), 0)
+    return variants[hash % variants.length]
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -57,9 +84,14 @@ export function EventCard({ event, index = 0 }: EventCardProps) {
 
           {/* Content */}
           <div className="p-4">
-            <h3 className="mb-2 font-semibold group-hover:text-primary">
-              {event.name}
-            </h3>
+            <div className="mb-2 flex items-start justify-between gap-2">
+              <h3 className="flex-1 font-semibold group-hover:text-primary">
+                {event.name}
+              </h3>
+              <Badge variant={getCategoryVariant(event.category)} className="shrink-0">
+                {event.category}
+              </Badge>
+            </div>
 
             <div className="mb-3 space-y-1 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
