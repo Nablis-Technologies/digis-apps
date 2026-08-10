@@ -2,12 +2,9 @@
 
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Button } from "@/components/ui/button"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { profileSchema, type ProfileFormData } from "@/lib/schemas"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
 
 interface ProfileStepProps {
   onNext: (data: ProfileFormData) => void
@@ -18,7 +15,7 @@ export function ProfileStep({ onNext, initialData }: ProfileStepProps) {
   const {
     register,
     handleSubmit,
-    formState: { errors, isValid },
+    formState: { errors },
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema as any),
     mode: "onChange",
@@ -30,7 +27,7 @@ export function ProfileStep({ onNext, initialData }: ProfileStepProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form id="onboarding-form" onSubmit={handleSubmit(onSubmit)}>
       <FieldGroup>
         <Field>
           <FieldLabel htmlFor="fullName">Full Name</FieldLabel>
@@ -120,12 +117,6 @@ export function ProfileStep({ onNext, initialData }: ProfileStepProps) {
           </Field>
         </div>
 
-        <Field>
-          <Button type="submit" disabled={!isValid} className="w-full gap-2">
-            Continue
-            <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4" />
-          </Button>
-        </Field>
       </FieldGroup>
     </form>
   )

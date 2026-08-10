@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { businessSchema, type BusinessFormData } from "@/lib/schemas"
 import { ETHIOPIAN_BANKS } from "@/lib/constants"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowRight01Icon, Upload02Icon } from "@hugeicons/core-free-icons"
+import { Upload02Icon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 
 interface BusinessStepProps {
@@ -24,7 +24,7 @@ export function BusinessStep({ onNext, initialData }: BusinessStepProps) {
     register,
     handleSubmit,
     setValue,
-    formState: { errors, isValid },
+    formState: { errors },
   } = useForm<BusinessFormData>({
     resolver: zodResolver(businessSchema as any),
     mode: "onChange",
@@ -51,7 +51,7 @@ export function BusinessStep({ onNext, initialData }: BusinessStepProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form id="onboarding-form" onSubmit={handleSubmit(onSubmit)}>
       <FieldGroup>
         <Field>
           <FieldLabel htmlFor="licenseFile">Business License (Optional)</FieldLabel>
@@ -142,12 +142,6 @@ export function BusinessStep({ onNext, initialData }: BusinessStepProps) {
           )}
         </Field>
 
-        <Field>
-          <Button type="submit" disabled={!isValid} className="w-full gap-2">
-            Continue
-            <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4" />
-          </Button>
-        </Field>
       </FieldGroup>
     </form>
   )

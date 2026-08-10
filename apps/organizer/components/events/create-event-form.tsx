@@ -308,7 +308,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   const selectedEntryType = ENTRY_TYPES.find((e) => e.value === entryType)!
 
   return (
-    <div className="flex flex-col max-h-[75vh]">
+    <div className="flex flex-col flex-1 min-h-0">
       <div className="sticky top-0 z-10 bg-popover pb-2">
       {/* Step indicators */}
       <div className="flex items-center gap-2">

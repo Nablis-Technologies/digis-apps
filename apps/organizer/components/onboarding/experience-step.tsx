@@ -3,14 +3,11 @@
 import { useState, useEffect } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Button } from "@/components/ui/button"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { experienceSchema, type ExperienceFormData } from "@/lib/schemas"
 import { EVENT_TYPES, AUDIENCE_SIZES, EVENT_FREQUENCIES } from "@/lib/constants"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
 
 interface ExperienceStepProps {
   onNext: (data: ExperienceFormData) => void
@@ -26,7 +23,7 @@ export function ExperienceStep({ onNext, initialData }: ExperienceStepProps) {
     handleSubmit,
     setValue,
     control,
-    formState: { errors, isValid },
+    formState: { errors },
   } = useForm<ExperienceFormData>({
     resolver: zodResolver(experienceSchema as any),
     mode: "onChange",
@@ -50,7 +47,7 @@ export function ExperienceStep({ onNext, initialData }: ExperienceStepProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form id="onboarding-form" onSubmit={handleSubmit(onSubmit)}>
       <FieldGroup>
         <Field>
           <FieldLabel>What types of events do you organize?</FieldLabel>
@@ -135,12 +132,6 @@ export function ExperienceStep({ onNext, initialData }: ExperienceStepProps) {
           )}
         </Field>
 
-        <Field>
-          <Button type="submit" disabled={!isValid} className="w-full gap-2">
-            Continue
-            <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4" />
-          </Button>
-        </Field>
       </FieldGroup>
     </form>
   )

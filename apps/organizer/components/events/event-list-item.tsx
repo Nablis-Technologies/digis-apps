@@ -37,9 +37,9 @@ export function EventListItem({ event, index = 0 }: EventListItemProps) {
       transition={{ delay: index * 0.1 }}
     >
       <Link href={`/organizer/events/${event.id}`}>
-        <div className="group flex gap-4 rounded-lg border bg-card p-4 transition-all hover:shadow-lg">
+        <div className="group flex gap-4 rounded-2xl border bg-card p-4 transition-all hover:shadow-lg">
           {/* Thumbnail */}
-          <div className="relative size-24 shrink-0 overflow-hidden rounded-lg bg-muted">
+          <div className="relative size-24 shrink-0 overflow-hidden rounded-xl bg-muted">
             <Image
               src={event.bannerUrl}
               alt={event.name}
@@ -94,9 +94,9 @@ export function EventListItem({ event, index = 0 }: EventListItemProps) {
 
             {/* Progress Bar */}
             <div className="mt-2">
-              <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+              <div className="h-2 overflow-hidden rounded-full bg-muted">
                 <div
-                  className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all"
+                  className="h-full rounded-full bg-lime-500 transition-all"
                   style={{ width: `${soldPercentage}%` }}
                 />
               </div>

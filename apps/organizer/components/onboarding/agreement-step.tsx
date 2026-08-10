@@ -2,21 +2,17 @@
 
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Button } from "@/components/ui/button"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Checkbox } from "@/components/ui/checkbox"
 import { agreementSchema, type AgreementFormData } from "@/lib/schemas"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { Tick02Icon } from "@hugeicons/core-free-icons"
 import { SERVICE_FEE_PERCENTAGE, PLATFORM_FEE_PERCENTAGE } from "@/lib/constants"
 
 interface AgreementStepProps {
   onNext: (data: AgreementFormData) => void
   initialData?: Partial<AgreementFormData>
-  isSubmitting?: boolean
 }
 
-export function AgreementStep({ onNext, initialData, isSubmitting }: AgreementStepProps) {
+export function AgreementStep({ onNext, initialData }: AgreementStepProps) {
   const {
     handleSubmit,
     control,
@@ -45,7 +41,7 @@ export function AgreementStep({ onNext, initialData, isSubmitting }: AgreementSt
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form id="onboarding-form" onSubmit={handleSubmit(onSubmit)}>
       <FieldGroup>
         {/* Service Information */}
         <div className="rounded-lg border bg-muted/50 p-4">
@@ -158,23 +154,6 @@ export function AgreementStep({ onNext, initialData, isSubmitting }: AgreementSt
           </div>
         </Field>
 
-        <Field>
-          <Button
-            type="submit"
-            disabled={!isValid || isSubmitting}
-            className="w-full gap-2"
-            size="lg"
-          >
-            {isSubmitting ? (
-              "Completing Registration..."
-            ) : (
-              <>
-                <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} className="size-5" />
-                Complete Registration
-              </>
-            )}
-          </Button>
-        </Field>
       </FieldGroup>
     </form>
   )

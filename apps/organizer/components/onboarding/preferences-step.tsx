@@ -3,15 +3,12 @@
 import { useState, useEffect } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Button } from "@/components/ui/button"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
 import { preferencesSchema, type PreferencesFormData } from "@/lib/schemas"
 import { PAYOUT_METHODS, SUPPORT_OPTIONS } from "@/lib/constants"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
 
 interface PreferencesStepProps {
   onNext: (data: PreferencesFormData) => void
@@ -27,7 +24,7 @@ export function PreferencesStep({ onNext, initialData }: PreferencesStepProps) {
     handleSubmit,
     setValue,
     control,
-    formState: { errors, isValid },
+    formState: { errors },
   } = useForm<PreferencesFormData>({
     resolver: zodResolver(preferencesSchema as any),
     mode: "onChange",
@@ -54,7 +51,7 @@ export function PreferencesStep({ onNext, initialData }: PreferencesStepProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form id="onboarding-form" onSubmit={handleSubmit(onSubmit)}>
       <FieldGroup>
         <Field>
           <FieldLabel htmlFor="payoutMethod">Preferred Payout Method</FieldLabel>
@@ -132,12 +129,6 @@ export function PreferencesStep({ onNext, initialData }: PreferencesStepProps) {
           </div>
         </Field>
 
-        <Field>
-          <Button type="submit" disabled={!isValid} className="w-full gap-2">
-            Continue
-            <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4" />
-          </Button>
-        </Field>
       </FieldGroup>
     </form>
   )

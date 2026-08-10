@@ -37,7 +37,7 @@ export function EventCard({ event, index = 0 }: EventCardProps) {
       transition={{ delay: index * 0.1 }}
     >
       <Link href={`/organizer/events/${event.id}`}>
-        <div className="group overflow-hidden rounded-lg border bg-card transition-all hover:shadow-lg">
+        <div className="group overflow-hidden rounded-2xl border bg-card transition-all hover:shadow-lg">
           {/* Banner Image */}
           <div className="relative aspect-video overflow-hidden bg-muted">
             <Image
@@ -92,7 +92,7 @@ export function EventCard({ event, index = 0 }: EventCardProps) {
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-muted">
                 <div
-                  className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all"
+                  className="h-full rounded-full bg-lime-500 transition-all"
                   style={{ width: `${soldPercentage}%` }}
                 />
               </div>
