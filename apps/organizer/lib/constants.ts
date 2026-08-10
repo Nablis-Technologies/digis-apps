@@ -88,7 +88,6 @@ export const ETHIOPIAN_BANKS = [
   { value: "dashen", label: "Dashen Bank" },
   { value: "boa", label: "Bank of Abyssinia" },
   { value: "wegagen", label: "Wegagen Bank" },
-  { value: "united", label: "United Bank" },
   { value: "nib", label: "NIB International Bank" },
   { value: "coop", label: "Cooperative Bank of Oromia" },
   { value: "lion", label: "Lion International Bank" },

@@ -6,20 +6,45 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Button } from "@/components/ui/button"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { businessSchema, type BusinessFormData } from "@/lib/schemas"
 import { ETHIOPIAN_BANKS } from "@/lib/constants"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Upload02Icon, FileAttachmentIcon, IdIcon, BankIcon, Location01Icon } from "@hugeicons/core-free-icons"
+import { Upload02Icon, FileAttachmentIcon, IdIcon, BankIcon, Location01Icon, Search01Icon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
+import Image from "next/image"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 interface BusinessStepProps {
   onNext: (data: BusinessFormData) => void
   initialData?: Partial<BusinessFormData>
 }
 
+// Bank logos mapping to actual image files
+const BANK_LOGOS: Record<string, string> = {
+  cbe: "/assets/CBE.jpeg",
+  awash: "/assets/AWASH.jpeg",
+  dashen: "/assets/DASHEN.png",
+  boa: "/assets/BOA.png",
+  wegagen: "/assets/WEGAGEN.png",
+  nib: "/assets/NIB.png",
+  coop: "/assets/COOP.png",
+  lion: "/assets/LION.jpeg",
+  oib: "/assets/OROMIA.png",
+  zemen: "/assets/ZEMEN.png",
+  bunna: "/assets/BUNNA.jpeg",
+}
+
 export function BusinessStep({ onNext, initialData }: BusinessStepProps) {
   const [fileName, setFileName] = useState<string>("")
+  const [selectedBank, setSelectedBank] = useState<string>(initialData?.bankName || "")
+  const [isBankDialogOpen, setIsBankDialogOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  
   const {
     register,
     handleSubmit,
@@ -49,6 +74,17 @@ export function BusinessStep({ onNext, initialData }: BusinessStepProps) {
       setValue("licenseFile", file, { shouldValidate: true })
     }
   }
+
+  const handleBankSelect = (value: string) => {
+    setSelectedBank(value)
+    setValue("bankName", value, { shouldValidate: true })
+    setIsBankDialogOpen(false)
+    setSearchQuery("")
+  }
+
+  const filteredBanks = ETHIOPIAN_BANKS.filter(bank =>
+    bank.label.toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
   return (
     <form id="onboarding-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -114,21 +150,28 @@ export function BusinessStep({ onNext, initialData }: BusinessStepProps) {
             <FieldLabel htmlFor="bankName" className="text-sm font-semibold">
               Bank Name
             </FieldLabel>
-            <Select
-              onValueChange={(value) => setValue("bankName", value, { shouldValidate: true })}
-              defaultValue={initialData?.bankName}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsBankDialogOpen(true)}
+              className="w-full h-12 justify-start bg-background/50 border-border/60 hover:border-primary transition-colors"
             >
-              <SelectTrigger id="bankName" className="h-12 bg-background/50 border-border/60 focus:border-primary transition-colors">
-                <SelectValue placeholder="Select your bank" />
-              </SelectTrigger>
-              <SelectContent>
-                {ETHIOPIAN_BANKS.map((bank) => (
-                  <SelectItem key={bank.value} value={bank.value}>
-                    {bank.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              {selectedBank ? (
+                <div className="flex items-center gap-3">
+                  <div className="size-8 relative rounded overflow-hidden bg-white flex-shrink-0">
+                    <Image
+                      src={BANK_LOGOS[selectedBank] || "/assets/CBE.jpeg"}
+                      alt={ETHIOPIAN_BANKS.find(b => b.value === selectedBank)?.label || "Bank"}
+                      fill
+                      className="object-contain"
+                    />
+                  </div>
+                  <span className="font-medium">{ETHIOPIAN_BANKS.find(b => b.value === selectedBank)?.label}</span>
+                </div>
+              ) : (
+                <span className="text-muted-foreground">Select your bank</span>
+              )}
+            </Button>
             {errors.bankName && (
               <p className="text-sm text-destructive mt-1.5">{errors.bankName.message}</p>
             )}
@@ -176,6 +219,58 @@ export function BusinessStep({ onNext, initialData }: BusinessStepProps) {
         </Field>
 
       </FieldGroup>
+
+      {/* Bank Selection Dialog */}
+      <Dialog open={isBankDialogOpen} onOpenChange={setIsBankDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Choose Bank</DialogTitle>
+          </DialogHeader>
+          
+          {/* Search */}
+          <div className="relative mb-4">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+              <HugeiconsIcon icon={Search01Icon} strokeWidth={2} className="size-5" />
+            </div>
+            <Input
+              placeholder="Search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-11 bg-muted/30"
+            />
+          </div>
+
+          {/* Banks Grid */}
+          <div className="flex-1 overflow-y-auto pr-2">
+            <div className="grid grid-cols-3 gap-3">
+              {filteredBanks.map((bank) => (
+                <button
+                  key={bank.value}
+                  type="button"
+                  onClick={() => handleBankSelect(bank.value)}
+                  className={`flex flex-col items-center justify-center gap-3 p-4 rounded-xl border-2 transition-all hover:border-primary hover:bg-primary/5 ${
+                    selectedBank === bank.value
+                      ? "border-primary bg-primary/5"
+                      : "border-border/60 bg-card"
+                  }`}
+                >
+                  <div className="size-16 rounded-xl bg-white p-2 flex items-center justify-center relative overflow-hidden">
+                    <Image
+                      src={BANK_LOGOS[bank.value] || "/assets/CBE.jpeg"}
+                      alt={bank.label}
+                      fill
+                      className="object-contain p-1"
+                    />
+                  </div>
+                  <span className="text-xs font-medium text-center leading-tight">
+                    {bank.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </form>
   )
 }

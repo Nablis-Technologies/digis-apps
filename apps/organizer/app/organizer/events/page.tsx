@@ -217,9 +217,6 @@ export default function EventsPage() {
             <Badge variant={getCategoryVariant(row.category)} className="mt-1">
               {row.category}
             </Badge>
-            <p className="mt-0.5 truncate text-xs text-muted-foreground">
-              {row.venue} - {row.city}
-            </p>
           </div>
         </div>
       ),
