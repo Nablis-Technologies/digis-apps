@@ -11,17 +11,30 @@ import {
   CheckmarkCircle01Icon,
   Tick02Icon,
   Loading01Icon,
+  UserIcon,
+  Building02Icon,
+  Award01Icon,
+  Settings02Icon,
+  FileValidationIcon,
 } from "@hugeicons/core-free-icons"
 import { ONBOARDING_STEPS } from "@/lib/constants"
 import { saveOrganizerAccount } from "@/lib/utils"
 import { toast } from "sonner"
 
-// Step components (will import these)
+// Step components
 import { ProfileStep } from "../../components/onboarding/profile-step"
 import { BusinessStep } from "../../components/onboarding/business-step"
 import { ExperienceStep } from "../../components/onboarding/experience-step"
 import { PreferencesStep } from "../../components/onboarding/preferences-step"
 import { AgreementStep } from "../../components/onboarding/agreement-step"
+
+const STEP_ICONS = [
+  UserIcon,
+  Building02Icon,
+  Award01Icon,
+  Settings02Icon,
+  FileValidationIcon,
+]
 
 export default function OnboardingPage() {
   const router = useRouter()
@@ -84,126 +97,153 @@ export default function OnboardingPage() {
     <AgreementStep key="agreement" onNext={handleNext} initialData={formData} />,
   ]
 
-  return (
-    <div className="h-[100dvh] flex flex-col bg-background overflow-hidden">
-      {/* Header (upper) */}
-      <header className="flex-shrink-0 bg-background px-4 pt-6 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-3xl">
-          <p className="text-sm font-medium text-muted-foreground">
-            Organizer Registration
-          </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-            Create your organizer account
-          </h1>
-          <p className="mt-3 max-w-2xl text-base text-muted-foreground">
-            Complete a few steps to configure your profile, business details, and
-            operating preferences.
-          </p>
-        </div>
+  const progressPercentage = ((currentStep + 1) / totalSteps) * 100
 
-        {/* Step indicator circles */}
-        <div className="mx-auto max-w-3xl mt-6 pb-3">
-          <div className="flex items-center gap-2">
-            {ONBOARDING_STEPS.map((s, i) => (
-              <div key={s.id} className="flex items-center gap-2 flex-1">
-                <div className="flex items-center gap-2">
-                  <div
-                    className={`size-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-                      i < currentStep
-                        ? "bg-lime-500 text-white"
-                        : i === currentStep
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {i < currentStep ? (
-                      <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-3.5" />
-                    ) : (
-                      i + 1
-                    )}
+  return (
+    <div className="min-h-[100dvh] bg-gradient-to-br from-background via-background to-muted/20">
+      {/* Fixed Progress Bar */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border/40">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          {/* Logo/Brand */}
+          <div className="flex items-center justify-between py-4">
+            <div>
+              <h1 className="text-lg font-bold text-foreground">DEGES</h1>
+              <p className="text-xs text-muted-foreground">Organizer Registration</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-semibold text-foreground">Step {currentStep + 1} of {totalSteps}</p>
+              <p className="text-xs text-muted-foreground">{Math.round(progressPercentage)}% Complete</p>
+            </div>
+          </div>
+
+          {/* Progress Indicator */}
+          <div className="relative pb-6">
+            {/* Progress Bar Background */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-muted/50 rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-gradient-to-r from-primary via-lime-500 to-lime-600"
+                initial={{ width: 0 }}
+                animate={{ width: `${progressPercentage}%` }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+              />
+            </div>
+
+            {/* Step Indicators */}
+            <div className="flex items-center justify-between pt-6">
+              {ONBOARDING_STEPS.map((step, index) => {
+                const isCompleted = index < currentStep
+                const isCurrent = index === currentStep
+                const StepIcon = STEP_ICONS[index]
+
+                return (
+                  <div key={step.id} className="flex flex-col items-center gap-2 flex-1">
+                    <motion.div
+                      className={`relative size-10 sm:size-12 rounded-full flex items-center justify-center transition-all duration-300 ${
+                        isCompleted
+                          ? "bg-gradient-to-br from-lime-500 to-lime-600 shadow-lg shadow-lime-500/30"
+                          : isCurrent
+                            ? "bg-gradient-to-br from-primary to-primary/80 shadow-lg shadow-primary/30 ring-4 ring-primary/20"
+                            : "bg-muted/60 border-2 border-border/50"
+                      }`}
+                      animate={isCurrent ? { scale: [1, 1.05, 1] } : { scale: 1 }}
+                      transition={{ duration: 2, repeat: isCurrent ? Infinity : 0 }}
+                    >
+                      {isCompleted ? (
+                        <HugeiconsIcon
+                          icon={CheckmarkCircle01Icon}
+                          strokeWidth={2.5}
+                          className="size-5 sm:size-6 text-white"
+                        />
+                      ) : (
+                        <HugeiconsIcon
+                          icon={StepIcon}
+                          strokeWidth={2}
+                          className={`size-5 sm:size-6 ${
+                            isCurrent ? "text-primary-foreground" : "text-muted-foreground"
+                          }`}
+                        />
+                      )}
+                    </motion.div>
+                    <p
+                      className={`text-xs font-medium text-center leading-tight hidden sm:block max-w-[80px] ${
+                        isCurrent ? "text-foreground" : "text-muted-foreground"
+                      }`}
+                    >
+                      {step.title}
+                    </p>
                   </div>
-                  <span className={`text-xs font-medium hidden sm:block ${i === currentStep ? "text-foreground" : "text-muted-foreground"}`}>
-                    {s.title}
-                  </span>
-                </div>
-                {i < totalSteps - 1 && (
-                  <div className={`flex-1 h-px ${i < currentStep ? "bg-lime-500" : "bg-border/50"}`} />
-                )}
-              </div>
-            ))}
+                )
+              })}
+            </div>
           </div>
         </div>
-      </header>
+      </div>
 
-      {/* Scrollable content */}
-      <main className="flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-3xl">
+      {/* Main Content */}
+      <div className="pt-[220px] sm:pt-[240px] pb-32 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-4xl">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentStep}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25 }}
-              className="bg-card border border-border/60 rounded-2xl p-5 sm:p-6"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
             >
-              <p className="text-sm font-medium text-muted-foreground">
-                Step {currentStep + 1} of {totalSteps}
-              </p>
-              <h2 className="mt-1 mb-5 text-xl font-bold text-foreground">
-                {currentStepData.title}
-              </h2>
-              <p className="-mt-3 mb-5 text-sm text-muted-foreground">
-                {currentStepData.description}
-              </p>
-              {stepComponents[currentStep]}
+              {/* Step Content Card */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2 }}
+                className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-3xl shadow-xl shadow-black/5 p-6 sm:p-8 lg:p-10"
+              >
+                {stepComponents[currentStep]}
+              </motion.div>
             </motion.div>
           </AnimatePresence>
         </div>
-      </main>
+      </div>
 
-      {/* Footer (lower) */}
-      <footer className="flex-shrink-0 border-t border-border/60 bg-background px-4 pt-3 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-3xl pb-4">
-          <div className="flex gap-2">
+      {/* Fixed Footer */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t border-border/40">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center gap-3">
             <Button
               variant="outline"
-              className="flex-1 h-11"
+              size="lg"
               onClick={handleBack}
               disabled={currentStep === 0 || isSubmitting}
+              className="min-w-[120px] h-12 font-medium"
             >
-              <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4 mr-2" /> Back
+              <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4 mr-2" />
+              Back
             </Button>
             <Button
               type="submit"
               form="onboarding-form"
-              className="flex-1 h-11 font-semibold"
+              size="lg"
               disabled={isSubmitting}
+              className="flex-1 h-12 font-semibold bg-gradient-to-r from-primary to-lime-600 hover:from-primary/90 hover:to-lime-600/90 shadow-lg shadow-primary/20"
             >
               {isSubmitting ? (
                 <>
-                  <HugeiconsIcon icon={Loading01Icon} strokeWidth={2} className="size-4 animate-spin mr-2" />
+                  <HugeiconsIcon icon={Loading01Icon} strokeWidth={2} className="size-5 animate-spin mr-2" />
                   Completing Registration...
                 </>
               ) : (
                 <>
                   {currentStep === totalSteps - 1 ? "Complete Registration" : "Continue"}
-                  {currentStep === totalSteps - 1 ? (
-                    <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} className="size-4 ml-2" />
-                  ) : (
-                    <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4 ml-2" />
-                  )}
+                  <HugeiconsIcon
+                    icon={currentStep === totalSteps - 1 ? Tick02Icon : ArrowRight01Icon}
+                    strokeWidth={2}
+                    className="size-5 ml-2"
+                  />
                 </>
               )}
             </Button>
           </div>
-          <p className="text-sm text-muted-foreground mt-2 text-center">
-            {currentStep === totalSteps - 1
-              ? "Review the final confirmations and submit your registration."
-              : "Each step helps us tailor the organizer workspace to your needs."}
-          </p>
         </div>
-      </footer>
+      </div>
     </div>
   )
 }

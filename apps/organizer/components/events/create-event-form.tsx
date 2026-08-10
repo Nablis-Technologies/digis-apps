@@ -31,6 +31,7 @@ import {
   Copy01Icon,
   Upload01Icon,
   CircleMinusIcon,
+  ArrowDown01Icon,
 } from "@hugeicons/core-free-icons"
 
 type TicketTypeInput = {
@@ -197,6 +198,12 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   })
   const [editingGuestId, setEditingGuestId] = useState<string | null>(null)
   const [editGuestForm, setEditGuestForm] = useState({ name: "", contact: "", personalLink: "", allowedGuests: 0 })
+
+  // Toggle states for optional sections
+  const [showEndDateTime, setShowEndDateTime] = useState(false)
+  const [showOnlineLink, setShowOnlineLink] = useState(false)
+  const [showBannerImage, setShowBannerImage] = useState(false)
+  const [showTicketOptionalFields, setShowTicketOptionalFields] = useState<{ [key: number]: boolean }>({})
 
   const [isRecurring, setIsRecurring] = useState(false)
   const [recurrenceType, setRecurrenceType] = useState<"weekly" | "biweekly" | "monthly" | "custom">("weekly")
@@ -466,14 +473,44 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                 <Label className="text-sm font-semibold">Start Time <span className="text-destructive">*</span></Label>
                 <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="h-11" />
               </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold">End Date (optional)</Label>
-                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-11" />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold">End Time (optional)</Label>
-                <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="h-11" />
-              </div>
+            </div>
+
+            {/* Optional: End Date/Time */}
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setShowEndDateTime(!showEndDateTime)}
+                className="flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <HugeiconsIcon 
+                  icon={ArrowDown01Icon} 
+                  strokeWidth={2} 
+                  className={`size-4 transition-transform ${showEndDateTime ? 'rotate-180' : ''}`} 
+                />
+                End Date & Time (optional)
+              </button>
+              <AnimatePresence initial={false}>
+                {showEndDateTime && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="grid grid-cols-2 gap-4 pt-2">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">End Date</Label>
+                        <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-11" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">End Time</Label>
+                        <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="h-11" />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             <div className="space-y-2">
@@ -490,41 +527,91 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
               {fieldErrors.location && <p className="text-destructive text-xs">{fieldErrors.location}</p>}
             </div>
 
+            {/* Optional: Online Link */}
             <div className="space-y-2">
-              <Label htmlFor="onlineUrl" className="text-sm font-semibold">Online Link (optional)</Label>
-              <div className="relative">
-                <HugeiconsIcon
-                  icon={Link01Icon}
-                  strokeWidth={2}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
+              <button
+                type="button"
+                onClick={() => setShowOnlineLink(!showOnlineLink)}
+                className="flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <HugeiconsIcon 
+                  icon={ArrowDown01Icon} 
+                  strokeWidth={2} 
+                  className={`size-4 transition-transform ${showOnlineLink ? 'rotate-180' : ''}`} 
                 />
-                <Input
-                  id="onlineUrl"
-                  placeholder="https://zoom.us/j/..."
-                  value={onlineUrl}
-                  onChange={(e) => setOnlineUrl(e.target.value)}
-                  className="h-11 pl-10"
-                />
-              </div>
+                Online Link (optional)
+              </button>
+              <AnimatePresence initial={false}>
+                {showOnlineLink && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="relative pt-2">
+                      <HugeiconsIcon
+                        icon={Link01Icon}
+                        strokeWidth={2}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
+                      />
+                      <Input
+                        id="onlineUrl"
+                        placeholder="https://zoom.us/j/..."
+                        value={onlineUrl}
+                        onChange={(e) => setOnlineUrl(e.target.value)}
+                        className="h-11 pl-10"
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
+            {/* Optional: Banner Image */}
             <div className="space-y-2">
-              <Label htmlFor="banner" className="text-sm font-semibold">Banner Image URL</Label>
-              <Input
-                id="banner"
-                placeholder="https://..."
-                value={bannerImage}
-                onChange={(e) => setBannerImage(e.target.value)}
-                className="h-11"
-              />
-              {bannerImage && (
-                <img
-                  src={bannerImage}
-                  alt="Banner preview"
-                  className="h-32 w-full object-cover rounded-xl mt-2"
-                  onError={(e) => (e.currentTarget.style.display = "none")}
+              <button
+                type="button"
+                onClick={() => setShowBannerImage(!showBannerImage)}
+                className="flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <HugeiconsIcon 
+                  icon={ArrowDown01Icon} 
+                  strokeWidth={2} 
+                  className={`size-4 transition-transform ${showBannerImage ? 'rotate-180' : ''}`} 
                 />
-              )}
+                Banner Image (optional)
+              </button>
+              <AnimatePresence initial={false}>
+                {showBannerImage && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="space-y-2 pt-2">
+                      <Input
+                        id="banner"
+                        placeholder="https://..."
+                        value={bannerImage}
+                        onChange={(e) => setBannerImage(e.target.value)}
+                        className="h-11"
+                      />
+                      {bannerImage && (
+                        <img
+                          src={bannerImage}
+                          alt="Banner preview"
+                          className="h-32 w-full object-cover rounded-xl mt-2"
+                          onError={(e) => (e.currentTarget.style.display = "none")}
+                        />
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
           </motion.div>
@@ -577,43 +664,71 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                         </div>
                       </div>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Description (optional)</Label>
-                      <Input placeholder="What's included?" value={t.description} onChange={(e) => updateTicketType(i, "description", e.target.value)} className="h-9" />
-                    </div>
-                    <div className="pt-1 border-t border-border/40 space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">Sales start (optional)</Label>
-                          <Input
-                            type="datetime-local"
-                            value={t.salesStart}
-                            onChange={(e) => updateTicketType(i, "salesStart", e.target.value)}
-                            className="h-9 text-xs"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">Sales end (optional)</Label>
-                          <Input
-                            type="datetime-local"
-                            value={t.salesEnd}
-                            onChange={(e) => updateTicketType(i, "salesEnd", e.target.value)}
-                            className="h-9 text-xs"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">Max tickets per person (optional)</Label>
-                        <Input
-                          type="number"
-                          placeholder="No limit"
-                          value={t.maxPerPerson}
-                          onChange={(e) => updateTicketType(i, "maxPerPerson", e.target.value)}
-                          className="h-9"
-                          min="1"
+                    
+                    {/* Optional: Advanced ticket settings */}
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setShowTicketOptionalFields(prev => ({ ...prev, [i]: !prev[i] }))}
+                        className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <HugeiconsIcon 
+                          icon={ArrowDown01Icon} 
+                          strokeWidth={2} 
+                          className={`size-3.5 transition-transform ${showTicketOptionalFields[i] ? 'rotate-180' : ''}`} 
                         />
-                        <p className="text-[10px] text-muted-foreground">Prevents bulk purchasing — leave blank for no limit</p>
-                      </div>
+                        Advanced settings (optional)
+                      </button>
+                      <AnimatePresence initial={false}>
+                        {showTicketOptionalFields[i] && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="pt-3 space-y-3">
+                              <div className="space-y-1.5">
+                                <Label className="text-xs text-muted-foreground">Description</Label>
+                                <Input placeholder="What's included?" value={t.description} onChange={(e) => updateTicketType(i, "description", e.target.value)} className="h-9" />
+                              </div>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs text-muted-foreground">Sales start</Label>
+                                  <Input
+                                    type="datetime-local"
+                                    value={t.salesStart}
+                                    onChange={(e) => updateTicketType(i, "salesStart", e.target.value)}
+                                    className="h-9 text-xs"
+                                  />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs text-muted-foreground">Sales end</Label>
+                                  <Input
+                                    type="datetime-local"
+                                    value={t.salesEnd}
+                                    onChange={(e) => updateTicketType(i, "salesEnd", e.target.value)}
+                                    className="h-9 text-xs"
+                                  />
+                                </div>
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label className="text-xs text-muted-foreground">Max tickets per person</Label>
+                                <Input
+                                  type="number"
+                                  placeholder="No limit"
+                                  value={t.maxPerPerson}
+                                  onChange={(e) => updateTicketType(i, "maxPerPerson", e.target.value)}
+                                  className="h-9"
+                                  min="1"
+                                />
+                                <p className="text-[10px] text-muted-foreground">Prevents bulk purchasing — leave blank for no limit</p>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   </div>
                 ))}

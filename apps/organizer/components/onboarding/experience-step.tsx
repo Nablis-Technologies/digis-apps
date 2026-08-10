@@ -8,10 +8,42 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { experienceSchema, type ExperienceFormData } from "@/lib/schemas"
 import { EVENT_TYPES, AUDIENCE_SIZES, EVENT_FREQUENCIES } from "@/lib/constants"
+import { HugeiconsIcon } from "@hugeicons/react"
+import {
+  PresentationPodiumIcon,
+  PencilEdit01Icon,
+  BookOpenIcon,
+  FootballIcon,
+  TheaterIcon,
+  SmileIcon,
+  UserGroupIcon,
+  FavouriteIcon,
+  Store01Icon,
+  Restaurant01Icon,
+} from "@hugeicons/core-free-icons"
+import { Music, PartyPopper, Palette, Shirt } from "lucide-react"
 
 interface ExperienceStepProps {
   onNext: (data: ExperienceFormData) => void
   initialData?: Partial<ExperienceFormData>
+}
+
+// Map event types to icons (mix of Hugeicons and Lucide)
+const EVENT_TYPE_ICONS: Record<string, { type: 'huge' | 'lucide', icon: any }> = {
+  concert: { type: 'lucide', icon: Music },
+  conference: { type: 'huge', icon: PresentationPodiumIcon },
+  festival: { type: 'lucide', icon: PartyPopper },
+  workshop: { type: 'huge', icon: PencilEdit01Icon },
+  seminar: { type: 'huge', icon: BookOpenIcon },
+  exhibition: { type: 'lucide', icon: Palette },
+  sports: { type: 'huge', icon: FootballIcon },
+  theater: { type: 'huge', icon: TheaterIcon },
+  comedy: { type: 'huge', icon: SmileIcon },
+  networking: { type: 'huge', icon: UserGroupIcon },
+  charity: { type: 'huge', icon: FavouriteIcon },
+  fashion: { type: 'lucide', icon: Shirt },
+  art: { type: 'lucide', icon: Palette },
+  food: { type: 'huge', icon: Restaurant01Icon },
 }
 
 export function ExperienceStep({ onNext, initialData }: ExperienceStepProps) {
@@ -47,37 +79,66 @@ export function ExperienceStep({ onNext, initialData }: ExperienceStepProps) {
   }
 
   return (
-    <form id="onboarding-form" onSubmit={handleSubmit(onSubmit)}>
+    <form id="onboarding-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <FieldGroup>
         <Field>
-          <FieldLabel>What types of events do you organize?</FieldLabel>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {EVENT_TYPES.map((type) => (
-              <div
-                key={type.value}
-                className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-accent"
-              >
-                <Checkbox
-                  id={type.value}
-                  checked={selectedEventTypes.includes(type.value)}
-                  onCheckedChange={() => toggleEventType(type.value)}
-                />
+          <FieldLabel className="text-sm font-semibold mb-3">
+            What types of events do you organize?
+          </FieldLabel>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {EVENT_TYPES.map((type) => {
+              const iconConfig = EVENT_TYPE_ICONS[type.value]
+              const isSelected = selectedEventTypes.includes(type.value)
+              
+              return (
                 <label
+                  key={type.value}
                   htmlFor={type.value}
-                  className="flex-1 cursor-pointer text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  className={`flex items-center space-x-3 rounded-xl border-2 p-4 cursor-pointer transition-all hover:bg-accent/50 ${
+                    isSelected
+                      ? "border-primary bg-primary/5 shadow-sm"
+                      : "border-border/60"
+                  }`}
                 >
-                  {type.label}
+                  <Checkbox
+                    id={type.value}
+                    checked={isSelected}
+                    onCheckedChange={() => toggleEventType(type.value)}
+                  />
+                  {iconConfig && (
+                    iconConfig.type === 'huge' ? (
+                      <HugeiconsIcon
+                        icon={iconConfig.icon}
+                        strokeWidth={2}
+                        className={`size-5 ${
+                          isSelected ? "text-primary" : "text-muted-foreground"
+                        }`}
+                      />
+                    ) : (
+                      <iconConfig.icon
+                        className={`size-5 ${
+                          isSelected ? "text-primary" : "text-muted-foreground"
+                        }`}
+                        strokeWidth={2}
+                      />
+                    )
+                  )}
+                  <span className="text-sm font-medium leading-none flex-1">
+                    {type.label}
+                  </span>
                 </label>
-              </div>
-            ))}
+              )
+            })}
           </div>
           {errors.eventTypes && (
-            <p className="text-sm text-destructive">{errors.eventTypes.message}</p>
+            <p className="text-sm text-destructive mt-2">{errors.eventTypes.message}</p>
           )}
         </Field>
 
         <Field>
-          <FieldLabel htmlFor="audienceSize">Typical Audience Size</FieldLabel>
+          <FieldLabel htmlFor="audienceSize" className="text-sm font-semibold">
+            Typical Audience Size
+          </FieldLabel>
           <Controller
             name="audienceSize"
             control={control}
@@ -86,7 +147,7 @@ export function ExperienceStep({ onNext, initialData }: ExperienceStepProps) {
                 onValueChange={field.onChange}
                 defaultValue={field.value}
               >
-                <SelectTrigger id="audienceSize" className="bg-background">
+                <SelectTrigger id="audienceSize" className="h-12 bg-background/50 border-border/60 focus:border-primary transition-colors">
                   <SelectValue placeholder="Select audience size" />
                 </SelectTrigger>
                 <SelectContent>
@@ -100,12 +161,14 @@ export function ExperienceStep({ onNext, initialData }: ExperienceStepProps) {
             )}
           />
           {errors.audienceSize && (
-            <p className="text-sm text-destructive">{errors.audienceSize.message}</p>
+            <p className="text-sm text-destructive mt-1.5">{errors.audienceSize.message}</p>
           )}
         </Field>
 
         <Field>
-          <FieldLabel htmlFor="eventFrequency">How often do you organize events?</FieldLabel>
+          <FieldLabel htmlFor="eventFrequency" className="text-sm font-semibold">
+            How often do you organize events?
+          </FieldLabel>
           <Controller
             name="eventFrequency"
             control={control}
@@ -114,7 +177,7 @@ export function ExperienceStep({ onNext, initialData }: ExperienceStepProps) {
                 onValueChange={field.onChange}
                 defaultValue={field.value}
               >
-                <SelectTrigger id="eventFrequency" className="bg-background">
+                <SelectTrigger id="eventFrequency" className="h-12 bg-background/50 border-border/60 focus:border-primary transition-colors">
                   <SelectValue placeholder="Select frequency" />
                 </SelectTrigger>
                 <SelectContent>
@@ -128,7 +191,7 @@ export function ExperienceStep({ onNext, initialData }: ExperienceStepProps) {
             )}
           />
           {errors.eventFrequency && (
-            <p className="text-sm text-destructive">{errors.eventFrequency.message}</p>
+            <p className="text-sm text-destructive mt-1.5">{errors.eventFrequency.message}</p>
           )}
         </Field>
 

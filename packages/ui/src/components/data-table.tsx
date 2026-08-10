@@ -110,7 +110,10 @@ function ActionButtons<T>({ row, actions }: { row: T; actions: RowAction<T>[] })
             e.stopPropagation()
             action.onClick(row)
           }}
-          className={cn("h-8", action.iconOnly ? "w-8 p-0" : "px-2")}
+          className={cn(
+            "h-8 text-muted-foreground hover:text-foreground",
+            action.iconOnly ? "w-8 p-0" : "px-2"
+          )}
           title={action.label}
         >
           {action.icon && (
@@ -126,7 +129,7 @@ function ActionButtons<T>({ row, actions }: { row: T; actions: RowAction<T>[] })
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
               onClick={(e) => e.stopPropagation()}
               title="More actions"
             >

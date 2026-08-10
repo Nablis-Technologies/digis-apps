@@ -41,22 +41,38 @@ export function AgreementStep({ onNext, initialData }: AgreementStepProps) {
   }
 
   return (
-    <form id="onboarding-form" onSubmit={handleSubmit(onSubmit)}>
+    <form id="onboarding-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <FieldGroup>
         {/* Service Information */}
-        <div className="rounded-lg border bg-muted/50 p-4">
-          <h3 className="mb-2 font-semibold">Service Fees</h3>
-          <div className="space-y-1 text-sm text-muted-foreground">
-            <p>• Platform Fee: {PLATFORM_FEE_PERCENTAGE}% per ticket sold</p>
-            <p>• Service Fee: {SERVICE_FEE_PERCENTAGE}% per transaction</p>
-            <p>• Payment processing fees may apply</p>
+        <div className="rounded-2xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-lime-500/5 p-6">
+          <h3 className="mb-3 text-lg font-bold text-foreground flex items-center gap-2">
+            <span className="inline-flex items-center justify-center size-8 rounded-lg bg-primary/10">
+              💰
+            </span>
+            Service Fees
+          </h3>
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-background/50">
+              <span className="text-muted-foreground">Platform Fee</span>
+              <span className="font-semibold text-foreground">{PLATFORM_FEE_PERCENTAGE}% per ticket</span>
+            </div>
+            <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-background/50">
+              <span className="text-muted-foreground">Service Fee</span>
+              <span className="font-semibold text-foreground">{SERVICE_FEE_PERCENTAGE}% per transaction</span>
+            </div>
+            <p className="text-xs text-muted-foreground pt-2">
+              Payment processing fees may apply based on the payment method
+            </p>
           </div>
         </div>
 
         {/* Terms and Conditions */}
         <Field>
-          <div className="space-y-4">
-            <div className="flex items-start space-x-3">
+          <div className="space-y-5">
+            <label
+              htmlFor="agreedToTerms"
+              className="flex items-start space-x-4 p-4 rounded-xl border-2 border-border/60 hover:border-primary/50 hover:bg-accent/30 cursor-pointer transition-all"
+            >
               <Controller
                 name="agreedToTerms"
                 control={control}
@@ -65,34 +81,34 @@ export function AgreementStep({ onNext, initialData }: AgreementStepProps) {
                     id="agreedToTerms"
                     checked={field.value}
                     onCheckedChange={field.onChange}
-                    className="mt-0.5"
+                    className="mt-1"
                   />
                 )}
               />
               <div className="flex-1">
-                <label
-                  htmlFor="agreedToTerms"
-                  className="cursor-pointer text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
+                <p className="text-sm font-semibold leading-snug mb-1">
                   I agree to the Terms and Conditions
-                </label>
-                <p className="mt-1 text-xs text-muted-foreground">
+                </p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   By checking this box, you agree to our{" "}
-                  <a href="#" className="underline hover:text-foreground">
+                  <a href="#" className="underline hover:text-foreground font-medium">
                     Terms of Service
                   </a>{" "}
                   and{" "}
-                  <a href="#" className="underline hover:text-foreground">
+                  <a href="#" className="underline hover:text-foreground font-medium">
                     Privacy Policy
                   </a>
                 </p>
               </div>
-            </div>
+            </label>
             {errors.agreedToTerms && (
               <p className="text-sm text-destructive">{errors.agreedToTerms.message}</p>
             )}
 
-            <div className="flex items-start space-x-3">
+            <label
+              htmlFor="agreedToFees"
+              className="flex items-start space-x-4 p-4 rounded-xl border-2 border-border/60 hover:border-primary/50 hover:bg-accent/30 cursor-pointer transition-all"
+            >
               <Controller
                 name="agreedToFees"
                 control={control}
@@ -101,27 +117,27 @@ export function AgreementStep({ onNext, initialData }: AgreementStepProps) {
                     id="agreedToFees"
                     checked={field.value}
                     onCheckedChange={field.onChange}
-                    className="mt-0.5"
+                    className="mt-1"
                   />
                 )}
               />
               <div className="flex-1">
-                <label
-                  htmlFor="agreedToFees"
-                  className="cursor-pointer text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
+                <p className="text-sm font-semibold leading-snug mb-1">
                   I acknowledge the service fees
-                </label>
-                <p className="mt-1 text-xs text-muted-foreground">
+                </p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   You understand and agree to the platform and service fees listed above
                 </p>
               </div>
-            </div>
+            </label>
             {errors.agreedToFees && (
               <p className="text-sm text-destructive">{errors.agreedToFees.message}</p>
             )}
 
-            <div className="flex items-start space-x-3">
+            <label
+              htmlFor="agreedToDataAccuracy"
+              className="flex items-start space-x-4 p-4 rounded-xl border-2 border-border/60 hover:border-primary/50 hover:bg-accent/30 cursor-pointer transition-all"
+            >
               <Controller
                 name="agreedToDataAccuracy"
                 control={control}
@@ -130,22 +146,19 @@ export function AgreementStep({ onNext, initialData }: AgreementStepProps) {
                     id="agreedToDataAccuracy"
                     checked={field.value}
                     onCheckedChange={field.onChange}
-                    className="mt-0.5"
+                    className="mt-1"
                   />
                 )}
               />
               <div className="flex-1">
-                <label
-                  htmlFor="agreedToDataAccuracy"
-                  className="cursor-pointer text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
+                <p className="text-sm font-semibold leading-snug mb-1">
                   I confirm the accuracy of my information
-                </label>
-                <p className="mt-1 text-xs text-muted-foreground">
+                </p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   All information provided is accurate and up to date
                 </p>
               </div>
-            </div>
+            </label>
             {errors.agreedToDataAccuracy && (
               <p className="text-sm text-destructive">
                 {errors.agreedToDataAccuracy.message}

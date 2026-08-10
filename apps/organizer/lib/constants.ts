@@ -27,7 +27,7 @@ export const ONBOARDING_STEPS = [
     id: 4,
     title: "Preferences",
     description: "Set your preferences",
-    fields: ["payoutMethod", "supportOptions", "useQRScanner"],
+    fields: ["payoutMethod"],
   },
   {
     id: 5,

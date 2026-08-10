@@ -42,8 +42,6 @@ export type ExperienceFormData = z.infer<typeof experienceSchema>
 // Step 4: Preferences
 export const preferencesSchema = z.object({
   payoutMethod: z.string().min(1, "Select payout method"),
-  supportOptions: z.array(z.string()).min(1, "Select at least one support option"),
-  useQRScanner: z.boolean(),
 })
 
 export type PreferencesFormData = z.infer<typeof preferencesSchema>
