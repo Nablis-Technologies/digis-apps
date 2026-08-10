@@ -355,7 +355,12 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
               {ENTRY_TYPES.map((et) => (
                 <button
                   key={et.value}
-                  onClick={() => setEntryType(et.value)}
+                  onClick={() => {
+                    setEntryType(et.value)
+                    if (et.value === "invite_only") {
+                      setVisibility("private")
+                    }
+                  }}
                   className={`text-left p-4 rounded-2xl border-2 transition-all ${
                     entryType === et.value ? "border-lime-500 bg-lime-500/5" : "border-border/40 hover:border-border bg-card/50"
                   }`}
@@ -412,11 +417,14 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
             className="space-y-5"
           >
             <div className="flex items-center gap-2 mb-1">
-              <Badge variant="outline" className="text-xs gap-1.5">
+              <Badge variant="success" className="text-xs gap-1.5 font-semibold">
                 {selectedEntryType.icon}
                 {selectedEntryType.label}
               </Badge>
-              <Badge variant="outline" className="text-xs gap-1.5">
+              <Badge 
+                variant={visibility === "public" ? "info" : "violet"} 
+                className="text-xs gap-1.5 font-semibold"
+              >
                 {VISIBILITY_OPTIONS.find((v) => v.value === visibility)?.icon}
                 {visibility.charAt(0).toUpperCase() + visibility.slice(1)}
               </Badge>
