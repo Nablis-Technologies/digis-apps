@@ -29,7 +29,6 @@ import {
   GlobeIcon,
   Store01Icon,
   LayoutTopIcon,
-  SettingsIcon,
 } from "@hugeicons/core-free-icons"
 import {
   Area,
@@ -404,21 +403,18 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.4 }}
+              className="flex flex-col gap-2"
             >
-              <Card>
-                <CardHeader>
-                  <CardTitle>Ticket tiers</CardTitle>
-                  <p className="text-sm text-muted-foreground">Inventory and pricing overview.</p>
-                </CardHeader>
-                <CardContent>
-                  <DataTable
-                    columns={tierColumns}
-                    data={tierRows}
-                    keyExtractor={(row) => row.id}
-                    emptyMessage="No ticket tiers found."
-                  />
-                </CardContent>
-              </Card>
+              <div>
+                <h3 className="font-semibold">Ticket tiers</h3>
+                <p className="text-sm text-muted-foreground">Inventory and pricing overview.</p>
+              </div>
+              <DataTable
+                columns={tierColumns}
+                data={tierRows}
+                keyExtractor={(row) => row.id}
+                emptyMessage="No ticket tiers found."
+              />
             </motion.div>
 
             {/* Quick Stats Summary */}
@@ -579,21 +575,18 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1, duration: 0.4 }}
+            className="flex flex-col gap-2"
           >
-            <Card>
-              <CardHeader>
-                <CardTitle>Ticket tiers</CardTitle>
-                <p className="text-sm text-muted-foreground">Inventory and pricing overview.</p>
-              </CardHeader>
-              <CardContent>
-                <DataTable
-                  columns={tierColumns}
-                  data={tierRows}
-                  keyExtractor={(row) => row.id}
-                  emptyMessage="No ticket tiers found."
-                />
-              </CardContent>
-            </Card>
+            <div>
+              <h3 className="font-semibold">Ticket tiers</h3>
+              <p className="text-sm text-muted-foreground">Inventory and pricing overview.</p>
+            </div>
+            <DataTable
+              columns={tierColumns}
+              data={tierRows}
+              keyExtractor={(row) => row.id}
+              emptyMessage="No ticket tiers found."
+            />
           </motion.div>
         </TabsContent>
 
@@ -606,26 +599,21 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1, duration: 0.4 }}
+            className="flex flex-col gap-2"
           >
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <HugeiconsIcon icon={BarChartIcon} strokeWidth={2} className="size-5" />
-                  Sale channel
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Where your tickets are being sold.
-                </p>
-              </CardHeader>
-              <CardContent>
-                <DataTable
-                  columns={channelColumns}
-                  data={saleChannelRows}
-                  keyExtractor={(row) => row.name}
-                  emptyMessage="No sales channels found."
-                />
-              </CardContent>
-            </Card>
+            <div className="flex items-center gap-2">
+              <HugeiconsIcon icon={BarChartIcon} strokeWidth={2} className="size-5" />
+              <h3 className="font-semibold">Sale channel</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Where your tickets are being sold.
+            </p>
+            <DataTable
+              columns={channelColumns}
+              data={saleChannelRows}
+              keyExtractor={(row) => row.name}
+              emptyMessage="No sales channels found."
+            />
           </motion.div>
         </TabsContent>
       </Tabs>

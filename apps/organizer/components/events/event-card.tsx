@@ -88,7 +88,10 @@ export function EventCard({ event, index = 0 }: EventCardProps) {
               <h3 className="flex-1 font-semibold group-hover:text-primary">
                 {event.name}
               </h3>
-              <Badge variant={getCategoryVariant(event.category)} className="shrink-0">
+              <Badge 
+                variant={getCategoryVariant(event.category)} 
+                className="shrink-0 border border-current/20"
+              >
                 {event.category}
               </Badge>
             </div>

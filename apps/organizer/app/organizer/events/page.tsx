@@ -214,7 +214,10 @@ export default function EventsPage() {
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{row.name}</p>
-            <Badge variant={getCategoryVariant(row.category)} className="mt-1">
+            <Badge 
+              variant={getCategoryVariant(row.category)} 
+              className="mt-1 border border-current/20"
+            >
               {row.category}
             </Badge>
           </div>
