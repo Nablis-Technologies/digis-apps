@@ -23,6 +23,8 @@
     --color-chart-3: var(--chart-3);
     --color-chart-2: var(--chart-2);
     --color-chart-1: var(--chart-1);
+    --color-event-rsvp: var(--event-rsvp);
+    --color-event-invite: var(--event-invite);
     --color-ring: var(--ring);
     --color-input: var(--input);
     --color-border: var(--border);
@@ -74,6 +76,8 @@
     --chart-3: oklch(0.648 0.2 131.684);
     --chart-4: oklch(0.532 0.157 131.589);
     --chart-5: oklch(0.453 0.124 130.933);
+    --event-rsvp: oklch(0.7 0.15 240);
+    --event-invite: oklch(0.75 0.15 50);
     --radius: 0.45rem;
     --sidebar: oklch(0.988 0.003 106.5);
     --sidebar-foreground: oklch(0.153 0.006 107.1);
@@ -109,6 +113,8 @@
     --chart-3: oklch(0.648 0.2 131.684);
     --chart-4: oklch(0.532 0.157 131.589);
     --chart-5: oklch(0.453 0.124 130.933);
+    --event-rsvp: oklch(0.65 0.18 240);
+    --event-invite: oklch(0.7 0.18 50);
     --sidebar: oklch(0.228 0.013 107.4);
     --sidebar-foreground: oklch(0.988 0.003 106.5);
     --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -153,4 +159,20 @@
   ::-webkit-scrollbar-corner {
     background: transparent;
     }
+}
+
+@layer utilities {
+  /* Event type color utilities - ensures Tailwind generates all event type bg/text/border classes */
+  .bg-event-rsvp { background-color: var(--event-rsvp); }
+  .bg-event-invite { background-color: var(--event-invite); }
+  .text-event-rsvp { color: var(--event-rsvp); }
+  .text-event-invite { color: var(--event-invite); }
+  .border-event-rsvp { border-color: var(--event-rsvp); }
+  .border-event-invite { border-color: var(--event-invite); }
+  
+  /* Opacity variants for event colors */
+  .bg-event-rsvp\/10 { background-color: color-mix(in oklab, var(--event-rsvp) 10%, transparent); }
+  .bg-event-invite\/10 { background-color: color-mix(in oklab, var(--event-invite) 10%, transparent); }
+  .bg-chart-3\/10 { background-color: color-mix(in oklab, var(--chart-3) 10%, transparent); }
+  .bg-chart-1\/10 { background-color: color-mix(in oklab, var(--chart-1) 10%, transparent); }
 }

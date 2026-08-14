@@ -65,34 +65,46 @@ type GuestInput = {
   allowedGuests: number
 }
 
-const ENTRY_TYPES: { value: EntryType; label: string; desc: string; icon: React.ReactNode; color: string }[] = [
+const ENTRY_TYPES: { value: EntryType; label: string; desc: string; icon: React.ReactNode; color: string; bgClass: string; textClass: string; borderClass: string }[] = [
   {
     value: "ticketed",
     label: "Ticketed",
     desc: "Paid entry — sell General, VIP, VVIP tiers",
     icon: <HugeiconsIcon icon={TicketIcon} strokeWidth={2} className="size-5" />,
-    color: "border-lime-500/50 bg-lime-500/8",
+    color: "--chart-1",
+    bgClass: "bg-chart-1",
+    textClass: "text-chart-1",
+    borderClass: "border-chart-1",
   },
   {
     value: "rsvp",
     label: "RSVP",
     desc: "Free registration, optional approval queue",
     icon: <HugeiconsIcon icon={CalendarCheckIcon} strokeWidth={2} className="size-5" />,
-    color: "border-lime-500/50 bg-lime-500/8",
+    color: "--event-rsvp",
+    bgClass: "bg-event-rsvp",
+    textClass: "text-event-rsvp",
+    borderClass: "border-event-rsvp",
   },
   {
     value: "free",
     label: "Free Entry",
     desc: "No tickets, no registration — just show up",
     icon: <HugeiconsIcon icon={GiftIcon} strokeWidth={2} className="size-5" />,
-    color: "border-lime-500/50 bg-lime-500/8",
+    color: "--chart-3",
+    bgClass: "bg-chart-3",
+    textClass: "text-chart-3",
+    borderClass: "border-chart-3",
   },
   {
     value: "invite_only",
     label: "Invite Only",
     desc: "Code-gated or curated guest list access",
     icon: <HugeiconsIcon icon={LockIcon} strokeWidth={2} className="size-5" />,
-    color: "border-lime-500/50 bg-lime-500/8",
+    color: "--event-invite",
+    bgClass: "bg-event-invite",
+    textClass: "text-event-invite",
+    borderClass: "border-event-invite",
   },
 ]
 
@@ -324,7 +336,11 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
             <div className="flex items-center gap-2">
               <div
                 className={`size-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-                  i < step ? "bg-lime-500 text-white" : i === step ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                  i < step 
+                    ? `${selectedEntryType.bgClass} text-white` 
+                    : i === step 
+                      ? "bg-primary text-primary-foreground" 
+                      : "bg-muted text-muted-foreground"
                 }`}
               >
                 {i < step ? <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-3.5" /> : i + 1}
@@ -334,7 +350,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
               </span>
             </div>
             {i < steps.length - 1 && (
-              <div className={`flex-1 h-px ${i < step ? "bg-lime-500" : "bg-border/50"}`} />
+              <div className={`flex-1 h-px ${i < step ? selectedEntryType.bgClass : "bg-border/50"}`} />
             )}
           </div>
         ))}
@@ -369,10 +385,10 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                     }
                   }}
                   className={`text-left p-4 rounded-2xl border-2 transition-all ${
-                    entryType === et.value ? "border-lime-500 bg-lime-500/5" : "border-border/40 hover:border-border bg-card/50"
+                    entryType === et.value ? `${et.borderClass} ${et.bgClass}/10` : "border-border/40 hover:border-border bg-card/50"
                   }`}
                 >
-                  <div className={`mb-2 ${entryType === et.value ? "text-lime-500" : "text-muted-foreground"}`}>
+                  <div className={`mb-2 ${entryType === et.value ? et.textClass : "text-muted-foreground"}`}>
                     {et.icon}
                   </div>
                   <div className="font-semibold text-sm">{et.label}</div>
@@ -390,10 +406,10 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                     key={v.value}
                     onClick={() => setVisibility(v.value)}
                     className={`w-full text-left px-4 py-3 rounded-xl border transition-all flex items-start gap-3 ${
-                      visibility === v.value ? "border-lime-500 bg-lime-500/5" : "border-border/40 hover:border-border bg-card/50"
+                      visibility === v.value ? `${selectedEntryType.borderClass} ${selectedEntryType.bgClass}/10` : "border-border/40 hover:border-border bg-card/50"
                     }`}
                   >
-                    <div className={`mt-0.5 ${visibility === v.value ? "text-lime-500" : "text-muted-foreground"}`}>
+                    <div className={`mt-0.5 ${visibility === v.value ? selectedEntryType.textClass : "text-muted-foreground"}`}>
                       {v.icon}
                     </div>
                     <div>
@@ -401,8 +417,8 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                       <div className="text-xs text-muted-foreground">{v.desc}</div>
                     </div>
                     {visibility === v.value && (
-                      <div className="ml-auto size-4 bg-primary rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-2.5 text-primary-foreground" />
+                      <div className={`ml-auto size-4 ${selectedEntryType.bgClass} rounded-full flex items-center justify-center flex-shrink-0 mt-0.5`}>
+                        <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-2.5 text-white" />
                       </div>
                     )}
                   </button>
@@ -757,11 +773,11 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                       type="button"
                       onClick={() => setUsePaidTickets(false)}
                       className={`flex items-center gap-3 px-3 py-3 rounded-xl border text-left transition-all ${
-                        !usePaidTickets ? "border-primary bg-primary/8 text-primary" : "border-border/40 text-muted-foreground hover:border-border"
+                        !usePaidTickets ? `${selectedEntryType.borderClass} ${selectedEntryType.bgClass}/15 ${selectedEntryType.textClass}` : "border-border/40 text-muted-foreground hover:border-border"
                       }`}
                     >
-                      <div className={`size-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${!usePaidTickets ? "border-primary" : "border-muted-foreground/40"}`}>
-                        {!usePaidTickets && <div className="size-2 rounded-full bg-primary" />}
+                      <div className={`size-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${!usePaidTickets ? selectedEntryType.borderClass : "border-muted-foreground/40"}`}>
+                        {!usePaidTickets && <div className={`size-2 rounded-full ${selectedEntryType.bgClass}`} />}
                       </div>
                       <div>
                         <p className="text-sm font-medium leading-none">Free</p>
@@ -772,11 +788,11 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                       type="button"
                       onClick={() => { setUsePaidTickets(true); if (ticketTypes.length === 0) addTicketType() }}
                       className={`flex items-center gap-3 px-3 py-3 rounded-xl border text-left transition-all ${
-                        usePaidTickets ? "border-lime-500 bg-lime-500/5 text-lime-500" : "border-border/40 text-muted-foreground hover:border-border"
+                        usePaidTickets ? `${selectedEntryType.borderClass} ${selectedEntryType.bgClass}/10 ${selectedEntryType.textClass}` : "border-border/40 text-muted-foreground hover:border-border"
                       }`}
                     >
-                      <div className={`size-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${usePaidTickets ? "border-lime-500" : "border-muted-foreground/40"}`}>
-                        {usePaidTickets && <div className="size-2 rounded-full bg-lime-500" />}
+                      <div className={`size-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${usePaidTickets ? selectedEntryType.borderClass : "border-muted-foreground/40"}`}>
+                        {usePaidTickets && <div className={`size-2 rounded-full ${selectedEntryType.bgClass}`} />}
                       </div>
                       <div>
                         <p className="text-sm font-medium leading-none">Paid</p>
@@ -823,7 +839,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                 </div>
 
                 {/* Invite Codes toggle */}
-                <div className={`rounded-2xl border transition-colors ${useCodesSection ? "border-primary/40 bg-primary/5" : "border-border/50 bg-card/50"}`}>
+                <div className={`rounded-2xl border transition-colors ${useCodesSection ? `${selectedEntryType.borderClass} ${selectedEntryType.bgClass}/10` : "border-border/50 bg-card/50"}`}>
                   <div
                     role="button"
                     tabIndex={0}
@@ -831,8 +847,8 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                     onClick={() => setUseCodesSection((v) => !v)}
                     onKeyDown={(e) => e.key === "Enter" && setUseCodesSection((v) => !v)}
                   >
-                    <div className={`p-2 rounded-xl flex-shrink-0 transition-colors ${useCodesSection ? "bg-primary/15" : "bg-muted"}`}>
-                      <HugeiconsIcon icon={Key01Icon} strokeWidth={2} className={`size-4 ${useCodesSection ? "text-primary" : "text-muted-foreground"}`} />
+                    <div className={`p-2 rounded-xl flex-shrink-0 transition-colors ${useCodesSection ? `${selectedEntryType.bgClass}/15` : "bg-muted"}`}>
+                      <HugeiconsIcon icon={Key01Icon} strokeWidth={2} className={`size-4 ${useCodesSection ? selectedEntryType.textClass : "text-muted-foreground"}`} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
@@ -897,7 +913,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                                   type="button"
                                   onClick={() => setNewCode((p) => ({ ...p, useType: t }))}
                                   className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all flex items-center justify-center gap-1 ${
-                                    newCode.useType === t ? "border-primary bg-primary/10 text-primary" : "border-border/40 text-muted-foreground hover:border-border"
+                                    newCode.useType === t ? `${selectedEntryType.borderClass} ${selectedEntryType.bgClass}/15 ${selectedEntryType.textClass}` : "border-border/40 text-muted-foreground hover:border-border"
                                   }`}
                                 >
                                   {t === "unlimited" ? "Unlimited" : t === "single" ? "Single-use" : "Limited"}
@@ -951,7 +967,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                             <div className="space-y-1.5">
                               {inviteCodes.map((c) => (
                                 <div key={c._id} className="flex items-center gap-2 px-3 py-2 bg-background border border-border/40 rounded-xl">
-                                  <HugeiconsIcon icon={Key01Icon} strokeWidth={2} className="size-3.5 text-primary flex-shrink-0" />
+                                  <HugeiconsIcon icon={Key01Icon} strokeWidth={2} className={`size-3.5 ${selectedEntryType.textClass} flex-shrink-0`} />
                                   <code className="font-mono text-sm font-bold flex-1">{c.code}</code>
                                   {c.label && <span className="text-xs text-muted-foreground">{c.label}</span>}
                                   <Badge variant="outline" className="text-[10px] px-1.5">
@@ -1056,7 +1072,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                                   onClick={() => setNewGuest((p) => ({ ...p, allowedGuests: n }))}
                                   className={`h-7 px-2.5 rounded-lg text-xs font-medium border transition-colors ${
                                     newGuest.allowedGuests === n
-                                      ? "bg-lime-500/20 text-lime-500 border-lime-500/40"
+                                      ? `${selectedEntryType.bgClass}/20 ${selectedEntryType.textClass} ${selectedEntryType.borderClass}`
                                       : "bg-muted/50 text-muted-foreground border-border/40 hover:border-border"
                                   }`}
                                 >
@@ -1130,7 +1146,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                             <div className="space-y-1.5">
                               {guests.map((g) =>
                                 editingGuestId === g._id ? (
-                                  <div key={g._id} className="bg-background border border-lime-500/40 rounded-xl p-3 space-y-2">
+                                  <div key={g._id} className={`bg-background border ${selectedEntryType.borderClass} rounded-xl p-3 space-y-2`}>
                                     <div className="grid grid-cols-2 gap-2">
                                       <Input
                                         placeholder="Name"
@@ -1159,7 +1175,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                                           onClick={() => setEditGuestForm((p) => ({ ...p, allowedGuests: n }))}
                                           className={`h-6 px-2 rounded text-[10px] font-medium border transition-colors ${
                                             editGuestForm.allowedGuests === n
-                                              ? "bg-lime-500/20 text-lime-500 border-lime-500/40"
+                                              ? `${selectedEntryType.bgClass}/20 ${selectedEntryType.textClass} ${selectedEntryType.borderClass}`
                                               : "bg-muted/50 text-muted-foreground border-border/40 hover:border-border"
                                           }`}
                                         >
@@ -1194,13 +1210,13 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                                   </div>
                                 ) : (
                                   <div key={g._id} className="flex items-center gap-2 px-3 py-2 bg-background border border-border/40 rounded-xl group">
-                                    <HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} className="size-3.5 text-lime-500 flex-shrink-0" />
+                                    <HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} className={`size-3.5 ${selectedEntryType.textClass} flex-shrink-0`} />
                                     <div className="flex-1 min-w-0">
                                       {g.name && <div className="text-sm font-medium truncate">{g.name}</div>}
                                       <div className="text-xs text-muted-foreground truncate">{g.contact}</div>
                                     </div>
                                     {g.allowedGuests > 0 && (
-                                      <span className="text-[10px] font-semibold text-lime-500 bg-lime-500/10 border border-lime-500/20 rounded px-1.5 py-0.5 flex-shrink-0">
+                                      <span className={`text-[10px] font-semibold ${selectedEntryType.textClass} ${selectedEntryType.bgClass}/15 border ${selectedEntryType.borderClass} rounded px-1.5 py-0.5 flex-shrink-0`}>
                                         +{g.allowedGuests}
                                       </span>
                                     )}
@@ -1290,8 +1306,8 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
 
             {/* Free */}
             {entryType === "free" && (
-              <div className="bg-card border border-lime-500/30 rounded-2xl p-5 text-center space-y-2">
-                <HugeiconsIcon icon={GiftIcon} strokeWidth={2} className="size-8 text-lime-500 mx-auto" />
+              <div className={`bg-card border ${selectedEntryType.borderClass} rounded-2xl p-5 text-center space-y-2`}>
+                <HugeiconsIcon icon={GiftIcon} strokeWidth={2} className={`size-8 ${selectedEntryType.textClass} mx-auto`} />
                 <h3 className="font-semibold">Free entry — no registration</h3>
                 <p className="text-sm text-muted-foreground">
                   The event page shows date, time and location. Attendees just show up.
@@ -1334,19 +1350,19 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
               type="button"
               onClick={() => setIsRecurring(false)}
               className={`w-full text-left p-4 rounded-2xl border-2 transition-all ${
-                !isRecurring ? "border-lime-500 bg-lime-500/5" : "border-border/40 hover:border-border bg-card/50"
+                !isRecurring ? `${selectedEntryType.borderClass} ${selectedEntryType.bgClass}/10` : "border-border/40 hover:border-border bg-card/50"
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-xl flex-shrink-0 ${!isRecurring ? "bg-lime-500/15" : "bg-muted"}`}>
-                  <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className={`size-5 ${!isRecurring ? "text-lime-500" : "text-muted-foreground"}`} />
+                <div className={`p-2 rounded-xl flex-shrink-0 ${!isRecurring ? `${selectedEntryType.bgClass}/20` : "bg-muted"}`}>
+                  <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className={`size-5 ${!isRecurring ? selectedEntryType.textClass : "text-muted-foreground"}`} />
                 </div>
                 <div>
                   <div className="font-semibold text-sm">Single event</div>
                   <div className="text-xs text-muted-foreground mt-0.5">One date, one event — standard mode</div>
                 </div>
                 {!isRecurring && (
-                  <div className="ml-auto size-5 bg-lime-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <div className={`ml-auto size-5 ${selectedEntryType.bgClass} rounded-full flex items-center justify-center flex-shrink-0`}>
                     <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-3 text-white" />
                   </div>
                 )}
@@ -1354,7 +1370,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
             </button>
 
             <div className={`rounded-2xl border-2 transition-all overflow-hidden ${
-              isRecurring ? "border-lime-500 bg-lime-500/5" : "border-border/40 bg-card/50"
+              isRecurring ? `${selectedEntryType.borderClass} ${selectedEntryType.bgClass}/10` : "border-border/40 bg-card/50"
             }`}>
               <button
                 type="button"
@@ -1362,15 +1378,15 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                 className="w-full text-left p-4"
               >
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-xl flex-shrink-0 ${isRecurring ? "bg-lime-500/15" : "bg-muted"}`}>
-                    <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className={`size-5 ${isRecurring ? "text-lime-500" : "text-muted-foreground"}`} />
+                  <div className={`p-2 rounded-xl flex-shrink-0 ${isRecurring ? `${selectedEntryType.bgClass}/20` : "bg-muted"}`}>
+                    <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className={`size-5 ${isRecurring ? selectedEntryType.textClass : "text-muted-foreground"}`} />
                   </div>
                   <div>
                     <div className="font-semibold text-sm">Recurring series</div>
                     <div className="text-xs text-muted-foreground mt-0.5">All instances share the same details — attendees pick their date</div>
                   </div>
                   {isRecurring && (
-                    <div className="ml-auto size-5 bg-lime-500 rounded-full flex items-center justify-center flex-shrink-0">
+                    <div className={`ml-auto size-5 ${selectedEntryType.bgClass} rounded-full flex items-center justify-center flex-shrink-0`}>
                       <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-3 text-white" />
                     </div>
                   )}
@@ -1385,11 +1401,11 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.22 }}
-                    className="overflow-hidden border-t border-lime-500/20"
+                    className={`overflow-hidden border-t ${selectedEntryType.borderClass}/20`}
                   >
                     <div className="p-4 space-y-4">
                       <div className="space-y-2">
-                        <Label className="text-xs font-bold text-lime-500 uppercase tracking-wider">Repeat every</Label>
+                        <Label className={`text-xs font-bold ${selectedEntryType.textClass} uppercase tracking-wider`}>Repeat every</Label>
                         <div className="grid grid-cols-4 gap-2">
                           {([
                             { value: "weekly", label: "1 week" },
@@ -1403,7 +1419,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                               onClick={() => setRecurrenceType(p.value)}
                               className={`py-2 px-2 rounded-xl border text-xs font-semibold transition-all ${
                                 recurrenceType === p.value
-                                  ? "border-lime-500/50 bg-lime-500/10 text-lime-500"
+                                  ? `${selectedEntryType.borderClass} ${selectedEntryType.bgClass}/15 ${selectedEntryType.textClass}`
                                   : "border-border/40 text-muted-foreground hover:border-border"
                               }`}
                             >
@@ -1415,7 +1431,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
 
                       {recurrenceType !== "custom" && (
                         <div className="space-y-2">
-                          <Label className="text-xs font-bold text-lime-500 uppercase tracking-wider">Occurrences</Label>
+                          <Label className={`text-xs font-bold ${selectedEntryType.textClass} uppercase tracking-wider`}>Occurrences</Label>
                           <div className="flex items-center gap-3">
                             <Button
                               variant="outline"
@@ -1448,7 +1464,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
 
                       {recurrenceType === "custom" && (
                         <div className="space-y-2">
-                          <Label className="text-xs font-bold text-lime-500 uppercase tracking-wider">Add dates</Label>
+                          <Label className={`text-xs font-bold ${selectedEntryType.textClass} uppercase tracking-wider`}>Add dates</Label>
                           <div className="flex gap-2">
                             <Input
                               type="date"
@@ -1540,7 +1556,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
             transition={{ duration: 0.25 }}
             className="space-y-5"
           >
-            <div className="bg-card border border-primary/20 rounded-2xl overflow-hidden">
+            <div className={`bg-card border ${selectedEntryType.borderClass} rounded-2xl overflow-hidden`}>
               {bannerImage && (
                 <img
                   src={bannerImage}
@@ -1551,11 +1567,15 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
               )}
               <div className="p-5">
                 <div className="flex flex-wrap gap-1.5 mb-3">
-                  <Badge variant="outline" className="text-xs gap-1">
+                  <Badge variant="success" className="text-xs gap-1.5 font-semibold">
                     {selectedEntryType.icon}
                     {selectedEntryType.label}
                   </Badge>
-                  <Badge variant="outline" className="text-xs">
+                  <Badge 
+                    variant={visibility === "public" ? "info" : "violet"} 
+                    className="text-xs gap-1.5 font-semibold"
+                  >
+                    {VISIBILITY_OPTIONS.find((v) => v.value === visibility)?.icon}
                     {visibility.charAt(0).toUpperCase() + visibility.slice(1)}
                   </Badge>
                   {requiresApproval && <Badge variant="outline" className="text-xs">Approval required</Badge>}
@@ -1630,7 +1650,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
 
             <div className="bg-card border border-border/60 rounded-2xl p-4 space-y-4">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-primary/10">
+                <div className={`p-1.5 rounded-lg ${selectedEntryType.bgClass}/15`}>
                   {selectedEntryType.icon}
                 </div>
                 <div>

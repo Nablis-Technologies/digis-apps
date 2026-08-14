@@ -322,11 +322,11 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const getStatusColor = (status: typeof event.status) => {
     switch (status) {
       case "Live":
-        return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"
+        return "bg-chart-1/10 text-chart-1 dark:bg-chart-1/20 dark:text-chart-1"
       case "Published":
-        return "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+        return "bg-chart-2/10 text-chart-2 dark:bg-chart-2/20 dark:text-chart-2"
       case "Draft":
-        return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+        return "bg-muted text-muted-foreground"
     }
   }
 
@@ -483,12 +483,12 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                   <AreaChart data={salesOverviewData} margin={{ left: -12, right: 12 }}>
                     <defs>
                       <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="oklch(0.623 0.214 259.815)" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="oklch(0.623 0.214 259.815)" stopOpacity={0} />
+                        <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0} />
                       </linearGradient>
                       <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="oklch(0.769 0.188 70.08)" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="oklch(0.769 0.188 70.08)" stopOpacity={0} />
+                        <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid
@@ -526,7 +526,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                       type="monotone"
                       dataKey="sales"
                       name="Tickets sold"
-                      stroke="oklch(0.623 0.214 259.815)"
+                      stroke="hsl(var(--chart-1))"
                       strokeWidth={2}
                       fillOpacity={1}
                       fill="url(#salesGradient)"
@@ -536,7 +536,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                       type="monotone"
                       dataKey="revenue"
                       name="Revenue"
-                      stroke="oklch(0.769 0.188 70.08)"
+                      stroke="hsl(var(--chart-2))"
                       strokeWidth={2}
                       fillOpacity={1}
                       fill="url(#revenueGradient)"
@@ -548,15 +548,13 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 <div className="flex items-center justify-center gap-4 pt-3">
                   <div className="flex items-center gap-1.5">
                     <span
-                      className="h-2 w-2 shrink-0 rounded-[2px]"
-                      style={{ backgroundColor: "oklch(0.623 0.214 259.815)" }}
+                      className="h-2 w-2 shrink-0 rounded-[2px] bg-chart-1"
                     />
                     <span className="text-xs">Tickets sold</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span
-                      className="h-2 w-2 shrink-0 rounded-[2px]"
-                      style={{ backgroundColor: "oklch(0.769 0.188 70.08)" }}
+                      className="h-2 w-2 shrink-0 rounded-[2px] bg-chart-2"
                     />
                     <span className="text-xs">Revenue</span>
                   </div>

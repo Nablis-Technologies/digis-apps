@@ -219,7 +219,7 @@ const eventColumns: Column<EventRow>[] = [
         <div className="flex items-center gap-3">
           <div className="h-2 w-24 overflow-hidden rounded-full bg-muted">
             <div
-              className="h-full rounded-full bg-lime-500 transition-all"
+              className="h-full rounded-full bg-chart-1 transition-all"
               style={{ width: `${pct}%` }}
             />
           </div>
@@ -312,7 +312,7 @@ function TicketsTable() {
               onClick={() => setActiveTab(key)}
               className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                 activeTab === key
-                  ? "bg-lime-500 text-white"
+                  ? "bg-chart-1 text-white"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
@@ -351,7 +351,7 @@ function TicketsTable() {
         }}
         renderActions={(row: EventRow) => (
           <Link href={`/organizer/events/${row.id}`}>
-            <div className="flex size-8 items-center justify-center rounded-full bg-lime-500/10 text-lime-500 transition-colors hover:bg-lime-500/20">
+            <div className="flex size-8 items-center justify-center rounded-full bg-chart-1/10 text-chart-1 transition-colors hover:bg-chart-1/20">
               <HugeiconsIcon
                 icon={ChevronRightIcon}
                 strokeWidth={2.5}
@@ -463,8 +463,8 @@ export default function OrganizerDashboard() {
                 <AreaChart data={samplePerformanceData} margin={{ left: -12, right: 12 }}>
                   <defs>
                     <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="oklch(0.623 0.214 259.815)" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="oklch(0.623 0.214 259.815)" stopOpacity={0} />
+                      <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid
@@ -504,7 +504,7 @@ export default function OrganizerDashboard() {
                   <Area
                     type="monotone"
                     dataKey="value"
-                    stroke="oklch(0.623 0.214 259.815)"
+                    stroke="hsl(var(--chart-1))"
                     strokeWidth={2}
                     fillOpacity={1}
                     fill="url(#colorValue)"
