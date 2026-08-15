@@ -23,6 +23,9 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { StatsCard } from "@/components/dashboard/stats-card"
 import { EventDialog } from "@/components/forms/event-dialog"
 import { ConfirmDialog } from "@/components/forms/confirm-dialog"
+import { TicketsTab } from "@/components/tickets-tab"
+import { ScheduleTab, TeamTab } from "@/components/schedule-team-tabs"
+import { RegistrationFormsTab } from "@/components/registration-forms-tab"
 import {
   useGetEventQuery,
   useDeleteEventMutation,
@@ -50,6 +53,7 @@ export default function EventDetailPage() {
 
   const [editOpen, setEditOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [tab, setTab] = useState<"overview" | "tickets" | "schedule" | "team" | "forms">("overview")
 
   async function handleDelete() {
     if (!event) return
@@ -196,6 +200,26 @@ export default function EventDetailPage() {
           </div>
         )}
       </div>
+
+      <div className="flex gap-1 border-b border-border/50">
+        {(["overview", "tickets", "schedule", "team", "forms"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={cn(
+              "px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px capitalize",
+              tab === t ? "border-lime-500 text-lime-600" : "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {t === "tickets" ? "Tickets & Products" : t === "schedule" ? "Schedule" : t === "forms" ? "Registration Forms" : t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {tab === "tickets" && <TicketsTab eventId={event.id} />}
+      {tab === "schedule" && <ScheduleTab eventId={event.id} />}
+      {tab === "team" && <TeamTab eventId={event.id} />}
+      {tab === "forms" && <RegistrationFormsTab eventId={event.id} />}
 
       <EventDialog open={editOpen} onOpenChange={setEditOpen} event={event} />
       <ConfirmDialog
