@@ -12,7 +12,7 @@
 - Prefers updating/repairing existing incomplete UI before moving on to new features. Confidence: 0.6
 - Rejects adding UI scope beyond what was explicitly asked — e.g., an owner picker added to the org create form was reverted ("no revert it"), keeping the form minimal (name + description with the existing `owner_id: ""` placeholder). Confidence: 0.8
 - Prefers minimal frontend-only changes: when the backend API doesn't expose the data needed for a requested UI behavior, declines expanding the backend/API contract and prefers leaving the behavior as-is rather than adding scope. Confidence: 0.6
-- When asked to commit, wants the entire working tree committed (`git add -A`), including unrelated pre-existing modified files — no selective staging or asking about out-of-scope changes ("okay commit everything that is on the working tree"). Confidence: 0.7
+- When asked to commit, wants the entire working tree committed (`git add -A`), including unrelated pre-existing modified files — no selective staging or asking about out-of-scope changes ("okay commit everything that is on the working tree"; a bare "commit" means stage all and commit without further questions). Confidence: 0.8
 r). Confidence: 0.8
 he form minimal (name + description with the existing `owner_id: ""` placeholder). Confidence: 0.8
 .7

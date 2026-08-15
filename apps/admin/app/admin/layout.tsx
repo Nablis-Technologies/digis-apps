@@ -61,6 +61,11 @@ const navSections: NavSection[] = [
         url: "/admin/organizations",
         icon: <HugeiconsIcon icon={OfficeIcon} strokeWidth={2} />,
       },
+    ],
+  },
+  {
+    title: "Legal",
+    items: [
       {
         title: "Legal Documents",
         url: "/admin/legal-documents",
