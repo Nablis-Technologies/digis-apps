@@ -11,6 +11,7 @@ import {
   ChartBarLineIcon, Ticket01Icon,
 } from "@hugeicons/core-free-icons"
 import { cn } from "@/lib/utils"
+import { toastSuccess, toastError } from "@/lib/toast"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import {
@@ -109,8 +110,13 @@ export default function UserDetailPage() {
       desc: `Permanently delete ${user.email}? This action cannot be undone.`,
       label: "Delete",
       action: async () => {
-        await deleteUser(user.id).unwrap()
-        window.location.href = "/admin/users"
+        try {
+          await deleteUser(user.id).unwrap()
+          toastSuccess("User deleted.")
+          window.location.href = "/admin/users"
+        } catch (err) {
+          toastError(err, "Failed to delete user.")
+        }
       },
     })
     setConfirmOpen(true)
@@ -121,7 +127,14 @@ export default function UserDetailPage() {
       title: "Reactivate User",
       desc: `Reactivate ${user.email}? They will be able to log in again.`,
       label: "Reactivate",
-      action: async () => { await reactivateUser(user.id).unwrap() },
+      action: async () => {
+        try {
+          await reactivateUser(user.id).unwrap()
+          toastSuccess("User reactivated.")
+        } catch (err) {
+          toastError(err, "Failed to reactivate user.")
+        }
+      },
     })
     setConfirmOpen(true)
   }
@@ -198,7 +211,7 @@ export default function UserDetailPage() {
       </div>
 
       {tab === "overview" && <OverviewTab user={user} />}
-      {tab === "roles" && <RolesTab userId={id} onAssign={() => setAssignRoleOpen(true)} onRemove={(roleId: string) => removeRole({ userId: id, roleId }).unwrap()} />}
+      {tab === "roles" && <RolesTab userId={id} onAssign={() => setAssignRoleOpen(true)} onRemove={(roleId: string) => removeRole({ userId: id, roleId }).unwrap().then(() => toastSuccess("Role removed.")).catch((err) => toastError(err, "Failed to remove role."))} />}
       {tab === "activity" && <PlaceholderTab title="Activity" description="Activity history for this user coming soon." />}
 
       <UserDialog open={editOpen} onOpenChange={setEditOpen} user={{ id: user.id, email: user.email, phone: user.phone, verified_at: user.verified_at }} />

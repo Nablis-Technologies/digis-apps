@@ -12,6 +12,8 @@ import {
   Settings05Icon,
   HelpCircleIcon,
   Mail01Icon,
+  File01Icon,
+  LockIcon,
 } from "@hugeicons/core-free-icons"
 import type { NavSection, NavSecondaryItem } from "@workspace/ui/components/admin/app-sidebar"
 
@@ -45,9 +47,10 @@ const navSections: NavSection[] = [
       },
       {
         title: "Events",
-        url: "#",
+        url: "/admin/events",
         icon: <HugeiconsIcon icon={MusicNote01Icon} strokeWidth={2} />,
         items: [
+          { title: "All Events", url: "/admin/events" },
           { title: "Categories", url: "/admin/categories" },
           { title: "Venues", url: "/admin/venues" },
           { title: "Artists", url: "/admin/artists" },
@@ -57,6 +60,16 @@ const navSections: NavSection[] = [
         title: "Organizations",
         url: "/admin/organizations",
         icon: <HugeiconsIcon icon={OfficeIcon} strokeWidth={2} />,
+      },
+      {
+        title: "Legal Documents",
+        url: "/admin/legal-documents",
+        icon: <HugeiconsIcon icon={File01Icon} strokeWidth={2} />,
+      },
+      {
+        title: "Data Retention",
+        url: "/admin/data-retention",
+        icon: <HugeiconsIcon icon={LockIcon} strokeWidth={2} />,
       },
     ],
   },

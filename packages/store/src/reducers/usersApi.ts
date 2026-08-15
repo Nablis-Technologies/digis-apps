@@ -101,7 +101,10 @@ export const usersApi = createApi({
       }),
       invalidatesTags: [{ type: "Users", id: "LIST" }],
     }),
-    updateUser: builder.mutation<SingleResponse<User>, { id: string; body: UpdateUserPayload }>({
+    updateUser: builder.mutation<
+      SingleResponse<User>,
+      { id: string; body: UpdateUserPayload }
+    >({
       query: ({ id, body }) => ({
         url: `/admin/users/${id}`,
         method: "PATCH",
@@ -116,7 +119,10 @@ export const usersApi = createApi({
       }),
       invalidatesTags: [{ type: "Users", id: "LIST" }],
     }),
-    deactivateUser: builder.mutation<SingleResponse<User>, { id: string; body: DeactivatePayload }>({
+    deactivateUser: builder.mutation<
+      SingleResponse<User>,
+      { id: string; body: DeactivatePayload }
+    >({
       query: ({ id, body }) => ({
         url: `/admin/users/${id}/deactivate`,
         method: "POST",
@@ -131,7 +137,10 @@ export const usersApi = createApi({
       }),
       invalidatesTags: (_result, _error, id) => [{ type: "Users", id }],
     }),
-    assignRole: builder.mutation<void, { userId: string; body: AssignRolePayload }>({
+    assignRole: builder.mutation<
+      void,
+      { userId: string; body: AssignRolePayload }
+    >({
       query: ({ userId, body }) => ({
         url: `/admin/users/${userId}/roles`,
         method: "POST",
@@ -154,8 +163,11 @@ export const usersApi = createApi({
     }),
     listUserRoles: builder.query<UserRole[], string>({
       query: (userId) => `/admin/users/${userId}/roles`,
-      transformResponse: (response: { success: boolean; data: UserRole[] }) => response.data,
-      providesTags: (_result, _error, userId) => [{ type: "UserRoles", id: userId }],
+      transformResponse: (response: { success: boolean; data: UserRole[] }) =>
+        response.data,
+      providesTags: (_result, _error, userId) => [
+        { type: "UserRoles", id: userId },
+      ],
     }),
   }),
 })

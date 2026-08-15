@@ -10,6 +10,7 @@ import {
   Dollar01Icon, Ticket01Icon, UserGroupIcon,
 } from "@hugeicons/core-free-icons"
 import { cn } from "@/lib/utils"
+import { toastSuccess, toastError } from "@/lib/toast"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import {
@@ -19,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { StatsCard } from "@/components/dashboard/stats-card"
 import { VenueDialog } from "@/components/forms/venue-dialog"
 import { ConfirmDialog } from "@/components/forms/confirm-dialog"
+import { EventsTab } from "@/components/events-tab"
 import { useGetVenueQuery, useDeleteVenueMutation } from "@/store/reducers/venuesApi"
 import type { Venue } from "@/store/reducers/venuesApi"
 
@@ -54,8 +56,10 @@ export default function VenueDetailPage() {
     if (!venue) return
     try {
       await deleteVenue(venue.id).unwrap()
+      toastSuccess("Venue deleted.")
       router.replace("/admin/venues")
-    } catch {
+    } catch (err) {
+      toastError(err, "Failed to delete venue.")
       // stay open to retry
     }
   }
@@ -154,7 +158,7 @@ export default function VenueDetailPage() {
       </div>
 
       {tab === "overview" && <OverviewTab venue={venue} />}
-      {tab === "events" && <PlaceholderTab title="Events" description="Event history for this venue coming soon." />}
+      {tab === "events" && <EventsTab />}
 
       <VenueDialog open={editOpen} onOpenChange={setEditOpen} venue={venue} />
       <ConfirmDialog
@@ -214,14 +218,3 @@ function OverviewTab({ venue }: { venue: Venue }) {
   )
 }
 
-function PlaceholderTab({ title, description }: { title: string; description: string }) {
-  return (
-    <div className="rounded-xl border border-border/50 bg-card p-12 shadow-xs flex flex-col items-center justify-center text-center">
-      <div className="flex size-12 items-center justify-center rounded-full bg-muted mb-4">
-        <HugeiconsIcon icon={Clock01Icon} strokeWidth={2} className="size-5 text-muted-foreground" />
-      </div>
-      <h3 className="font-semibold mb-1">{title}</h3>
-      <p className="text-sm text-muted-foreground">{description}</p>
-    </div>
-  )
-}

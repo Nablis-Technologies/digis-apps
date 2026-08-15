@@ -16,7 +16,7 @@ export function NavSecondary({
 }) {
   return (
     <div className={cn("px-3 py-1", className)}>
-      <p className="mb-1.5 px-3 text-[11px] font-medium uppercase tracking-[0.08em] text-sidebar-foreground/35">
+      <p className="mb-1.5 px-3 text-[11px] font-medium tracking-[0.08em] text-sidebar-foreground/35 uppercase">
         Help
       </p>
       <nav className="flex flex-col gap-0.5">

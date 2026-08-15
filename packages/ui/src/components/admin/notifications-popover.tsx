@@ -29,19 +29,63 @@ interface NotificationItem {
   link?: string
 }
 
-const typeConfig: Record<NotifType, { icon: typeof NotificationIcon; color: string }> = {
+const typeConfig: Record<
+  NotifType,
+  { icon: typeof NotificationIcon; color: string }
+> = {
   users: { icon: UserGroupIcon, color: "bg-blue-100 text-blue-700" },
-  organizations: { icon: Building01Icon, color: "bg-violet-100 text-violet-700" },
+  organizations: {
+    icon: Building01Icon,
+    color: "bg-violet-100 text-violet-700",
+  },
   events: { icon: Calendar03Icon, color: "bg-amber-100 text-amber-700" },
   system: { icon: AlertDiamondIcon, color: "bg-emerald-100 text-emerald-700" },
 }
 
 const mockNotifications: NotificationItem[] = [
-  { id: "1", type: "users", title: "New user registered", description: "Abebe Kebede created a new account", time: "2m ago", read: false, link: "/admin/users" },
-  { id: "2", type: "organizations", title: "Verification submitted", description: "Ethio Events PLC submitted documents", time: "15m ago", read: false, link: "/admin/organizations" },
-  { id: "3", type: "events", title: "Event pending review", description: "Great Ethiopian Run 2026", time: "1h ago", read: false },
-  { id: "4", type: "system", title: "Backup completed", description: "Daily backup finished successfully", time: "3h ago", read: true },
-  { id: "5", type: "users", title: "Account verified", description: "Meron Tadesse completed verification", time: "5h ago", read: true, link: "/admin/users" },
+  {
+    id: "1",
+    type: "users",
+    title: "New user registered",
+    description: "Abebe Kebede created a new account",
+    time: "2m ago",
+    read: false,
+    link: "/admin/users",
+  },
+  {
+    id: "2",
+    type: "organizations",
+    title: "Verification submitted",
+    description: "Ethio Events PLC submitted documents",
+    time: "15m ago",
+    read: false,
+    link: "/admin/organizations",
+  },
+  {
+    id: "3",
+    type: "events",
+    title: "Event pending review",
+    description: "Great Ethiopian Run 2026",
+    time: "1h ago",
+    read: false,
+  },
+  {
+    id: "4",
+    type: "system",
+    title: "Backup completed",
+    description: "Daily backup finished successfully",
+    time: "3h ago",
+    read: true,
+  },
+  {
+    id: "5",
+    type: "users",
+    title: "Account verified",
+    description: "Meron Tadesse completed verification",
+    time: "5h ago",
+    read: true,
+    link: "/admin/users",
+  },
 ]
 
 export function NotificationsPopover() {
@@ -81,13 +125,26 @@ export function NotificationsPopover() {
                   i < recent.length - 1 && "border-b border-border/25"
                 )}
               >
-                <div className={cn("flex size-8 shrink-0 items-center justify-center rounded-full", cfg.color)}>
-                  <HugeiconsIcon icon={cfg.icon} strokeWidth={2} className="size-3.5" />
+                <div
+                  className={cn(
+                    "flex size-8 shrink-0 items-center justify-center rounded-full",
+                    cfg.color
+                  )}
+                >
+                  <HugeiconsIcon
+                    icon={cfg.icon}
+                    strokeWidth={2}
+                    className="size-3.5"
+                  />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium leading-snug">{n.title}</p>
-                  <p className="text-xs text-muted-foreground truncate">{n.description}</p>
-                  <p className="text-xs text-muted-foreground/60 mt-0.5">{n.time}</p>
+                  <p className="text-sm leading-snug font-medium">{n.title}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {n.description}
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground/60">
+                    {n.time}
+                  </p>
                 </div>
                 {!n.read && (
                   <span className="mt-1.5 size-2 shrink-0 rounded-full bg-lime-500" />

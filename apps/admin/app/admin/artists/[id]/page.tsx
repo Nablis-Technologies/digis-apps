@@ -10,6 +10,7 @@ import {
   ChartBarLineIcon, Dollar01Icon,
 } from "@hugeicons/core-free-icons"
 import { cn } from "@/lib/utils"
+import { toastSuccess, toastError } from "@/lib/toast"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import {
@@ -19,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { StatsCard } from "@/components/dashboard/stats-card"
 import { ArtistDialog } from "@/components/forms/artist-dialog"
 import { ConfirmDialog } from "@/components/forms/confirm-dialog"
+import { EventsTab } from "@/components/events-tab"
 import { useGetArtistQuery, useDeleteArtistMutation } from "@/store/reducers/artistsApi"
 import type { Artist } from "@/store/reducers/artistsApi"
 
@@ -60,8 +62,10 @@ export default function ArtistDetailPage() {
     if (!artist) return
     try {
       await deleteArtist(artist.id).unwrap()
+      toastSuccess("Artist deleted.")
       router.replace("/admin/artists")
-    } catch {
+    } catch (err) {
+      toastError(err, "Failed to delete artist.")
       // stay open to retry
     }
   }
@@ -158,7 +162,7 @@ export default function ArtistDetailPage() {
       </div>
 
       {tab === "overview" && <OverviewTab artist={artist} />}
-      {tab === "events" && <PlaceholderTab title="Events" description="Event history for this artist coming soon." />}
+      {tab === "events" && <EventsTab />}
 
       <ArtistDialog open={editOpen} onOpenChange={setEditOpen} artist={artist} />
       <ConfirmDialog
@@ -222,18 +226,6 @@ function OverviewTab({ artist }: { artist: Artist }) {
           </div>
         </div>
       </div>
-    </div>
-  )
-}
-
-function PlaceholderTab({ title, description }: { title: string; description: string }) {
-  return (
-    <div className="rounded-xl border border-border/50 bg-card p-12 shadow-xs flex flex-col items-center justify-center text-center">
-      <div className="flex size-12 items-center justify-center rounded-full bg-muted mb-4">
-        <HugeiconsIcon icon={Clock01Icon} strokeWidth={2} className="size-5 text-muted-foreground" />
-      </div>
-      <h3 className="font-semibold mb-1">{title}</h3>
-      <p className="text-sm text-muted-foreground">{description}</p>
     </div>
   )
 }

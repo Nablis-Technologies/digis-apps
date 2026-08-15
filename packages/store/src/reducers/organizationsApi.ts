@@ -51,19 +51,14 @@ interface CreateOrgPayload {
     name: string
     description?: string
     owner_id: string
-    organizer_type: "individual" | "company"
-    category?: string
-    contact_phone?: string
-    contact_email?: string
-    city?: string
-    region?: string
-    country?: string
-    website_url?: string
   }
 }
 
 interface UpdateOrgPayload {
-  organization: Partial<CreateOrgPayload["organization"]>
+  organization: {
+    name?: string
+    description?: string
+  }
 }
 
 export const organizationsApi = createApi({
@@ -71,7 +66,10 @@ export const organizationsApi = createApi({
   baseQuery: baseQueryWithReauth,
   tagTypes: ["Organizations"],
   endpoints: (builder) => ({
-    listOrganizations: builder.query<PaginatedResponse<Organization>, ListOrgsParams | void>({
+    listOrganizations: builder.query<
+      PaginatedResponse<Organization>,
+      ListOrgsParams | void
+    >({
       query: (params) => ({
         url: "/admin/organizations",
         params: params ?? undefined,
@@ -79,7 +77,10 @@ export const organizationsApi = createApi({
       providesTags: (result) =>
         result
           ? [
-              ...result.data.map(({ id }) => ({ type: "Organizations" as const, id })),
+              ...result.data.map(({ id }) => ({
+                type: "Organizations" as const,
+                id,
+              })),
               { type: "Organizations", id: "LIST" },
             ]
           : [{ type: "Organizations", id: "LIST" }],
@@ -88,7 +89,10 @@ export const organizationsApi = createApi({
       query: (id) => `/admin/organizations/${id}`,
       providesTags: (_result, _error, id) => [{ type: "Organizations", id }],
     }),
-    createOrganization: builder.mutation<SingleResponse<Organization>, CreateOrgPayload>({
+    createOrganization: builder.mutation<
+      SingleResponse<Organization>,
+      CreateOrgPayload
+    >({
       query: (body) => ({
         url: "/admin/organizations",
         method: "POST",
@@ -96,13 +100,18 @@ export const organizationsApi = createApi({
       }),
       invalidatesTags: [{ type: "Organizations", id: "LIST" }],
     }),
-    updateOrganization: builder.mutation<SingleResponse<Organization>, { id: string; body: UpdateOrgPayload }>({
+    updateOrganization: builder.mutation<
+      SingleResponse<Organization>,
+      { id: string; body: UpdateOrgPayload }
+    >({
       query: ({ id, body }) => ({
         url: `/admin/organizations/${id}`,
         method: "PATCH",
         body,
       }),
-      invalidatesTags: (_result, _error, { id }) => [{ type: "Organizations", id }],
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: "Organizations", id },
+      ],
     }),
     deleteOrganization: builder.mutation<void, string>({
       query: (id) => ({
@@ -110,6 +119,42 @@ export const organizationsApi = createApi({
         method: "DELETE",
       }),
       invalidatesTags: [{ type: "Organizations", id: "LIST" }],
+    }),
+    transferOrganization: builder.mutation<
+      void,
+      { id: string; new_owner_id: string }
+    >({
+      query: ({ id, new_owner_id }) => ({
+        url: `/admin/organizations/${id}/transfer_ownership`,
+        method: "POST",
+        body: { organization: { new_owner_id } },
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: "Organizations", id },
+      ],
+    }),
+    approveVerification: builder.mutation<void, string>({
+      query: (id) => ({
+        url: `/admin/organizations/${id}/verification/approve`,
+        method: "POST",
+      }),
+      invalidatesTags: (_result, _error, id) => [{ type: "Organizations", id }],
+    }),
+    rejectVerification: builder.mutation<void, { id: string; feedback: string }>({
+      query: ({ id, feedback }) => ({
+        url: `/admin/organizations/${id}/verification/reject`,
+        method: "POST",
+        body: { feedback: { message: feedback } },
+      }),
+      invalidatesTags: (_result, _error, { id }) => [{ type: "Organizations", id }],
+    }),
+    requestVerificationModification: builder.mutation<void, { id: string; feedback: string }>({
+      query: ({ id, feedback }) => ({
+        url: `/admin/organizations/${id}/verification/request_modification`,
+        method: "POST",
+        body: { feedback: { message: feedback } },
+      }),
+      invalidatesTags: (_result, _error, { id }) => [{ type: "Organizations", id }],
     }),
   }),
 })
@@ -120,4 +165,8 @@ export const {
   useCreateOrganizationMutation,
   useUpdateOrganizationMutation,
   useDeleteOrganizationMutation,
+  useTransferOrganizationMutation,
+  useApproveVerificationMutation,
+  useRejectVerificationMutation,
+  useRequestVerificationModificationMutation,
 } = organizationsApi

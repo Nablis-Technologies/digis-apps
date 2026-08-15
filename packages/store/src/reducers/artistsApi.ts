@@ -54,7 +54,10 @@ export const artistsApi = createApi({
   baseQuery: baseQueryWithReauth,
   tagTypes: ["Artists"],
   endpoints: (builder) => ({
-    listArtists: builder.query<PaginatedResponse<Artist>, ListArtistsParams | void>({
+    listArtists: builder.query<
+      PaginatedResponse<Artist>,
+      ListArtistsParams | void
+    >({
       query: (params) => ({
         url: "/admin/artists",
         params: params ?? undefined,
@@ -62,7 +65,10 @@ export const artistsApi = createApi({
       providesTags: (result) =>
         result
           ? [
-              ...result.data.map(({ id }) => ({ type: "Artists" as const, id })),
+              ...result.data.map(({ id }) => ({
+                type: "Artists" as const,
+                id,
+              })),
               { type: "Artists", id: "LIST" },
             ]
           : [{ type: "Artists", id: "LIST" }],
@@ -71,15 +77,20 @@ export const artistsApi = createApi({
       query: (id) => `/admin/artists/${id}`,
       providesTags: (_result, _error, id) => [{ type: "Artists", id }],
     }),
-    createArtist: builder.mutation<SingleResponse<Artist>, CreateArtistPayload>({
-      query: (body) => ({
-        url: "/admin/artists",
-        method: "POST",
-        body,
-      }),
-      invalidatesTags: [{ type: "Artists", id: "LIST" }],
-    }),
-    updateArtist: builder.mutation<SingleResponse<Artist>, { id: string; body: UpdateArtistPayload }>({
+    createArtist: builder.mutation<SingleResponse<Artist>, CreateArtistPayload>(
+      {
+        query: (body) => ({
+          url: "/admin/artists",
+          method: "POST",
+          body,
+        }),
+        invalidatesTags: [{ type: "Artists", id: "LIST" }],
+      }
+    ),
+    updateArtist: builder.mutation<
+      SingleResponse<Artist>,
+      { id: string; body: UpdateArtistPayload }
+    >({
       query: ({ id, body }) => ({
         url: `/admin/artists/${id}`,
         method: "PATCH",

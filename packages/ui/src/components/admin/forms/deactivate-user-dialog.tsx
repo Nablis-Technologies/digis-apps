@@ -13,6 +13,7 @@ import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
 import { Label } from "@workspace/ui/components/label"
 import { useDeactivateUserMutation } from "@workspace/store/reducers/usersApi"
+import { toastSuccess, toastError } from "@workspace/ui/lib/toast"
 
 export function DeactivateUserDialog({
   open,
@@ -32,31 +33,69 @@ export function DeactivateUserDialog({
     e.preventDefault()
     if (!userId) return
     try {
-      await deactivateUser({ id: userId, body: { deactivated_reason: reason } }).unwrap()
+      await deactivateUser({
+        id: userId,
+        body: { deactivated_reason: reason },
+      }).unwrap()
       onOpenChange(false)
+      toastSuccess("User deactivated.")
       setReason("")
-    } catch {
+    } catch (err) {
       // stay open so user can retry
+      toastError(err, "Failed to deactivate user.")
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!isLoading) { onOpenChange(o); if (!o) setReason("") } }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!isLoading) {
+          onOpenChange(o)
+          if (!o) setReason("")
+        }
+      }}
+    >
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Deactivate User</DialogTitle>
           <DialogDescription>
-            {userName ? <><strong>{userName}</strong> will be unable to log in. Their tokens will be revoked.</> : "This user will be unable to log in. Their tokens will be revoked."}
+            {userName ? (
+              <>
+                <strong>{userName}</strong> will be unable to log in. Their
+                tokens will be revoked.
+              </>
+            ) : (
+              "This user will be unable to log in. Their tokens will be revoked."
+            )}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="reason">Reason <span className="text-destructive">*</span></Label>
-            <Input id="reason" placeholder="Account compromised" value={reason} onChange={(e) => setReason(e.target.value)} required />
+            <Label htmlFor="reason">
+              Reason <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="reason"
+              placeholder="Account compromised"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              required
+            />
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <DialogClose asChild><Button type="button" variant="outline" disabled={isLoading}>Cancel</Button></DialogClose>
-            <Button type="submit" disabled={!reason.trim() || isLoading} className="bg-red-600 text-white hover:bg-red-700 disabled:bg-red-600/50">{isLoading ? "Deactivating..." : "Deactivate"}</Button>
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={isLoading}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button
+              type="submit"
+              disabled={!reason.trim() || isLoading}
+              className="bg-red-600 text-white hover:bg-red-700 disabled:bg-red-600/50"
+            >
+              {isLoading ? "Deactivating..." : "Deactivate"}
+            </Button>
           </div>
         </form>
       </DialogContent>

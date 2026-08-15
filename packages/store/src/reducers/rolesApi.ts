@@ -78,7 +78,10 @@ export const rolesApi = createApi({
       }),
       invalidatesTags: [{ type: "Roles", id: "LIST" }],
     }),
-    updateRole: builder.mutation<SingleResponse<Role>, { id: string; body: UpdateRolePayload }>({
+    updateRole: builder.mutation<
+      SingleResponse<Role>,
+      { id: string; body: UpdateRolePayload }
+    >({
       query: ({ id, body }) => ({
         url: `/admin/roles/${id}`,
         method: "PATCH",

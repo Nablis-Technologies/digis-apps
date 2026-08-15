@@ -12,7 +12,11 @@ import {
 import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
 import { Label } from "@workspace/ui/components/label"
-import { useCreatePermissionMutation, useUpdatePermissionMutation } from "@workspace/store/reducers/permissionsApi"
+import {
+  useCreatePermissionMutation,
+  useUpdatePermissionMutation,
+} from "@workspace/store/reducers/permissionsApi"
+import { toastSuccess, toastError } from "@workspace/ui/lib/toast"
 
 type FormData = {
   code: string
@@ -23,7 +27,14 @@ type FormData = {
   active: boolean
 }
 
-const empty: FormData = { code: "", resource: "", action: "", namespace: "", description: "", active: true }
+const empty: FormData = {
+  code: "",
+  resource: "",
+  action: "",
+  namespace: "",
+  description: "",
+  active: true,
+}
 
 export function PermissionDialog({
   open,
@@ -32,25 +43,50 @@ export function PermissionDialog({
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  permission?: { id: string; code: string; resource: string; action: string; namespace: string | null; description: string | null; active: boolean } | null
+  permission?: {
+    id: string
+    code: string
+    resource: string
+    action: string
+    namespace: string | null
+    description: string | null
+    active: boolean
+  } | null
 }) {
   const isEdit = !!permission
   const [form, setForm] = useState<FormData>(empty)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
-  const [createPermission, { isLoading: isCreating }] = useCreatePermissionMutation()
-  const [updatePermission, { isLoading: isUpdating }] = useUpdatePermissionMutation()
+  const [createPermission, { isLoading: isCreating }] =
+    useCreatePermissionMutation()
+  const [updatePermission, { isLoading: isUpdating }] =
+    useUpdatePermissionMutation()
   const submitting = isCreating || isUpdating
 
   useEffect(() => {
     if (open) {
-      setForm(permission ? { code: permission.code, resource: permission.resource, action: permission.action, namespace: permission.namespace ?? "", description: permission.description ?? "", active: permission.active } : empty)
+      setForm(
+        permission
+          ? {
+              code: permission.code,
+              resource: permission.resource,
+              action: permission.action,
+              namespace: permission.namespace ?? "",
+              description: permission.description ?? "",
+              active: permission.active,
+            }
+          : empty
+      )
       setErrorMsg(null)
     }
   }, [open, permission])
 
-  function update<K extends keyof FormData>(key: K, value: FormData[K]) { setForm((p) => ({ ...p, [key]: value })) }
-  function isValid() { return form.code.trim() && form.resource.trim() && form.action.trim() }
+  function update<K extends keyof FormData>(key: K, value: FormData[K]) {
+    setForm((p) => ({ ...p, [key]: value }))
+  }
+  function isValid() {
+    return form.code.trim() && form.resource.trim() && form.action.trim()
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -81,56 +117,122 @@ export function PermissionDialog({
         }).unwrap()
       }
       onOpenChange(false)
+      toastSuccess(isEdit ? "Permission updated." : "Permission created.")
     } catch (err: unknown) {
-      const msg = err && typeof err === "object" && "data" in err
-        ? (err as { data?: { message?: string } }).data?.message
-        : undefined
+      const msg =
+        err && typeof err === "object" && "data" in err
+          ? (err as { data?: { message?: string } }).data?.message
+          : undefined
       setErrorMsg(msg ?? "Something went wrong. Please try again.")
+      toastError(err, isEdit ? "Failed to update permission." : "Failed to create permission.")
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!submitting) onOpenChange(o) }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!submitting) onOpenChange(o)
+      }}
+    >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit Permission" : "Create Permission"}</DialogTitle>
-          <DialogDescription>{isEdit ? `Update permission "${permission?.code}".` : "Define a new permission. Code must be unique."}</DialogDescription>
+          <DialogTitle>
+            {isEdit ? "Edit Permission" : "Create Permission"}
+          </DialogTitle>
+          <DialogDescription>
+            {isEdit
+              ? `Update permission "${permission?.code}".`
+              : "Define a new permission. Code must be unique."}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="code">Code <span className="text-destructive">*</span></Label>
-              <Input id="code" placeholder="user.view" value={form.code} onChange={(e) => update("code", e.target.value)} required disabled={isEdit} />
+              <Label htmlFor="code">
+                Code <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="code"
+                placeholder="user.view"
+                value={form.code}
+                onChange={(e) => update("code", e.target.value)}
+                required
+                disabled={isEdit}
+              />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="action">Action <span className="text-destructive">*</span></Label>
-              <Input id="action" placeholder="view" value={form.action} onChange={(e) => update("action", e.target.value)} required disabled={isEdit} />
+              <Label htmlFor="action">
+                Action <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="action"
+                placeholder="view"
+                value={form.action}
+                onChange={(e) => update("action", e.target.value)}
+                required
+                disabled={isEdit}
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="resource">Resource <span className="text-destructive">*</span></Label>
-              <Input id="resource" placeholder="user" value={form.resource} onChange={(e) => update("resource", e.target.value)} required disabled={isEdit} />
+              <Label htmlFor="resource">
+                Resource <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="resource"
+                placeholder="user"
+                value={form.resource}
+                onChange={(e) => update("resource", e.target.value)}
+                required
+                disabled={isEdit}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="namespace">Namespace</Label>
-              <Input id="namespace" placeholder="core" value={form.namespace} onChange={(e) => update("namespace", e.target.value)} disabled={isEdit} />
+              <Input
+                id="namespace"
+                placeholder="core"
+                value={form.namespace}
+                onChange={(e) => update("namespace", e.target.value)}
+                disabled={isEdit}
+              />
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="desc">Description</Label>
-            <Input id="desc" placeholder="View user details" value={form.description} onChange={(e) => update("description", e.target.value)} />
+            <Input
+              id="desc"
+              placeholder="View user details"
+              value={form.description}
+              onChange={(e) => update("description", e.target.value)}
+            />
           </div>
           <div className="flex items-center gap-2">
-            <input type="checkbox" id="active" checked={form.active} onChange={(e) => update("active", e.target.checked)} className="size-4 rounded border-border" />
-            <Label htmlFor="active" className="cursor-pointer">Active</Label>
+            <input
+              type="checkbox"
+              id="active"
+              checked={form.active}
+              onChange={(e) => update("active", e.target.checked)}
+              className="size-4 rounded border-border"
+            />
+            <Label htmlFor="active" className="cursor-pointer">
+              Active
+            </Label>
           </div>
           {errorMsg && <p className="text-sm text-destructive">{errorMsg}</p>}
           <div className="flex justify-end gap-3 pt-2">
             <DialogClose asChild>
-              <Button type="button" variant="outline" disabled={submitting}>Cancel</Button>
+              <Button type="button" variant="outline" disabled={submitting}>
+                Cancel
+              </Button>
             </DialogClose>
-            <Button type="submit" disabled={!isValid() || submitting} className="bg-lime-500 text-white hover:bg-lime-600 disabled:bg-lime-500/50">
+            <Button
+              type="submit"
+              disabled={!isValid() || submitting}
+              className="bg-lime-500 text-white hover:bg-lime-600 disabled:bg-lime-500/50"
+            >
               {submitting ? "Saving..." : isEdit ? "Update" : "Create"}
             </Button>
           </div>

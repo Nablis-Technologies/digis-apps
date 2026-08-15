@@ -14,6 +14,7 @@ import {
   RefreshIcon,
 } from "@hugeicons/core-free-icons"
 import { cn } from "@/lib/utils"
+import { toastSuccess, toastError } from "@/lib/toast"
 import { DataTable, type Column, type SortConfig } from "@/components/ui/data-table"
 import { StatsCard } from "@/components/dashboard/stats-card"
 import { ConfirmDialog } from "@/components/forms/confirm-dialog"
@@ -145,9 +146,11 @@ export default function ArtistsPage() {
     setConfirmSubmitting(true)
     try {
       await deleteArtist(confirmItem.id).unwrap()
+      toastSuccess("Artist deleted.")
       setConfirmOpen(false)
       setConfirmItem(null)
-    } catch {
+    } catch (err) {
+      toastError(err, "Failed to delete artist.")
       // stay open to retry
     } finally {
       setConfirmSubmitting(false)

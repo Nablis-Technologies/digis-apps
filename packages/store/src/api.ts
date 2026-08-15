@@ -9,8 +9,7 @@ import Cookies from "js-cookie"
 const ACCESS_TOKEN_KEY = "accessToken"
 const REFRESH_TOKEN_KEY = "refreshToken"
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "https://digis-backend-49cs.onrender.com"
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000"
 
 export function getAccessToken() {
   return Cookies.get(ACCESS_TOKEN_KEY) ?? null
@@ -56,7 +55,8 @@ function performRefresh(refreshToken: string) {
       const json = await res.json()
       const access = json?.data?.access_token
       const refresh = json?.data?.refresh_token
-      if (!access || !refresh) throw new Error("missing tokens in refresh response")
+      if (!access || !refresh)
+        throw new Error("missing tokens in refresh response")
       return { access, refresh }
     })
     .finally(() => {

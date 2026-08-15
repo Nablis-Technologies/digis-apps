@@ -10,6 +10,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import { LogoutIcon } from "@hugeicons/core-free-icons"
 import { useLogoutMutation } from "@workspace/store/reducers/authApi"
+import { toastSuccess } from "@workspace/ui/lib/toast"
 
 export function NavUser({
   user,
@@ -25,6 +26,7 @@ export function NavUser({
   async function handleLogout() {
     try {
       await logout().unwrap()
+      toastSuccess("Logged out.")
     } catch {
       // tokens cleared in onQueryStarted regardless
     } finally {
@@ -45,16 +47,17 @@ export function NavUser({
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
+        <SidebarMenuButton
+          size="lg"
+          className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+        >
           <Avatar className="h-8 w-8 rounded-lg">
             <AvatarFallback className="rounded-lg text-xs font-medium">
               {initials}
             </AvatarFallback>
           </Avatar>
           <div className="grid flex-1 text-left text-sm leading-tight">
-            <span className="truncate font-medium">
-              {user.email}
-            </span>
+            <span className="truncate font-medium">{user.email}</span>
             <span className="truncate text-xs">
               {user.phone ? user.phone : ""}
             </span>
@@ -65,7 +68,11 @@ export function NavUser({
             disabled={isLoggingOut}
             className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
           >
-            <HugeiconsIcon icon={LogoutIcon} strokeWidth={2} className="size-4" />
+            <HugeiconsIcon
+              icon={LogoutIcon}
+              strokeWidth={2}
+              className="size-4"
+            />
           </button>
         </SidebarMenuButton>
       </SidebarMenuItem>

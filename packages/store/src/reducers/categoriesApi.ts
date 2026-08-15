@@ -58,7 +58,10 @@ export const categoriesApi = createApi({
   baseQuery: baseQueryWithReauth,
   tagTypes: ["Categories"],
   endpoints: (builder) => ({
-    listCategories: builder.query<PaginatedResponse<Category>, ListCategoriesParams | void>({
+    listCategories: builder.query<
+      PaginatedResponse<Category>,
+      ListCategoriesParams | void
+    >({
       query: (params) => ({
         url: "/admin/categories",
         params: params ?? undefined,
@@ -66,12 +69,18 @@ export const categoriesApi = createApi({
       providesTags: (result) =>
         result
           ? [
-              ...result.data.map(({ id }) => ({ type: "Categories" as const, id })),
+              ...result.data.map(({ id }) => ({
+                type: "Categories" as const,
+                id,
+              })),
               { type: "Categories", id: "LIST" },
             ]
           : [{ type: "Categories", id: "LIST" }],
     }),
-    createCategory: builder.mutation<SingleResponse<Category>, CreateCategoryPayload>({
+    createCategory: builder.mutation<
+      SingleResponse<Category>,
+      CreateCategoryPayload
+    >({
       query: (body) => ({
         url: "/admin/categories",
         method: "POST",
@@ -79,13 +88,18 @@ export const categoriesApi = createApi({
       }),
       invalidatesTags: [{ type: "Categories", id: "LIST" }],
     }),
-    updateCategory: builder.mutation<SingleResponse<Category>, { id: string; body: UpdateCategoryPayload }>({
+    updateCategory: builder.mutation<
+      SingleResponse<Category>,
+      { id: string; body: UpdateCategoryPayload }
+    >({
       query: ({ id, body }) => ({
         url: `/admin/categories/${id}`,
         method: "PATCH",
         body,
       }),
-      invalidatesTags: (_result, _error, { id }) => [{ type: "Categories", id }],
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: "Categories", id },
+      ],
     }),
     deleteCategory: builder.mutation<void, string>({
       query: (id) => ({

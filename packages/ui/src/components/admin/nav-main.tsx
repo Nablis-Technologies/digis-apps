@@ -27,7 +27,7 @@ export function NavMain({
     <div className="flex flex-col gap-6 px-3 py-1">
       {sections.map((section) => (
         <div key={section.title}>
-          <p className="mb-1.5 px-3 text-[11px] font-medium uppercase tracking-[0.08em] text-sidebar-foreground/35">
+          <p className="mb-1.5 px-3 text-[11px] font-medium tracking-[0.08em] text-sidebar-foreground/35 uppercase">
             {section.title}
           </p>
           <nav className="flex flex-col gap-0.5">
@@ -135,7 +135,7 @@ function NavItem({
                 className={cn(
                   "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
                   isSubActive
-                    ? "text-lime-600 dark:text-lime-400 font-semibold"
+                    ? "font-semibold text-lime-600 dark:text-lime-400"
                     : "text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                 )}
               >

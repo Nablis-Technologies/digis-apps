@@ -7,13 +7,23 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowLeft01Icon, Building01Icon, Mail01Icon, SmartPhone01Icon, Calendar01Icon,
   Globe02Icon, MapPinpoint01Icon, MoreHorizontalIcon, Edit01Icon, Delete01Icon,
-  CheckmarkCircle01Icon, Cancel01Icon, Edit02Icon, UserCheck01Icon, UserBlock01Icon,
-  Clock01Icon, PlusSignCircleIcon, RefreshIcon, Ticket01Icon, Dollar01Icon,
+  CheckmarkCircle01Icon, Edit02Icon, Cancel01Icon,
+  Clock01Icon, PlusSignCircleIcon, Ticket01Icon, Dollar01Icon,
   UserGroupIcon, Mail02Icon, File01Icon, ChartBarLineIcon,
   Calendar03Icon, CheckmarkBadge01Icon,
 } from "@hugeicons/core-free-icons"
 import { cn } from "@/lib/utils"
+import { toastSuccess, toastError } from "@/lib/toast"
 import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+} from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -25,34 +35,21 @@ import { OrganizationDialog } from "@/components/forms/organization-dialog"
 import { TransferOwnershipDialog } from "@/components/forms/transfer-ownership-dialog"
 import { AddMemberDialog } from "@/components/forms/add-member-dialog"
 import { ConfirmDialog } from "@/components/forms/confirm-dialog"
-import { RequestModificationDialog } from "@/components/forms/request-modification-dialog"
 import {
   useGetOrganizationQuery,
   useDeleteOrganizationMutation,
+  useApproveVerificationMutation,
+  useRejectVerificationMutation,
+  useRequestVerificationModificationMutation,
   type Organization,
 } from "@/store/reducers/organizationsApi"
+import {
+  useListMembershipsQuery,
+  useUpdateMembershipMutation,
+  useDeleteMembershipMutation,
+} from "@/store/reducers/membershipsApi"
 
 // ─── Mock Data ──────────────────────────────────────────────────────────────
-
-const mockVerifications: {
-  id: string; status: "pending" | "approved" | "rejected" | "modification_requested"
-  submitted_at: string; reviewed_at: string | null; notes: string | null; feedback: string | null
-}[] = [
-  { id: "v1", status: "approved", submitted_at: "2026-01-12T10:00:00Z", reviewed_at: "2026-01-14T09:00:00Z", notes: "All documents verified", feedback: null },
-  { id: "v2", status: "modification_requested", submitted_at: "2026-03-01T11:00:00Z", reviewed_at: "2026-03-03T14:00:00Z", notes: "Update required", feedback: "TIN certificate unclear" },
-  { id: "v3", status: "approved", submitted_at: "2026-03-10T09:00:00Z", reviewed_at: "2026-03-12T11:00:00Z", notes: "Resubmitted documents OK", feedback: null },
-  { id: "v4", status: "pending", submitted_at: "2026-06-20T08:00:00Z", reviewed_at: null, notes: "Initial submission awaiting review", feedback: null },
-]
-
-const mockMembers: {
-  id: string; user_id: string; user_email: string; role: "owner" | "admin" | "staff" | "member"
-  suspended: boolean; joined_at: string
-}[] = [
-  { id: "m1", user_id: "u1", user_email: "abebe@example.com", role: "owner", suspended: false, joined_at: "2026-01-10T00:00:00Z" },
-  { id: "m2", user_id: "u2", user_email: "meron@example.com", role: "admin", suspended: false, joined_at: "2026-01-15T00:00:00Z" },
-  { id: "m3", user_id: "u4", user_email: "hanna@example.com", role: "staff", suspended: false, joined_at: "2026-02-01T00:00:00Z" },
-  { id: "m4", user_id: "u9", user_email: "fikir@example.com", role: "member", suspended: true, joined_at: "2026-04-01T00:00:00Z" },
-]
 
 const sparklineA = [4, 7, 5, 12, 8, 10, 14]
 const sparklineB = [800, 1200, 950, 1800, 1500, 2100, 2450]
@@ -93,18 +90,16 @@ const mockActivity: ActivityItem[] = [
 
 function fmtDate(iso: string) { return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) }
 
-const verifStatus: Record<string, { label: string; cls: string }> = {
-  pending: { label: "Pending", cls: "bg-amber-50 text-amber-700" },
-  approved: { label: "Approved", cls: "bg-emerald-50 text-emerald-700" },
-  rejected: { label: "Rejected", cls: "bg-red-50 text-red-700" },
-  modification_requested: { label: "Changes Requested", cls: "bg-orange-50 text-orange-700" },
-}
-
 const roleConfig: Record<string, { label: string; cls: string }> = {
   owner: { label: "Owner", cls: "bg-violet-50 text-violet-700" },
   admin: { label: "Admin", cls: "bg-blue-50 text-blue-700" },
   staff: { label: "Staff", cls: "bg-amber-50 text-amber-700" },
   member: { label: "Member", cls: "bg-zinc-50 text-zinc-600" },
+}
+
+function roleBadge(role: string) {
+  const cfg = roleConfig[role] ?? { label: role, cls: "bg-zinc-50 text-zinc-600" }
+  return <span className={cn("rounded-md px-2 py-0.5 text-xs font-medium", cfg.cls)}>{cfg.label}</span>
 }
 
 const eventStatus: Record<string, { label: string; cls: string }> = {
@@ -114,22 +109,13 @@ const eventStatus: Record<string, { label: string; cls: string }> = {
   completed: { label: "Completed", cls: "bg-blue-50 text-blue-700" },
 }
 
-const verificationItems = [
-  { label: "Business Registration", status: "verified" as const },
-  { label: "Tax Identification Number", status: "verified" as const },
-  { label: "Address Verification", status: "verified" as const },
-  { label: "Bank Information", status: "pending" as const },
-  { label: "Brand Assets", status: "pending" as const },
-]
-
-type Tab = "overview" | "verification" | "members" | "activity" | "documents"
+type Tab = "overview" | "verification" | "members" | "activity"
 
 const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
   { key: "overview", label: "Overview", icon: <HugeiconsIcon icon={Building01Icon} strokeWidth={2} className="size-3.5" /> },
   { key: "verification", label: "Verification", icon: <HugeiconsIcon icon={CheckmarkBadge01Icon} strokeWidth={2} className="size-3.5" /> },
   { key: "members", label: "Members", icon: <HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} className="size-3.5" /> },
   { key: "activity", label: "Activity", icon: <HugeiconsIcon icon={ChartBarLineIcon} strokeWidth={2} className="size-3.5" /> },
-  { key: "documents", label: "Documents", icon: <HugeiconsIcon icon={File01Icon} strokeWidth={2} className="size-3.5" /> },
 ]
 
 // ─── Main Page Component ────────────────────────────────────────────────────
@@ -141,6 +127,9 @@ export default function OrgDetailPage() {
 
   const { data, isLoading: loading } = useGetOrganizationQuery(id)
   const [deleteOrg, { isLoading: deleting }] = useDeleteOrganizationMutation()
+  const [approveVerification] = useApproveVerificationMutation()
+  const [rejectVerification] = useRejectVerificationMutation()
+  const [requestVerificationModification] = useRequestVerificationModificationMutation()
 
   const org = data?.data
 
@@ -149,18 +138,16 @@ export default function OrgDetailPage() {
   const [transferOpen, setTransferOpen] = useState(false)
   const [addMemberOpen, setAddMemberOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const [modifyOpen, setModifyOpen] = useState(false)
-
-  function confirmAction() {
-    setConfirmOpen(true)
-  }
+  const [feedbackDialog, setFeedbackDialog] = useState<{ mode: "reject" | "modify" } | null>(null)
 
   async function handleDelete() {
     if (!org) return
     try {
       await deleteOrg(org.id).unwrap()
+      toastSuccess("Organization deleted.")
       router.replace("/admin/organizations")
-    } catch {
+    } catch (err) {
+      toastError(err, "Failed to delete organization.")
       // stay open to retry
     }
   }
@@ -192,9 +179,6 @@ export default function OrgDetailPage() {
       </div>
     )
   }
-
-  const verifiedCount = verificationItems.filter((v) => v.status === "verified").length
-  const onboardingPercent = Math.round((verifiedCount / verificationItems.length) * 100)
 
   return (
     <div className="space-y-6">
@@ -279,23 +263,49 @@ export default function OrgDetailPage() {
           <div className="space-y-4 lg:sticky lg:top-[calc(var(--header-height)+1.5rem)]">
             <OrgSummaryCard org={org} />
             <AccountManagerCard />
-            <OnboardingProgressCard percent={onboardingPercent} verifiedCount={verifiedCount} total={verificationItems.length} />
-            <VerificationChecklistCard items={verificationItems} />
             <ActivityFeedCard items={mockActivity} />
           </div>
         </div>
       )}
-      {tab === "verification" && <VerificationTab onConfirm={confirmAction} onRequestModification={() => setModifyOpen(true)} />}
-      {tab === "members" && <MembersTab onAdd={() => setAddMemberOpen(true)} onConfirm={confirmAction} />}
+      {tab === "verification" && (
+        <VerificationTab
+          verified={org.verified}
+          onApprove={async () => {
+            try {
+              await approveVerification(org.id).unwrap()
+              toastSuccess("Verification approved.")
+            } catch (err) {
+              toastError(err, "Failed to approve verification.")
+            }
+          }}
+          onReject={() => setFeedbackDialog({ mode: "reject" })}
+          onRequestModification={() => setFeedbackDialog({ mode: "modify" })}
+        />
+      )}
+      {tab === "members" && <MembersTab orgId={org.id} onAdd={() => setAddMemberOpen(true)} />}
       {tab === "activity" && <PlaceholderTab title="Activity" description="Full activity history coming soon." />}
-      {tab === "documents" && <PlaceholderTab title="Documents" description="Document management coming soon." />}
 
       {/* ── Dialogs ── */}
       <OrganizationDialog open={editOpen} onOpenChange={setEditOpen} organization={org} />
-      <TransferOwnershipDialog open={transferOpen} onOpenChange={setTransferOpen} orgName={org.name} />
-      <AddMemberDialog open={addMemberOpen} onOpenChange={setAddMemberOpen} />
+      <TransferOwnershipDialog open={transferOpen} onOpenChange={setTransferOpen} orgId={org.id} orgName={org.name} />
+      <AddMemberDialog open={addMemberOpen} onOpenChange={setAddMemberOpen} orgId={org.id} />
       <ConfirmDialog open={confirmOpen} onOpenChange={setConfirmOpen} title="Delete Organization" description={`Delete ${org.name}? All members will be removed and events will be affected.`} confirmLabel={deleting ? "Deleting..." : "Delete"} onConfirm={handleDelete} />
-      <RequestModificationDialog open={modifyOpen} onOpenChange={setModifyOpen} orgName={org.name} />
+      {feedbackDialog && (
+        <VerificationFeedbackDialog
+          mode={feedbackDialog.mode}
+          onOpenChange={(o) => { if (!o) setFeedbackDialog(null) }}
+          onConfirm={async (feedback) => {
+            if (feedbackDialog.mode === "reject") {
+              await rejectVerification({ id: org.id, feedback }).unwrap()
+              toastSuccess("Verification rejected.")
+            } else {
+              await requestVerificationModification({ id: org.id, feedback }).unwrap()
+              toastSuccess("Modification requested.")
+            }
+            setFeedbackDialog(null)
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -391,86 +401,191 @@ function OverviewTab({ org }: { org: Organization }) {
   )
 }
 
-function VerificationTab({ onConfirm, onRequestModification }: {
-  onConfirm: (title: string, desc: string, label: string) => void
+function VerificationTab({
+  verified,
+  onApprove,
+  onReject,
+  onRequestModification,
+}: {
+  verified: boolean
+  onApprove: () => void
+  onReject: () => void
   onRequestModification: () => void
 }) {
   return (
     <div className="rounded-xl border border-border/50 bg-card p-6 shadow-xs">
-      <h3 className="font-semibold mb-4">Verification History</h3>
-      <div className="space-y-4">
-        {mockVerifications.map((v) => {
-          const s = verifStatus[v.status]
-          return (
-            <div key={v.id} className="rounded-lg border border-border/50 px-4 py-3">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", s.cls)}>{s.label}</span>
-                <span className="text-xs text-muted-foreground">Submitted {fmtDate(v.submitted_at)}</span>
-              </div>
-              {v.notes && <p className="text-sm text-muted-foreground mb-1">{v.notes}</p>}
-              {v.feedback && <p className="text-sm text-amber-700 bg-amber-50 dark:bg-amber-950/20 rounded-lg px-3 py-1.5 mt-1">Feedback: {v.feedback}</p>}
-
-              {(v.status === "pending" || v.status === "modification_requested") && (
-                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/25">
-                  <Button size="xs" className="bg-emerald-500 text-white hover:bg-emerald-600" onClick={() => onConfirm("Approve Verification", "Approve this verification request?", "Approve")}>
-                    <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-3" />Approve
-                  </Button>
-                  <Button size="xs" variant="destructive" onClick={() => onConfirm("Reject Verification", "Reject this verification request?", "Reject")}>
-                    <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-3" />Reject
-                  </Button>
-                  {v.status === "pending" && (
-                    <Button size="xs" variant="outline" onClick={onRequestModification}>
-                      <HugeiconsIcon icon={Edit02Icon} strokeWidth={2} className="size-3" />Request Changes
-                    </Button>
-                  )}
-                </div>
-              )}
-
-              {(v.status === "approved" || v.status === "rejected") && (
-                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/25">
-                  <Button size="xs" variant="outline" onClick={() => onConfirm("Reopen Request", "Reopen this verification request for re-review?", "Reopen")}>
-                    <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} className="size-3" />Reopen
-                  </Button>
-                </div>
-              )}
-            </div>
-          )
-        })}
+      <h3 className="font-semibold mb-1">Verification</h3>
+      <p className="text-sm text-muted-foreground mb-5">Review and manage this organization&apos;s verification status.</p>
+      <div className="flex items-center gap-3 rounded-lg border border-border/50 px-4 py-3 mb-5">
+        <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", verified ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400" : "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400")}>
+          {verified ? "Verified" : "Unverified"}
+        </span>
+        <span className="text-sm text-muted-foreground">
+          {verified ? "This organization has been verified." : "This organization has not been verified yet."}
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button size="sm" className="bg-emerald-500 text-white hover:bg-emerald-600" onClick={onApprove} disabled={verified}>
+          <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-4" />Approve
+        </Button>
+        <Button size="sm" variant="destructive" onClick={onReject} disabled={!verified}>
+          <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-4" />Reject
+        </Button>
+        <Button size="sm" variant="outline" onClick={onRequestModification} disabled={!verified}>
+          <HugeiconsIcon icon={Edit02Icon} strokeWidth={2} className="size-4" />Request Changes
+        </Button>
       </div>
     </div>
   )
 }
 
-function MembersTab({ onAdd, onConfirm }: { onAdd: () => void; onConfirm: (title: string, desc: string, label: string) => void }) {
+function VerificationFeedbackDialog({
+  mode,
+  onOpenChange,
+  onConfirm,
+}: {
+  mode: "reject" | "modify"
+  onOpenChange: (open: boolean) => void
+  onConfirm: (feedback: string) => Promise<void>
+}) {
+  const [feedback, setFeedback] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!feedback.trim()) return
+    setSubmitting(true)
+    try {
+      await onConfirm(feedback)
+      onOpenChange(false)
+    } catch {
+      // stay open to retry
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => { if (!submitting) onOpenChange(o) }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{mode === "reject" ? "Reject Verification" : "Request Changes"}</DialogTitle>
+          <DialogDescription>
+            {mode === "reject" ? "Provide a reason for rejecting this verification." : "Ask the organization to provide additional information or fix issues."}
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-2">
+            <Label htmlFor="feedback">
+              Feedback <span className="text-destructive">*</span>
+            </Label>
+            <textarea
+              id="feedback"
+              rows={4}
+              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/50 resize-none"
+              placeholder="Please provide a clearer copy of your TIN certificate..."
+              value={feedback}
+              onChange={(e) => setFeedback(e.target.value)}
+              required
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={submitting}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="submit" disabled={!feedback.trim() || submitting} className="bg-lime-500 text-white hover:bg-lime-600 disabled:bg-lime-500/50">
+              {submitting ? "Sending..." : "Send"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function MembersTab({
+  orgId,
+  onAdd,
+}: {
+  orgId: string
+  onAdd: () => void
+}) {
+  const { data, isLoading } = useListMembershipsQuery({ organizationId: orgId })
+  const [updateMember, { isLoading: updating }] = useUpdateMembershipMutation()
+  const [deleteMember, { isLoading: deleting }] = useDeleteMembershipMutation()
+  const members = data?.data ?? []
+
+  async function changeRole(m: (typeof members)[number], role: "admin" | "member") {
+    try {
+      await updateMember({
+        organizationId: orgId,
+        id: m.id,
+        body: { membership: { role } },
+      }).unwrap()
+      toastSuccess("Member role updated.")
+    } catch (err) {
+      toastError(err, "Failed to update member role.")
+      // stay — RTK invalidation will refetch
+    }
+  }
+
+  async function removeMember(m: (typeof members)[number]) {
+    try {
+      await deleteMember({ organizationId: orgId, id: m.id }).unwrap()
+      toastSuccess("Member removed.")
+    } catch (err) {
+      toastError(err, "Failed to remove member.")
+      // stay
+    }
+  }
+
   return (
     <div className="rounded-xl border border-border/50 bg-card p-6 shadow-xs">
-      <div className="flex items-center justify-between mb-4"><h3 className="font-semibold">Members</h3><Button size="sm" onClick={onAdd} className="bg-lime-500 text-white hover:bg-lime-600"><HugeiconsIcon icon={PlusSignCircleIcon} strokeWidth={2} className="size-4" />Add Member</Button></div>
-      <div className="space-y-2">{mockMembers.map((m) => (
-        <div key={m.id} className="flex items-center justify-between rounded-lg border border-border/50 px-4 py-3">
-          <div className="flex items-center gap-3">
-            <span className={cn("rounded-md px-2 py-0.5 text-xs font-medium", roleConfig[m.role].cls)}>{roleConfig[m.role].label}</span>
-            <span className="text-sm">{m.user_email}</span>
-            {m.suspended && <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-red-50 text-red-700">Suspended</span>}
-          </div>
-          <div className="flex items-center gap-1">
-            <button className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground" onClick={() => onConfirm("Change Role", `Update role for ${m.user_email}?`, "Change")}>
-              <HugeiconsIcon icon={Edit02Icon} strokeWidth={2} className="size-3.5" />
-            </button>
-            {m.suspended ? (
-              <button className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground" onClick={() => onConfirm("Activate Member", `Activate ${m.user_email}?`, "Activate")}>
-                <HugeiconsIcon icon={UserCheck01Icon} strokeWidth={2} className="size-3.5" />
-              </button>
-            ) : (
-              <button className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground" onClick={() => onConfirm("Suspend Member", `Suspend ${m.user_email}?`, "Suspend")}>
-                <HugeiconsIcon icon={UserBlock01Icon} strokeWidth={2} className="size-3.5" />
-              </button>
-            )}
-            <button className="flex size-7 items-center justify-center rounded-md text-destructive hover:bg-destructive/10" onClick={() => onConfirm("Remove Member", `Remove ${m.user_email}?`, "Remove")}>
-              <HugeiconsIcon icon={Delete01Icon} strokeWidth={2} className="size-3.5" />
-            </button>
-          </div>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold">Members</h3>
+        <Button size="sm" onClick={onAdd} className="bg-lime-500 text-white hover:bg-lime-600">
+          <HugeiconsIcon icon={PlusSignCircleIcon} strokeWidth={2} className="size-4" />Add Member
+        </Button>
+      </div>
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading members...</p>
+      ) : members.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No members yet.</p>
+      ) : (
+        <div className="space-y-2">
+          {members.map((m) => (
+            <div key={m.id} className="flex items-center justify-between rounded-lg border border-border/50 px-4 py-3">
+              <div className="flex items-center gap-3">
+                {roleBadge(m.role)}
+                <span className="text-sm font-mono">{m.user_id}</span>
+                {m.suspended && (
+                  <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-red-50 text-red-700">Suspended</span>
+                )}
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+                  disabled={updating || deleting || m.role === "owner"}
+                  onClick={() => changeRole(m, m.role === "admin" ? "member" : "admin")}
+                  title="Toggle role"
+                >
+                  <HugeiconsIcon icon={Edit02Icon} strokeWidth={2} className="size-3.5" />
+                </button>
+                <button
+                  className="flex size-7 items-center justify-center rounded-md text-destructive hover:bg-destructive/10"
+                  disabled={deleting || m.role === "owner"}
+                  onClick={() => removeMember(m)}
+                  title="Remove member"
+                >
+                  <HugeiconsIcon icon={Delete01Icon} strokeWidth={2} className="size-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
-      ))}</div>
+      )}
     </div>
   )
 }
@@ -523,47 +638,6 @@ function AccountManagerCard() {
         <HugeiconsIcon icon={Mail02Icon} strokeWidth={2} className="size-3.5" />
         Message
       </Button>
-    </div>
-  )
-}
-
-function OnboardingProgressCard({ percent, verifiedCount, total }: { percent: number; verifiedCount: number; total: number }) {
-  return (
-    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-xs">
-      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Onboarding Progress</p>
-      <div className="flex items-baseline justify-between mb-2">
-        <span className="text-2xl font-semibold tracking-tight">{percent}%</span>
-        <span className="text-xs text-muted-foreground">{verifiedCount} of {total} steps completed</span>
-      </div>
-      <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-        <div className="h-full rounded-full bg-lime-500 transition-all duration-500" style={{ width: `${percent}%` }} />
-      </div>
-    </div>
-  )
-}
-
-function VerificationChecklistCard({ items }: { items: { label: string; status: "verified" | "pending" }[] }) {
-  return (
-    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-xs">
-      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Verification Status</p>
-      <div className="space-y-2.5">
-        {items.map((item) => (
-          <div key={item.label} className="flex items-center justify-between gap-2">
-            <span className="text-sm">{item.label}</span>
-            {item.status === "verified" ? (
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 dark:text-emerald-400 rounded-full px-2 py-0.5">
-                <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-3" />
-                Verified
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400 rounded-full px-2 py-0.5">
-                <HugeiconsIcon icon={Clock01Icon} strokeWidth={2} className="size-3" />
-                Pending
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
     </div>
   )
 }

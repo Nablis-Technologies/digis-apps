@@ -16,6 +16,7 @@ import {
   RefreshIcon,
 } from "@hugeicons/core-free-icons"
 import { cn } from "@/lib/utils"
+import { toastSuccess, toastError } from "@/lib/toast"
 import { DataTable, type Column, type SortConfig } from "@/components/ui/data-table"
 import { StatsCard } from "@/components/dashboard/stats-card"
 import { OrganizationDialog } from "@/components/forms/organization-dialog"
@@ -156,9 +157,11 @@ export default function OrganizationsPage() {
     setConfirmSubmitting(true)
     try {
       await deleteOrg(confirmItem.id).unwrap()
+      toastSuccess("Organization deleted.")
       setConfirmOpen(false)
       setConfirmItem(null)
-    } catch {
+    } catch (err) {
+      toastError(err, "Failed to delete organization.")
       // stay open to retry
     } finally {
       setConfirmSubmitting(false)
@@ -211,7 +214,7 @@ export default function OrganizationsPage() {
         confirmLabel={confirmSubmitting ? "Deleting..." : "Delete"}
         onConfirm={handleDelete}
       />
-      <TransferOwnershipDialog open={!!transferOrg} onOpenChange={(o) => { if (!o) setTransferOrg(null) }} orgName={transferOrg?.name} />
+      <TransferOwnershipDialog open={!!transferOrg} onOpenChange={(o) => { if (!o) setTransferOrg(null) }} orgId={transferOrg?.id} orgName={transferOrg?.name} />
     </div>
   )
 }

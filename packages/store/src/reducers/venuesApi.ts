@@ -64,7 +64,10 @@ export const venuesApi = createApi({
   baseQuery: baseQueryWithReauth,
   tagTypes: ["Venues"],
   endpoints: (builder) => ({
-    listVenues: builder.query<PaginatedResponse<Venue>, ListVenuesParams | void>({
+    listVenues: builder.query<
+      PaginatedResponse<Venue>,
+      ListVenuesParams | void
+    >({
       query: (params) => ({
         url: "/admin/venues",
         params: params ?? undefined,
@@ -89,7 +92,10 @@ export const venuesApi = createApi({
       }),
       invalidatesTags: [{ type: "Venues", id: "LIST" }],
     }),
-    updateVenue: builder.mutation<SingleResponse<Venue>, { id: string; body: UpdateVenuePayload }>({
+    updateVenue: builder.mutation<
+      SingleResponse<Venue>,
+      { id: string; body: UpdateVenuePayload }
+    >({
       query: ({ id, body }) => ({
         url: `/admin/venues/${id}`,
         method: "PATCH",

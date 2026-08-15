@@ -59,7 +59,10 @@ export const permissionsApi = createApi({
   baseQuery: baseQueryWithReauth,
   tagTypes: ["Permissions"],
   endpoints: (builder) => ({
-    listPermissions: builder.query<PaginatedResponse<Permission>, ListPermissionsParams | void>({
+    listPermissions: builder.query<
+      PaginatedResponse<Permission>,
+      ListPermissionsParams | void
+    >({
       query: (params) => ({
         url: "/admin/permissions",
         params: params ?? undefined,
@@ -67,12 +70,18 @@ export const permissionsApi = createApi({
       providesTags: (result) =>
         result
           ? [
-              ...result.data.map(({ id }) => ({ type: "Permissions" as const, id })),
+              ...result.data.map(({ id }) => ({
+                type: "Permissions" as const,
+                id,
+              })),
               { type: "Permissions", id: "LIST" },
             ]
           : [{ type: "Permissions", id: "LIST" }],
     }),
-    createPermission: builder.mutation<SingleResponse<Permission>, CreatePermissionPayload>({
+    createPermission: builder.mutation<
+      SingleResponse<Permission>,
+      CreatePermissionPayload
+    >({
       query: (body) => ({
         url: "/admin/permissions",
         method: "POST",
@@ -80,13 +89,18 @@ export const permissionsApi = createApi({
       }),
       invalidatesTags: [{ type: "Permissions", id: "LIST" }],
     }),
-    updatePermission: builder.mutation<SingleResponse<Permission>, { id: string; body: UpdatePermissionPayload }>({
+    updatePermission: builder.mutation<
+      SingleResponse<Permission>,
+      { id: string; body: UpdatePermissionPayload }
+    >({
       query: ({ id, body }) => ({
         url: `/admin/permissions/${id}`,
         method: "PATCH",
         body,
       }),
-      invalidatesTags: (_result, _error, { id }) => [{ type: "Permissions", id }],
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: "Permissions", id },
+      ],
     }),
     deletePermission: builder.mutation<void, string>({
       query: (id) => ({

@@ -7,6 +7,7 @@ import { Input } from "@workspace/ui/components/input"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { useLoginMutation } from "@workspace/store/reducers/authApi"
+import { toastSuccess, toastError } from "@workspace/ui/lib/toast"
 
 type LoginFormProps = React.ComponentProps<"form"> & { redirectTo?: string }
 
@@ -24,9 +25,10 @@ export function LoginForm({
     e.preventDefault()
     try {
       await login({ identifier, password }).unwrap()
+      toastSuccess("Logged in successfully.")
       router.replace(redirectTo)
-    } catch {
-      // error handled via `error` state
+    } catch (err) {
+      toastError(err, "Failed to log in. Please check your credentials.")
     }
   }
 

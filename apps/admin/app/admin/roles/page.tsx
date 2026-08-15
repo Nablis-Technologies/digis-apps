@@ -13,6 +13,7 @@ import {
   RefreshIcon,
 } from "@hugeicons/core-free-icons"
 import { cn } from "@/lib/utils"
+import { toastSuccess, toastError } from "@/lib/toast"
 import { DataTable, type Column, type SortConfig } from "@/components/ui/data-table"
 import { StatsCard } from "@/components/dashboard/stats-card"
 import { RoleDialog } from "@/components/forms/role-dialog"
@@ -105,9 +106,11 @@ export default function RolesPage() {
     setConfirmSubmitting(true)
     try {
       await deleteRole(confirmItem.id).unwrap()
+      toastSuccess("Role deleted.")
       setConfirmOpen(false)
       setConfirmItem(null)
-    } catch {
+    } catch (err) {
+      toastError(err, "Failed to delete role.")
       // stay open so user can retry
     } finally {
       setConfirmSubmitting(false)

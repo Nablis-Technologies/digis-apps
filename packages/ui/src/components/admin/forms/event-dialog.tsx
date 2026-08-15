@@ -1,0 +1,290 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+} from "@workspace/ui/components/dialog"
+import { Button } from "@workspace/ui/components/button"
+import { Input } from "@workspace/ui/components/input"
+import { Label } from "@workspace/ui/components/label"
+import { cn } from "@workspace/ui/lib/utils"
+import {
+  useCreateEventMutation,
+  useUpdateEventMutation,
+  type Event,
+} from "@workspace/store/reducers/eventsApi"
+import { useListOrganizationsQuery } from "@workspace/store/reducers/organizationsApi"
+import { useListCategoriesQuery } from "@workspace/store/reducers/categoriesApi"
+import { toastSuccess, toastError } from "@workspace/ui/lib/toast"
+
+const visibilityOptions = ["public", "unlisted", "private"] as const
+
+type FormData = {
+  title: string
+  description: string
+  visibility: string
+  timezone: string
+  currency: string
+  organizationId: string
+  categoryIds: string[]
+}
+
+const empty: FormData = {
+  title: "",
+  description: "",
+  visibility: "public",
+  timezone: "Africa/Addis_Ababa",
+  currency: "ETB",
+  organizationId: "",
+  categoryIds: [],
+}
+
+export function EventDialog({
+  open,
+  onOpenChange,
+  event,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  event?: Event | null
+}) {
+  const isEdit = !!event
+  const [form, setForm] = useState<FormData>(empty)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
+  const [createEvent, { isLoading: isCreating }] = useCreateEventMutation()
+  const [updateEvent, { isLoading: isUpdating }] = useUpdateEventMutation()
+  const { data: orgsData, isLoading: orgsLoading } = useListOrganizationsQuery(
+    { page: 1, per_page: 50 },
+    { skip: !open }
+  )
+  const { data: catsData, isLoading: catsLoading } = useListCategoriesQuery(
+    { page: 1, per_page: 50 },
+    { skip: !open }
+  )
+  const submitting = isCreating || isUpdating
+  const organizations = orgsData?.data ?? []
+  const categories = catsData?.data ?? []
+
+  useEffect(() => {
+    if (open) {
+      setForm(
+        event
+          ? {
+              title: event.title,
+              description: event.description ?? "",
+              visibility: event.visibility,
+              timezone: event.timezone,
+              currency: event.currency,
+              organizationId: event.organization?.id ?? "",
+              categoryIds: event.categories?.map((c) => c.id) ?? [],
+            }
+          : empty
+      )
+      setErrorMsg(null)
+    }
+  }, [open, event])
+
+  function update<K extends keyof FormData>(key: K, value: FormData[K]) {
+    setForm((p) => ({ ...p, [key]: value }))
+  }
+
+  function toggleCategory(id: string) {
+    setForm((p) => ({
+      ...p,
+      categoryIds: p.categoryIds.includes(id) ? p.categoryIds.filter((c) => c !== id) : [...p.categoryIds, id],
+    }))
+  }
+
+  function isValid() {
+    return form.title.trim() && (isEdit || !!form.organizationId)
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!isValid()) return
+    setErrorMsg(null)
+
+    const payload = {
+      event: {
+        title: form.title,
+        description: form.description || undefined,
+        visibility: form.visibility,
+        timezone: form.timezone,
+        currency: form.currency,
+        organization_id: form.organizationId,
+        category_ids: form.categoryIds,
+      },
+    }
+
+    try {
+      if (isEdit && event) {
+        await updateEvent({ id: event.id, body: payload }).unwrap()
+      } else {
+        await createEvent(payload).unwrap()
+      }
+      onOpenChange(false)
+      toastSuccess(isEdit ? "Event updated." : "Event created.")
+    } catch (err: unknown) {
+      const msg =
+        err && typeof err === "object" && "data" in err
+          ? (err as { data?: { message?: string } }).data?.message
+          : undefined
+      setErrorMsg(msg ?? "Something went wrong. Please try again.")
+      toastError(err, isEdit ? "Failed to update event." : "Failed to create event.")
+    }
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!submitting) onOpenChange(o)
+      }}
+    >
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{isEdit ? "Edit Event" : "Create Event"}</DialogTitle>
+          <DialogDescription>
+            {isEdit ? `Update "${event?.title}".` : "Create a new platform event."}
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-2">
+            <Label htmlFor="title">
+              Title <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="title"
+              placeholder="New Year Concert"
+              value={form.title}
+              onChange={(e) => update("title", e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="desc">Description</Label>
+            <Input
+              id="desc"
+              placeholder="Event description"
+              value={form.description}
+              onChange={(e) => update("description", e.target.value)}
+            />
+          </div>
+
+          {!isEdit && (
+            <div className="space-y-2">
+              <Label>
+                Organization <span className="text-destructive">*</span>
+              </Label>
+              {orgsLoading ? (
+                <p className="text-sm text-muted-foreground">Loading organizations...</p>
+              ) : (
+                <div className="max-h-40 space-y-1.5 overflow-y-auto rounded-lg border border-border/50 p-2">
+                  {organizations.length === 0 ? (
+                    <p className="px-2 py-1.5 text-sm text-muted-foreground">No organizations found.</p>
+                  ) : (
+                    organizations.map((o) => (
+                      <button
+                        key={o.id}
+                        type="button"
+                        onClick={() => update("organizationId", o.id)}
+                        className={cn(
+                          "w-full rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors",
+                          form.organizationId === o.id
+                            ? "border-lime-500 bg-lime-50 text-lime-700 dark:bg-lime-950/20 dark:text-lime-400"
+                            : "border-border text-muted-foreground hover:border-foreground/20 hover:text-foreground"
+                        )}
+                      >
+                        {o.name}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Visibility</Label>
+              <select
+                value={form.visibility}
+                onChange={(e) => update("visibility", e.target.value)}
+                className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/50"
+              >
+                {visibilityOptions.map((v) => (
+                  <option key={v} value={v} className="capitalize">
+                    {v}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="timezone">Timezone</Label>
+              <Input
+                id="timezone"
+                value={form.timezone}
+                onChange={(e) => update("timezone", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="currency">Currency</Label>
+              <Input
+                id="currency"
+                value={form.currency}
+                onChange={(e) => update("currency", e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Categories</Label>
+            {catsLoading ? (
+              <p className="text-sm text-muted-foreground">Loading categories...</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {categories.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => toggleCategory(c.id)}
+                    className={cn(
+                      "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                      form.categoryIds.includes(c.id)
+                        ? "border-lime-500 bg-lime-50 text-lime-700 dark:bg-lime-950/20 dark:text-lime-400"
+                        : "border-border text-muted-foreground hover:border-foreground/20 hover:text-foreground"
+                    )}
+                  >
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {errorMsg && <p className="text-sm text-destructive">{errorMsg}</p>}
+          <div className="flex justify-end gap-3 pt-2">
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={submitting}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button
+              type="submit"
+              disabled={!isValid() || submitting}
+              className="bg-lime-500 text-white hover:bg-lime-600 disabled:bg-lime-500/50"
+            >
+              {submitting ? "Saving..." : isEdit ? "Update" : "Create"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}

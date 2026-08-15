@@ -12,43 +12,98 @@ import {
 import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
 import { Label } from "@workspace/ui/components/label"
+import { useTransferOrganizationMutation } from "@workspace/store/reducers/organizationsApi"
+import { toastSuccess, toastError } from "@workspace/ui/lib/toast"
 
 export function TransferOwnershipDialog({
   open,
   onOpenChange,
+  orgId,
   orgName,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
+  orgId?: string
   orgName?: string
 }) {
-  const [email, setEmail] = useState("")
-  const [submitting, setSubmitting] = useState(false)
+  const [newOwnerId, setNewOwnerId] = useState("")
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [transferOrg, { isLoading: transferring }] =
+    useTransferOrganizationMutation()
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!email.trim()) return
-    setSubmitting(true)
-    setTimeout(() => { setSubmitting(false); onOpenChange(false); setEmail("") }, 800)
+    if (!newOwnerId.trim() || !orgId) return
+    setErrorMsg(null)
+
+    transferOrg({ id: orgId, new_owner_id: newOwnerId.trim() })
+      .unwrap()
+      .then(() => {
+        onOpenChange(false)
+        toastSuccess("Ownership transferred.")
+        setNewOwnerId("")
+      })
+      .catch((err: unknown) => {
+        const msg =
+          err && typeof err === "object" && "data" in err
+            ? (err as { data?: { message?: string } }).data?.message
+            : undefined
+        setErrorMsg(msg ?? "Something went wrong. Please try again.")
+        toastError(err, "Failed to transfer ownership.")
+      })
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!submitting) { onOpenChange(o); if (!o) setEmail("") } }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!transferring) {
+          onOpenChange(o)
+          if (!o) setNewOwnerId("")
+        }
+      }}
+    >
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Transfer Ownership</DialogTitle>
           <DialogDescription>
-            {orgName ? <>Transfer ownership of <strong>{orgName}</strong> to another user. The new owner must already be a member.</> : "Transfer ownership to another user. The new owner must already be a member."}
+            {orgName ? (
+              <>
+                Transfer ownership of <strong>{orgName}</strong> to another
+                user. The new owner must already be a member.
+              </>
+            ) : (
+              "Transfer ownership to another user. The new owner must already be a member."
+            )}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="newOwner">New Owner Email <span className="text-destructive">*</span></Label>
-            <Input id="newOwner" type="email" placeholder="user@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <Label htmlFor="newOwnerId">
+              New Owner ID <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="newOwnerId"
+              placeholder="owner user id"
+              value={newOwnerId}
+              onChange={(e) => setNewOwnerId(e.target.value)}
+              required
+            />
           </div>
+          {errorMsg && <p className="text-sm text-destructive">{errorMsg}</p>}
           <div className="flex justify-end gap-3 pt-2">
-            <DialogClose asChild><Button type="button" variant="outline" disabled={submitting}>Cancel</Button></DialogClose>
-            <Button type="submit" disabled={!email.trim() || submitting} className="bg-lime-500 text-white hover:bg-lime-600 disabled:bg-lime-500/50">{submitting ? "Transferring..." : "Transfer"}</Button>
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={transferring}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button
+              type="submit"
+              disabled={!newOwnerId.trim() || !orgId || transferring}
+              className="bg-lime-500 text-white hover:bg-lime-600 disabled:bg-lime-500/50"
+            >
+              {transferring ? "Transferring..." : "Transfer"}
+            </Button>
           </div>
         </form>
       </DialogContent>

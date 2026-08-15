@@ -1033,7 +1033,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"organization\": {\n    \"name\": \"My Organization\",\n    \"description\": \"Description of the organization\",\n    \"organizer_type\": \"individual\",\n    \"category\": \"conference\",\n    \"contact_phone\": \"+1234567890\",\n    \"contact_email\": \"org@example.com\",\n    \"website_url\": \"https://example.com\",\n    \"tin_number\": \"12-3456789\",\n    \"address_line1\": \"123 Main St\",\n    \"city\": \"New York\",\n    \"region\": \"NY\",\n    \"estimated_audience\": \"100_500\",\n    \"event_frequency\": \"monthly\",\n    \"experience_summary\": \"Experienced event organizer\",\n    \"social_links\": {\n      \"twitter\": \"https://twitter.com/myorg\"\n    }\n  }\n}"
+                  "raw": "{\n  \"organization\": {\n    \"name\": \"My Organization\",\n    \"description\": \"Description of the organization\"\n  }\n}"
                 }
               },
               "description": "Create your own organization.",
@@ -1068,7 +1068,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"organization\": {\n    \"name\": \"Updated Organization\",\n    \"description\": \"Updated description\",\n    \"organizer_type\": \"company\",\n    \"category\": \"music\",\n    \"contact_phone\": \"+1987654321\",\n    \"city\": \"Los Angeles\",\n    \"region\": \"CA\",\n    \"estimated_audience\": \"500_1000\",\n    \"event_frequency\": \"quarterly\",\n    \"experience_summary\": \"Updated experience summary\",\n    \"social_links\": {\n      \"twitter\": \"https://twitter.com/updatedorg\"\n    }\n  }\n}"
+                  "raw": "{\n  \"organization\": {\n    \"name\": \"Updated Organization\",\n    \"description\": \"Updated description\"\n  }\n}"
                 }
               },
               "description": "Update your organization.",
@@ -1099,109 +1099,6 @@
               },
               "description": "Delete your organization.",
               "response": []
-            },
-            {
-              "name": "Upload Documents",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{token}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/organizations/owner/:id/documents",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "organizations",
-                    "owner",
-                    ":id",
-                    "documents"
-                  ],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": "<org_uuid>"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "formdata",
-                  "formdata": [
-                    {
-                      "key": "profile",
-                      "type": "file",
-                      "src": "",
-                      "description": "Profile image"
-                    },
-                    {
-                      "key": "banner",
-                      "type": "file",
-                      "src": "",
-                      "description": "Banner image"
-                    },
-                    {
-                      "key": "business_license",
-                      "type": "file",
-                      "src": "",
-                      "description": "Business license document"
-                    },
-                    {
-                      "key": "tin_certificate",
-                      "type": "file",
-                      "src": "",
-                      "description": "TIN certificate document"
-                    }
-                  ]
-                },
-                "description": "Upload organization documents (multipart/form-data)."
-              }
-            },
-            {
-              "name": "Download Document",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{token}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/organizations/owner/:id/download/:document_type",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "organizations",
-                    "owner",
-                    ":id",
-                    "download",
-                    ":document_type"
-                  ],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": "<org_uuid>"
-                    },
-                    {
-                      "key": "document_type",
-                      "value": "banner"
-                    }
-                  ]
-                },
-                "description": "Download an organization document. document_type: profile, banner, business_license, tin_certificate"
-              }
             },
             {
               "name": "Memberships",
@@ -1308,7 +1205,7 @@
                     "description": "Add a user to an organization you own",
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n  \"membership\": {\n    \"user_id\": \"<user_uuid>\",\n    \"role\": \"staff\"\n  }\n}"
+                      "raw": "{\n  \"membership\": {\n    \"user_id\": \"<user_uuid>\",\n    \"role\": \"member\"\n  }\n}"
                     }
                   },
                   "response": [],
@@ -1417,181 +1314,6 @@
                   },
                   "response": [],
                   "event": []
-                },
-                {
-                  "name": "Suspend Membership",
-                  "request": {
-                    "method": "PATCH",
-                    "header": [
-                      {
-                        "key": "Content-Type",
-                        "value": "application/json",
-                        "type": "text"
-                      },
-                      {
-                        "key": "Authorization",
-                        "value": "Bearer {{token}}",
-                        "type": "text"
-                      }
-                    ],
-                    "url": {
-                      "raw": "{{baseUrl}}/organizations/owner/:owner_organization_id/memberships/:id/suspend",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "organizations",
-                        "owner",
-                        ":owner_organization_id",
-                        "memberships",
-                        ":id",
-                        "suspend"
-                      ],
-                      "variable": [
-                        {
-                          "key": "owner_organization_id",
-                          "value": "<org_uuid>"
-                        },
-                        {
-                          "key": "id",
-                          "value": "<membership_uuid>"
-                        }
-                      ]
-                    },
-                    "description": "Suspend a membership (owner/admin only)."
-                  }
-                },
-                {
-                  "name": "Activate Membership",
-                  "request": {
-                    "method": "PATCH",
-                    "header": [
-                      {
-                        "key": "Content-Type",
-                        "value": "application/json",
-                        "type": "text"
-                      },
-                      {
-                        "key": "Authorization",
-                        "value": "Bearer {{token}}",
-                        "type": "text"
-                      }
-                    ],
-                    "url": {
-                      "raw": "{{baseUrl}}/organizations/owner/:owner_organization_id/memberships/:id/activate",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "organizations",
-                        "owner",
-                        ":owner_organization_id",
-                        "memberships",
-                        ":id",
-                        "activate"
-                      ],
-                      "variable": [
-                        {
-                          "key": "owner_organization_id",
-                          "value": "<org_uuid>"
-                        },
-                        {
-                          "key": "id",
-                          "value": "<membership_uuid>"
-                        }
-                      ]
-                    },
-                    "description": "Reactivate a suspended membership (owner/admin only)."
-                  }
-                }
-              ]
-            },
-            {
-              "name": "Verification",
-              "item": [
-                {
-                  "name": "Submit for Verification",
-                  "request": {
-                    "method": "POST",
-                    "header": [
-                      {
-                        "key": "Content-Type",
-                        "value": "application/json",
-                        "type": "text"
-                      },
-                      {
-                        "key": "Authorization",
-                        "value": "Bearer {{token}}",
-                        "type": "text"
-                      }
-                    ],
-                    "url": {
-                      "raw": "{{baseUrl}}/organizations/owner/:organization_id/verification/submit",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "organizations",
-                        "owner",
-                        ":id",
-                        "verification",
-                        "submit"
-                      ],
-                      "variable": [
-                        {
-                          "key": "organization_id",
-                          "value": "<org_uuid>"
-                        }
-                      ]
-                    },
-                    "body": {
-                      "mode": "raw",
-                      "raw": "{\n  \"notes\": \"Ready for review. All documents uploaded.\"\n}"
-                    },
-                    "description": "Submit organization for verification."
-                  }
-                },
-                {
-                  "name": "Resubmit for Verification",
-                  "request": {
-                    "method": "POST",
-                    "header": [
-                      {
-                        "key": "Content-Type",
-                        "value": "application/json",
-                        "type": "text"
-                      },
-                      {
-                        "key": "Authorization",
-                        "value": "Bearer {{token}}",
-                        "type": "text"
-                      }
-                    ],
-                    "url": {
-                      "raw": "{{baseUrl}}/organizations/owner/:organization_id/verification/resubmit",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "organizations",
-                        "owner",
-                        ":id",
-                        "verification",
-                        "resubmit"
-                      ],
-                      "variable": [
-                        {
-                          "key": "organization_id",
-                          "value": "<org_uuid>"
-                        }
-                      ]
-                    },
-                    "body": {
-                      "mode": "raw",
-                      "raw": "{\n  \"organization\": {\n    \"name\": \"Updated Organization\",\n    \"description\": \"Fixed the issues mentioned in the rejection feedback.\",\n    \"contact_phone\": \"+1234567890\",\n    \"city\": \"New York\",\n    \"region\": \"NY\",\n    \"estimated_audience\": \"100_500\",\n    \"social_links\": {\n      \"twitter\": \"https://twitter.com/updatedorg\"\n    }\n  }\n}"
-                    },
-                    "description": "Resubmit after rejection or modification request."
-                  }
                 }
               ]
             }
@@ -3667,7 +3389,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"organization\": {\n    \"name\": \"New Organization\",\n    \"description\": \"An amazing organization\",\n    \"owner_id\": \"<owner_user_uuid>\",\n    \"organizer_type\": \"individual\",\n    \"category\": \"conference\",\n    \"contact_phone\": \"+1234567890\",\n    \"city\": \"New York\",\n    \"region\": \"NY\"\n  }\n}"
+                  "raw": "{\n  \"organization\": {\n    \"name\": \"New Organization\",\n    \"description\": \"An amazing organization\",\n    \"owner_id\": 1\n  }\n}"
                 }
               },
               "description": "Create a new organization (admin). Requires owner_id to designate initial owner.",
@@ -3719,7 +3441,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"organization\": {\n    \"name\": \"Updated Organization\",\n    \"description\": \"Updated description\",\n    \"organizer_type\": \"company\",\n    \"category\": \"music\",\n    \"contact_phone\": \"+1987654321\",\n    \"city\": \"Los Angeles\",\n    \"region\": \"CA\",\n    \"estimated_audience\": \"500_1000\"\n  }\n}"
+                  "raw": "{\n  \"organization\": {\n    \"name\": \"Updated Organization\",\n    \"description\": \"Updated description\"\n  }\n}"
                 }
               },
               "description": "Update an existing organization (admin).",
@@ -3815,7 +3537,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"organization\": {\n    \"new_owner_id\": \"<new_owner_user_uuid>\"\n  }\n}"
+                  "raw": "{\n  \"new_owner_id\": 2\n}"
                 }
               },
               "description": "Transfer organization ownership to another user. The new owner must already be a member.",
@@ -3834,133 +3556,6 @@
                       "});"
                     ],
                     "type": "text/javascript"
-                  }
-                }
-              ]
-            },
-            {
-              "name": "Verification",
-              "item": [
-                {
-                  "name": "Approve Verification",
-                  "request": {
-                    "method": "POST",
-                    "header": [
-                      {
-                        "key": "Content-Type",
-                        "value": "application/json",
-                        "type": "text"
-                      },
-                      {
-                        "key": "Authorization",
-                        "value": "Bearer {{token}}",
-                        "type": "text"
-                      }
-                    ],
-                    "url": {
-                      "raw": "{{baseUrl}}/admin/organizations/:id/verification/approve",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "admin",
-                        "organizations",
-                        ":id",
-                        "verification",
-                        "approve"
-                      ],
-                      "variable": [
-                        {
-                          "key": "id",
-                          "value": "<org_uuid>"
-                        }
-                      ]
-                    },
-                    "description": "Approve organization verification. Requires verifications.approve permission."
-                  }
-                },
-                {
-                  "name": "Reject Verification",
-                  "request": {
-                    "method": "POST",
-                    "header": [
-                      {
-                        "key": "Content-Type",
-                        "value": "application/json",
-                        "type": "text"
-                      },
-                      {
-                        "key": "Authorization",
-                        "value": "Bearer {{token}}",
-                        "type": "text"
-                      }
-                    ],
-                    "url": {
-                      "raw": "{{baseUrl}}/admin/organizations/:id/verification/reject",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "admin",
-                        "organizations",
-                        ":id",
-                        "verification",
-                        "reject"
-                      ],
-                      "variable": [
-                        {
-                          "key": "id",
-                          "value": "<org_uuid>"
-                        }
-                      ]
-                    },
-                    "body": {
-                      "mode": "raw",
-                      "raw": "{\n  \"feedback\": {\n    \"message\": \"Documents are incomplete. Please upload a valid business license.\"\n  }\n}"
-                    },
-                    "description": "Reject organization verification. Requires verifications.reject permission."
-                  }
-                },
-                {
-                  "name": "Request Modification",
-                  "request": {
-                    "method": "POST",
-                    "header": [
-                      {
-                        "key": "Content-Type",
-                        "value": "application/json",
-                        "type": "text"
-                      },
-                      {
-                        "key": "Authorization",
-                        "value": "Bearer {{token}}",
-                        "type": "text"
-                      }
-                    ],
-                    "url": {
-                      "raw": "{{baseUrl}}/admin/organizations/:id/verification/request_modification",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "admin",
-                        "organizations",
-                        ":id",
-                        "verification",
-                        "request_modification"
-                      ],
-                      "variable": [
-                        {
-                          "key": "id",
-                          "value": "<org_uuid>"
-                        }
-                      ]
-                    },
-                    "body": {
-                      "mode": "raw",
-                      "raw": "{\n  \"feedback\": {\n    \"message\": \"Please provide a clearer copy of your TIN certificate.\"\n  }\n}"
-                    },
-                    "description": "Request modifications before re-review. Requires verifications.request_modification permission."
                   }
                 }
               ]
@@ -3986,7 +3581,7 @@
                       ],
                       "variable": [
                         {
-                          "key": "id",
+                          "key": "organization_id",
                           "value": ""
                         }
                       ],
@@ -4041,7 +3636,7 @@
                       ],
                       "variable": [
                         {
-                          "key": "id",
+                          "key": "organization_id",
                           "value": ""
                         },
                         {
@@ -4094,7 +3689,7 @@
                       ],
                       "variable": [
                         {
-                          "key": "id",
+                          "key": "organization_id",
                           "value": ""
                         }
                       ]
@@ -4148,7 +3743,7 @@
                       ],
                       "variable": [
                         {
-                          "key": "id",
+                          "key": "organization_id",
                           "value": ""
                         },
                         {
@@ -4201,7 +3796,7 @@
                       ],
                       "variable": [
                         {
-                          "key": "id",
+                          "key": "organization_id",
                           "value": ""
                         },
                         {

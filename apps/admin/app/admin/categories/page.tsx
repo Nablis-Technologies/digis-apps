@@ -12,6 +12,7 @@ import {
   RefreshIcon,
 } from "@hugeicons/core-free-icons"
 import { cn } from "@/lib/utils"
+import { toastSuccess, toastError } from "@/lib/toast"
 import { DataTable, type Column, type SortConfig } from "@/components/ui/data-table"
 import { StatsCard } from "@/components/dashboard/stats-card"
 import { ConfirmDialog } from "@/components/forms/confirm-dialog"
@@ -119,9 +120,11 @@ export default function CategoriesPage() {
     setConfirmSubmitting(true)
     try {
       await deleteCategory(confirmItem.id).unwrap()
+      toastSuccess("Category deleted.")
       setConfirmOpen(false)
       setConfirmItem(null)
-    } catch {
+    } catch (err) {
+      toastError(err, "Failed to delete category.")
       // stay open to retry
     } finally {
       setConfirmSubmitting(false)

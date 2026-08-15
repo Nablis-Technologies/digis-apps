@@ -13,6 +13,7 @@ import { Button } from "@workspace/ui/components/button"
 import { Label } from "@workspace/ui/components/label"
 import { useAssignRoleMutation } from "@workspace/store/reducers/usersApi"
 import { useListRolesQuery } from "@workspace/store/reducers/rolesApi"
+import { toastSuccess, toastError } from "@workspace/ui/lib/toast"
 
 export function AssignRoleDialog({
   open,
@@ -33,36 +34,68 @@ export function AssignRoleDialog({
     e.preventDefault()
     if (!selected || !userId) return
     try {
-      await assignRole({ userId, body: { user_role: { role_id: selected } } }).unwrap()
+      await assignRole({
+        userId,
+        body: { user_role: { role_id: selected } },
+      }).unwrap()
       onOpenChange(false)
+      toastSuccess("Role assigned.")
       setSelected("")
-    } catch {
+    } catch (err) {
       // stay open so user can retry
+      toastError(err, "Failed to assign role.")
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!isLoading) { onOpenChange(o); if (!o) setSelected("") } }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!isLoading) {
+          onOpenChange(o)
+          if (!o) setSelected("")
+        }
+      }}
+    >
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Assign Role</DialogTitle>
-          <DialogDescription>Select a role to assign to this user.</DialogDescription>
+          <DialogDescription>
+            Select a role to assign to this user.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
             <Label>Role</Label>
             <div className="space-y-1.5">
               {roles.map((r) => (
-                <button key={r.id} type="button" onClick={() => setSelected(r.id)} className={`w-full rounded-lg border px-3 py-2.5 text-left text-sm font-medium transition-colors ${selected === r.id ? "border-lime-500 bg-lime-50 text-lime-700 dark:bg-lime-950/20 dark:text-lime-400" : "border-border text-muted-foreground hover:border-foreground/20 hover:text-foreground"}`}>
-                  <span className="text-xs font-mono text-muted-foreground mr-2">{r.code}</span>
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => setSelected(r.id)}
+                  className={`w-full rounded-lg border px-3 py-2.5 text-left text-sm font-medium transition-colors ${selected === r.id ? "border-lime-500 bg-lime-50 text-lime-700 dark:bg-lime-950/20 dark:text-lime-400" : "border-border text-muted-foreground hover:border-foreground/20 hover:text-foreground"}`}
+                >
+                  <span className="mr-2 font-mono text-xs text-muted-foreground">
+                    {r.code}
+                  </span>
                   {r.name}
                 </button>
               ))}
             </div>
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <DialogClose asChild><Button type="button" variant="outline" disabled={isLoading}>Cancel</Button></DialogClose>
-            <Button type="submit" disabled={!selected || isLoading} className="bg-lime-500 text-white hover:bg-lime-600 disabled:bg-lime-500/50">{isLoading ? "Assigning..." : "Assign Role"}</Button>
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={isLoading}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button
+              type="submit"
+              disabled={!selected || isLoading}
+              className="bg-lime-500 text-white hover:bg-lime-600 disabled:bg-lime-500/50"
+            >
+              {isLoading ? "Assigning..." : "Assign Role"}
+            </Button>
           </div>
         </form>
       </DialogContent>

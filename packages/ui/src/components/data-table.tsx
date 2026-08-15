@@ -137,7 +137,7 @@ function SortIndicator({
           <HugeiconsIcon
             icon={ArrowDown02Icon}
             strokeWidth={2}
-            className="size-2.5 -mt-1 text-muted-foreground/30"
+            className="-mt-1 size-2.5 text-muted-foreground/30"
           />
         </div>
       )}
@@ -185,7 +185,10 @@ function TablePagination({
 
           {generatePageNumbers(page, totalPages).map((p, i) =>
             p === "..." ? (
-              <span key={`ellipsis-${i}`} className="px-1 text-muted-foreground/40">
+              <span
+                key={`ellipsis-${i}`}
+                className="px-1 text-muted-foreground/40"
+              >
                 ...
               </span>
             ) : (
@@ -273,8 +276,9 @@ export function DataTable<T>({
                 <th
                   key={col.header}
                   className={cn(
-                    "px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground",
-                    col.sortable && "cursor-pointer select-none hover:text-foreground",
+                    "px-4 py-3.5 text-left text-xs font-semibold tracking-wider text-muted-foreground uppercase",
+                    col.sortable &&
+                      "cursor-pointer select-none hover:text-foreground",
                     col.hideOnMobile && "hidden md:table-cell",
                     col.className
                   )}
@@ -304,7 +308,7 @@ export function DataTable<T>({
                 </th>
               ))}
               {hasActions && (
-                <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <th className="px-4 py-3.5 text-right text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                   Actions
                 </th>
               )}
@@ -345,7 +349,10 @@ export function DataTable<T>({
                     </td>
                   ))}
                   {hasActions && (
-                    <td className="px-4 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>
+                    <td
+                      className="px-4 py-3.5 text-right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {renderActions(row)}
                     </td>
                   )}

@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import { usePathname } from "next/navigation"
 import {
   Breadcrumb,
@@ -15,7 +16,11 @@ import { useSidebar } from "@workspace/ui/components/sidebar"
 import { NotificationsPopover } from "@workspace/ui/components/admin/notifications-popover"
 import { useTheme } from "next-themes"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { SidebarLeftIcon, Moon01Icon, Sun02Icon } from "@hugeicons/core-free-icons"
+import {
+  SidebarLeftIcon,
+  Moon01Icon,
+  Sun02Icon,
+} from "@hugeicons/core-free-icons"
 
 const labelMap: Record<string, string> = {
   admin: "Admin",
@@ -62,20 +67,23 @@ export function SiteHeader() {
           orientation="vertical"
           className="mr-2 data-vertical:h-4 data-vertical:self-auto"
         />
-        <Breadcrumb className="hidden sm:block flex-1">
+        <Breadcrumb className="hidden flex-1 sm:block">
           <BreadcrumbList>
-            {segments.map((seg) => (
-              <BreadcrumbItem key={seg.href}>
-                {seg.isLast ? (
-                  <BreadcrumbPage>{seg.label}</BreadcrumbPage>
-                ) : (
-                  <>
+            {segments.flatMap((seg, i) => {
+              const nodes: React.ReactNode[] = [
+                <BreadcrumbItem key={seg.href}>
+                  {seg.isLast ? (
+                    <BreadcrumbPage>{seg.label}</BreadcrumbPage>
+                  ) : (
                     <BreadcrumbLink href={seg.href}>{seg.label}</BreadcrumbLink>
-                    <BreadcrumbSeparator />
-                  </>
-                )}
-              </BreadcrumbItem>
-            ))}
+                  )}
+                </BreadcrumbItem>,
+              ]
+              if (!seg.isLast) {
+                nodes.push(<BreadcrumbSeparator key={`sep-${seg.href}`} />)
+              }
+              return nodes
+            })}
           </BreadcrumbList>
         </Breadcrumb>
         <div className="ml-auto flex items-center gap-1">
@@ -86,7 +94,10 @@ export function SiteHeader() {
             className="h-8 w-8"
             onClick={() => setTheme(isDark ? "light" : "dark")}
           >
-            <HugeiconsIcon icon={isDark ? Sun02Icon : Moon01Icon} strokeWidth={2} />
+            <HugeiconsIcon
+              icon={isDark ? Sun02Icon : Moon01Icon}
+              strokeWidth={2}
+            />
           </Button>
         </div>
       </div>

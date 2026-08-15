@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
+import { toastSuccess, toastError } from "@/lib/toast"
 import { DataTable, type Column, type SortConfig } from "@/components/ui/data-table"
 import { StatsCard } from "@/components/dashboard/stats-card"
 import { UserDialog } from "@/components/forms/user-dialog"
@@ -183,7 +184,14 @@ export default function UsersPage() {
                 title: "Reactivate User",
                 desc: `Reactivate ${u.email}? They will be able to log in again.`,
                 label: "Reactivate",
-                action: async () => { await reactivateUser(u.id).unwrap() },
+                action: async () => {
+                  try {
+                    await reactivateUser(u.id).unwrap()
+                    toastSuccess("User reactivated.")
+                  } catch (err) {
+                    toastError(err, "Failed to reactivate user.")
+                  }
+                },
               })
               setConfirmOpen(true)
             }}
@@ -192,7 +200,14 @@ export default function UsersPage() {
                 title: "Delete User",
                 desc: `Permanently delete ${u.email}? This action cannot be undone.`,
                 label: "Delete",
-                action: async () => { await deleteUser(u.id).unwrap() },
+                action: async () => {
+                  try {
+                    await deleteUser(u.id).unwrap()
+                    toastSuccess("User deleted.")
+                  } catch (err) {
+                    toastError(err, "Failed to delete user.")
+                  }
+                },
               })
               setConfirmOpen(true)
             }}
