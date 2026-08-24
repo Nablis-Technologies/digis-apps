@@ -34,7 +34,24 @@ import {
   ArrowDown01Icon,
   BookmarkIcon,
   Tick02Icon,
+  ImageAddIcon,
+  Clock03Icon,
 } from "@hugeicons/core-free-icons"
+import { 
+  HelpCircle, 
+  Plus, 
+  X, 
+  Clock, 
+  ChevronUp, 
+  ChevronDown, 
+  Pencil, 
+  Trash2, 
+  BarChart2, 
+  Type, 
+  Hash, 
+  CheckSquare, 
+  ChevronDown as ChevronDownIcon 
+} from "lucide-react"
 
 type TicketTypeInput = {
   name: string
@@ -66,6 +83,67 @@ type GuestInput = {
   personalLink: string
   allowedGuests: number
 }
+
+type CustomQuestionType = "text" | "textarea" | "number" | "select" | "checkbox"
+
+type CustomQuestion = {
+  id: string
+  label: string
+  type: CustomQuestionType
+  required: boolean
+  placeholder?: string
+  options?: string
+}
+
+type QuestionFormData = {
+  label: string
+  type: CustomQuestionType
+  required: boolean
+  placeholder: string
+  options: string
+}
+
+type QuestionResponse = {
+  id: string
+  questionId: string
+  orderId?: string
+  rsvpId?: string
+  respondentPhone?: string
+  answer: string
+}
+
+type ResponsesData = {
+  questions: CustomQuestion[]
+  answers: QuestionResponse[]
+}
+
+const QUESTION_TYPES: { value: CustomQuestionType; label: string; icon: React.ReactNode }[] = [
+  {
+    value: "text",
+    label: "Text",
+    icon: <Type className="w-3.5 h-3.5" />,
+  },
+  {
+    value: "textarea", 
+    label: "Long Text",
+    icon: <Type className="w-3.5 h-3.5" />,
+  },
+  {
+    value: "number",
+    label: "Number", 
+    icon: <Hash className="w-3.5 h-3.5" />,
+  },
+  {
+    value: "select",
+    label: "Dropdown",
+    icon: <ChevronDownIcon className="w-3.5 h-3.5" />,
+  },
+  {
+    value: "checkbox",
+    label: "Checkbox",
+    icon: <CheckSquare className="w-3.5 h-3.5" />,
+  },
+]
 
 const ENTRY_TYPES: { value: EntryType; label: string; desc: string; icon: React.ReactNode; color: string; bgClass: string; textClass: string; borderClass: string }[] = [
   {
@@ -225,6 +303,25 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   const [customDates, setCustomDates] = useState<string[]>([])
   const [isCreating, setIsCreating] = useState(false)
 
+  // Custom Questions state
+  const [questions, setQuestions] = useState<CustomQuestion[]>([])
+  const [showCustomQuestions, setShowCustomQuestions] = useState(false)
+  const [showQForm, setShowQForm] = useState(false)
+  const [editingQId, setEditingQId] = useState<string | null>(null)
+  const [qSaving, setQSaving] = useState(false)
+  const [qForm, setQForm] = useState<QuestionFormData>({
+    label: "",
+    type: "text",
+    required: false,
+    placeholder: "",
+    options: ""
+  })
+  const [showResponses, setShowResponses] = useState(false)
+  const [responses, setResponses] = useState<ResponsesData>({
+    questions: [],
+    answers: []
+  })
+
   const addTicketType = () =>
     setTicketTypes((p) => [...p, { name: "", price: "", quantity: "", description: "", maxPerPerson: "", salesStart: "", salesEnd: "" }])
   const removeTicketType = (i: number) =>
@@ -236,6 +333,107 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
     if (!newCode.code.trim()) return
     setInviteCodes((p) => [...p, { ...newCode, code: newCode.code.trim().toUpperCase(), _id: crypto.randomUUID() }])
     setNewCode({ code: "", label: "", useType: "unlimited", maxUses: "", hasExpiry: false, expiresAt: "" })
+  }
+
+  // Custom Questions functions
+  const openAddQuestion = () => {
+    setQForm({
+      label: "",
+      type: "text",
+      required: false,
+      placeholder: "",
+      options: ""
+    })
+    setEditingQId(null)
+    setShowCustomQuestions(true)
+    setShowQForm(true)
+  }
+
+  const openEditQuestion = (question: CustomQuestion) => {
+    setQForm({
+      label: question.label,
+      type: question.type,
+      required: question.required,
+      placeholder: question.placeholder || "",
+      options: question.options || ""
+    })
+    setEditingQId(question.id)
+    setShowQForm(true)
+  }
+
+  const handleSaveQuestion = () => {
+    if (!qForm.label.trim()) return
+    
+    setQSaving(true)
+    
+    // Simulate async operation
+    setTimeout(() => {
+      if (editingQId) {
+        // Update existing question
+        setQuestions(prev => prev.map(q => 
+          q.id === editingQId 
+            ? {
+                ...q,
+                label: qForm.label,
+                type: qForm.type,
+                required: qForm.required,
+                placeholder: qForm.placeholder || undefined,
+                options: qForm.type === "select" ? qForm.options : undefined
+              }
+            : q
+        ))
+      } else {
+        // Add new question
+        const newQuestion: CustomQuestion = {
+          id: crypto.randomUUID(),
+          label: qForm.label,
+          type: qForm.type,
+          required: qForm.required,
+          placeholder: qForm.placeholder || undefined,
+          options: qForm.type === "select" ? qForm.options : undefined
+        }
+        setQuestions(prev => [...prev, newQuestion])
+      }
+      
+      setShowQForm(false)
+      setEditingQId(null)
+      setQSaving(false)
+    }, 500)
+  }
+
+  const handleDeleteQuestion = (questionId: string) => {
+    setQuestions(prev => prev.filter(q => q.id !== questionId))
+  }
+
+  const handleMoveQuestion = (question: CustomQuestion, direction: "up" | "down") => {
+    setQuestions(prev => {
+      const currentIndex = prev.findIndex(q => q.id === question.id)
+      if (currentIndex === -1) return prev
+      
+      const newIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1
+      if (newIndex < 0 || newIndex >= prev.length) return prev
+      
+      const newQuestions = [...prev]
+      const [removed] = newQuestions.splice(currentIndex, 1)
+      newQuestions.splice(newIndex, 0, removed)
+      return newQuestions
+    })
+  }
+
+  const fetchResponses = () => {
+    // Mock function - would fetch real responses from API
+    setResponses({
+      questions: questions,
+      answers: [
+        // Mock response data
+        {
+          id: "1",
+          questionId: questions[0]?.id || "",
+          respondentPhone: "+251912345678",
+          answer: "Vegetarian"
+        }
+      ]
+    })
   }
 
   const handleCreate = async (publish: boolean) => {
@@ -297,6 +495,14 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
           contact: g.contact,
           personalLink: g.personalLink || undefined,
           allowedGuests: g.allowedGuests,
+        })),
+        customQuestions: questions.map((q) => ({
+          id: q.id,
+          label: q.label,
+          type: q.type,
+          required: q.required,
+          placeholder: q.placeholder || undefined,
+          options: q.options || undefined,
         })),
         publish,
       }
@@ -503,33 +709,49 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
             </div>
 
             {/* Optional: End Date/Time */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-semibold">End Date & Time (optional)</Label>
-                <Switch
-                  checked={showEndDateTime}
-                  onCheckedChange={setShowEndDateTime}
-                  className="data-checked:[&]:bg-[var(--event-color)]"
+            <div className={`rounded-2xl border transition-colors ${showEndDateTime ? `${selectedEntryType.borderClass} ${selectedEntryType.bgClass}/10` : "border-border/50 bg-card/50"}`}>
+              <div
+                role="button"
+                tabIndex={0}
+                className="w-full flex items-center gap-3 p-4 text-left cursor-pointer"
+                onClick={() => setShowEndDateTime((v) => !v)}
+                onKeyDown={(e) => e.key === "Enter" && setShowEndDateTime((v) => !v)}
+              >
+                <div className={`p-2 rounded-xl flex-shrink-0 transition-colors ${showEndDateTime ? `${selectedEntryType.bgClass}/15` : "bg-muted"}`}>
+                  <HugeiconsIcon icon={Clock03Icon} strokeWidth={2} className={`w-4 h-4 ${showEndDateTime ? selectedEntryType.textClass : "text-muted-foreground"}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm">End Date & Time</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Optional — set when the event concludes</p>
+                </div>
+                <Switch 
+                  checked={showEndDateTime} 
+                  onCheckedChange={setShowEndDateTime} 
+                  className="flex-shrink-0 data-checked:[&]:bg-[var(--event-color)]" 
                   style={{ "--event-color": `var(${selectedEntryType.color})` } as React.CSSProperties}
+                  onClick={(e) => e.stopPropagation()} 
                 />
               </div>
               <AnimatePresence initial={false}>
                 {showEndDateTime && (
                   <motion.div
+                    key="end-datetime-body"
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
+                    transition={{ duration: 0.2, ease: "easeInOut" }}
                     className="overflow-hidden"
                   >
-                    <div className="grid grid-cols-2 gap-4 pt-2">
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">End Date</Label>
-                        <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-11" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">End Time</Label>
-                        <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="h-11" />
+                    <div className="px-4 pb-4 space-y-3 border-t border-border/40 pt-3">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-medium">End Date</Label>
+                          <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-9 text-sm" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-medium">End Time</Label>
+                          <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="h-9 text-sm" />
+                        </div>
                       </div>
                     </div>
                   </motion.div>
@@ -552,38 +774,57 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
             </div>
 
             {/* Optional: Online Link */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-semibold">Online Link (optional)</Label>
-                <Switch
-                  checked={showOnlineLink}
-                  onCheckedChange={setShowOnlineLink}
-                  className="data-checked:[&]:bg-[var(--event-color)]"
+            <div className={`rounded-2xl border transition-colors ${showOnlineLink ? `${selectedEntryType.borderClass} ${selectedEntryType.bgClass}/10` : "border-border/50 bg-card/50"}`}>
+              <div
+                role="button"
+                tabIndex={0}
+                className="w-full flex items-center gap-3 p-4 text-left cursor-pointer"
+                onClick={() => setShowOnlineLink((v) => !v)}
+                onKeyDown={(e) => e.key === "Enter" && setShowOnlineLink((v) => !v)}
+              >
+                <div className={`p-2 rounded-xl flex-shrink-0 transition-colors ${showOnlineLink ? `${selectedEntryType.bgClass}/15` : "bg-muted"}`}>
+                  <HugeiconsIcon icon={Link01Icon} strokeWidth={2} className={`w-4 h-4 ${showOnlineLink ? selectedEntryType.textClass : "text-muted-foreground"}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm">Online Link</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Optional — add Zoom, Meet, or livestream URL</p>
+                </div>
+                <Switch 
+                  checked={showOnlineLink} 
+                  onCheckedChange={setShowOnlineLink} 
+                  className="flex-shrink-0 data-checked:[&]:bg-[var(--event-color)]" 
                   style={{ "--event-color": `var(${selectedEntryType.color})` } as React.CSSProperties}
+                  onClick={(e) => e.stopPropagation()} 
                 />
               </div>
               <AnimatePresence initial={false}>
                 {showOnlineLink && (
                   <motion.div
+                    key="online-link-body"
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
+                    transition={{ duration: 0.2, ease: "easeInOut" }}
                     className="overflow-hidden"
                   >
-                    <div className="relative pt-2">
-                      <HugeiconsIcon
-                        icon={Link01Icon}
-                        strokeWidth={2}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
-                      />
-                      <Input
-                        id="onlineUrl"
-                        placeholder="https://zoom.us/j/..."
-                        value={onlineUrl}
-                        onChange={(e) => setOnlineUrl(e.target.value)}
-                        className="h-11 pl-10"
-                      />
+                    <div className="px-4 pb-4 space-y-3 border-t border-border/40 pt-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium">Event URL</Label>
+                        <div className="relative">
+                          <HugeiconsIcon
+                            icon={Link01Icon}
+                            strokeWidth={2}
+                            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
+                          />
+                          <Input
+                            id="onlineUrl"
+                            placeholder="https://zoom.us/j/..."
+                            value={onlineUrl}
+                            onChange={(e) => setOnlineUrl(e.target.value)}
+                            className="h-9 text-sm pl-10"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </motion.div>
                 )}
@@ -591,40 +832,67 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
             </div>
 
             {/* Optional: Banner Image */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-semibold">Banner Image (optional)</Label>
-                <Switch
-                  checked={showBannerImage}
-                  onCheckedChange={setShowBannerImage}
-                  className="data-checked:[&]:bg-[var(--event-color)]"
+            <div className={`rounded-2xl border transition-colors ${showBannerImage ? `${selectedEntryType.borderClass} ${selectedEntryType.bgClass}/10` : "border-border/50 bg-card/50"}`}>
+              <div
+                role="button"
+                tabIndex={0}
+                className="w-full flex items-center gap-3 p-4 text-left cursor-pointer"
+                onClick={() => setShowBannerImage((v) => !v)}
+                onKeyDown={(e) => e.key === "Enter" && setShowBannerImage((v) => !v)}
+              >
+                <div className={`p-2 rounded-xl flex-shrink-0 transition-colors ${showBannerImage ? `${selectedEntryType.bgClass}/15` : "bg-muted"}`}>
+                  <HugeiconsIcon icon={ImageAddIcon} strokeWidth={2} className={`w-4 h-4 ${showBannerImage ? selectedEntryType.textClass : "text-muted-foreground"}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm">Banner Image</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Optional — add a cover image for the event</p>
+                </div>
+                <Switch 
+                  checked={showBannerImage} 
+                  onCheckedChange={setShowBannerImage} 
+                  className="flex-shrink-0 data-checked:[&]:bg-[var(--event-color)]" 
                   style={{ "--event-color": `var(${selectedEntryType.color})` } as React.CSSProperties}
+                  onClick={(e) => e.stopPropagation()} 
                 />
               </div>
               <AnimatePresence initial={false}>
                 {showBannerImage && (
                   <motion.div
+                    key="banner-image-body"
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
+                    transition={{ duration: 0.2, ease: "easeInOut" }}
                     className="overflow-hidden"
                   >
-                    <div className="space-y-2 pt-2">
-                      <Input
-                        id="banner"
-                        placeholder="https://..."
-                        value={bannerImage}
-                        onChange={(e) => setBannerImage(e.target.value)}
-                        className="h-11"
-                      />
+                    <div className="px-4 pb-4 space-y-3 border-t border-border/40 pt-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium">Image URL</Label>
+                        <div className="relative">
+                          <HugeiconsIcon
+                            icon={ImageAddIcon}
+                            strokeWidth={2}
+                            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
+                          />
+                          <Input
+                            id="banner"
+                            placeholder="https://..."
+                            value={bannerImage}
+                            onChange={(e) => setBannerImage(e.target.value)}
+                            className="h-9 text-sm pl-10"
+                          />
+                        </div>
+                      </div>
                       {bannerImage && (
-                        <img
-                          src={bannerImage}
-                          alt="Banner preview"
-                          className="h-32 w-full object-cover rounded-xl mt-2"
-                          onError={(e) => (e.currentTarget.style.display = "none")}
-                        />
+                        <div className="space-y-1.5">
+                          <p className="text-xs font-medium">Preview</p>
+                          <img
+                            src={bannerImage}
+                            alt="Banner preview"
+                            className="h-32 w-full object-cover rounded-xl"
+                            onError={(e) => (e.currentTarget.style.display = "none")}
+                          />
+                        </div>
                       )}
                     </div>
                   </motion.div>
@@ -1347,6 +1615,353 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                 </div>
               </div>
             )}
+
+            {/* Custom Questions Section */}
+            <div className={`rounded-2xl border transition-colors ${showCustomQuestions ? `${selectedEntryType.borderClass} ${selectedEntryType.bgClass}/10` : "border-border/50 bg-card/50"}`}>
+              <div
+                role="button"
+                tabIndex={0}
+                className="w-full flex items-center gap-3 p-4 text-left cursor-pointer"
+                onClick={() => setShowCustomQuestions((v) => !v)}
+                onKeyDown={(e) => e.key === "Enter" && setShowCustomQuestions((v) => !v)}
+              >
+                <div className={`p-2 rounded-xl flex-shrink-0 transition-colors ${showCustomQuestions ? `${selectedEntryType.bgClass}/15` : "bg-muted"}`}>
+                  <HelpCircle className={`w-4 h-4 ${showCustomQuestions ? selectedEntryType.textClass : "text-muted-foreground"}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-sm">Custom Questions</p>
+                    {questions.length > 0 && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 h-4">{questions.length} added</Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">Collect extra info from attendees at checkout</p>
+                </div>
+                <Switch 
+                  checked={showCustomQuestions} 
+                  onCheckedChange={setShowCustomQuestions} 
+                  className="flex-shrink-0 data-checked:[&]:bg-[var(--event-color)]" 
+                  style={{ "--event-color": `var(${selectedEntryType.color})` } as React.CSSProperties}
+                  onClick={(e) => e.stopPropagation()} 
+                />
+              </div>
+              <AnimatePresence initial={false}>
+                {showCustomQuestions && (
+                  <motion.div
+                    key="questions-body"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-4 pb-4 space-y-3 border-t border-border/40 pt-3">
+                      {/* Add Question Button */}
+                      <div className="flex justify-end">
+                        <Button
+                          size="sm"
+                          variant={showQForm ? "ghost" : "outline"}
+                          onClick={showQForm ? () => { setShowQForm(false); setEditingQId(null); } : () => setShowQForm(true)}
+                          className="h-8 text-xs gap-1.5"
+                        >
+                          {showQForm ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                          {showQForm ? "Cancel" : "Add question"}
+                        </Button>
+                      </div>
+                {/* Add/Edit Question Form */}
+                <AnimatePresence>
+                  {showQForm && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className={`bg-background border ${selectedEntryType.borderClass}/20 rounded-xl p-4 space-y-3 overflow-hidden`}
+                    >
+                      <p className={`text-xs font-semibold ${selectedEntryType.textClass} uppercase tracking-wider`}>
+                        {editingQId ? "Edit question" : "New question"}
+                      </p>
+                      
+                      {/* Question Label */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Question label <span className="text-destructive">*</span></Label>
+                        <Input
+                          placeholder='e.g. "Dietary preference?" or "T-shirt size?"'
+                          value={qForm.label}
+                          onChange={(e) => setQForm((f) => ({ ...f, label: e.target.value }))}
+                          className="h-9 text-sm"
+                          autoFocus
+                        />
+                      </div>
+                      
+                      {/* Question Type Selector */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Answer type</Label>
+                        <div className="grid grid-cols-5 gap-1.5">
+                          {QUESTION_TYPES.map((t) => (
+                            <button
+                              key={t.value}
+                              type="button"
+                              onClick={() => setQForm((f) => ({ ...f, type: t.value }))}
+                              className={`flex flex-col items-center gap-1 py-2 rounded-xl border text-[10px] font-semibold transition-all ${
+                                qForm.type === t.value
+                                  ? `${selectedEntryType.borderClass}/50 ${selectedEntryType.bgClass}/10 ${selectedEntryType.textClass}`
+                                  : "border-border/40 text-muted-foreground hover:border-border"
+                              }`}
+                            >
+                              {t.icon}
+                              <span className="leading-tight text-center">{t.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      {/* Options for Select Type */}
+                      {qForm.type === "select" && (
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Options <span className="text-muted-foreground">(comma-separated)</span></Label>
+                          <Input
+                            placeholder="Vegetarian, Vegan, Non-vegetarian"
+                            value={qForm.options}
+                            onChange={(e) => setQForm((f) => ({ ...f, options: e.target.value }))}
+                            className="h-9 text-sm"
+                          />
+                        </div>
+                      )}
+                      
+                      {/* Placeholder for Text Inputs */}
+                      {qForm.type !== "checkbox" && qForm.type !== "select" && (
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Placeholder hint <span className="text-muted-foreground">(optional)</span></Label>
+                          <Input
+                            placeholder="e.g. Enter your company name"
+                            value={qForm.placeholder}
+                            onChange={(e) => setQForm((f) => ({ ...f, placeholder: e.target.value }))}
+                            className="h-9 text-sm"
+                          />
+                        </div>
+                      )}
+                      
+                      {/* Required Toggle */}
+                      <div className="flex items-center justify-between py-1">
+                        <div>
+                          <p className="text-xs font-medium">Required field</p>
+                          <p className="text-[10px] text-muted-foreground">Attendees must answer this question</p>
+                        </div>
+                        <Switch 
+                          checked={qForm.required} 
+                          onCheckedChange={(v) => setQForm((f) => ({ ...f, required: v }))}
+                          className="data-checked:[&]:bg-[var(--event-color)]"
+                          style={{ "--event-color": `var(${selectedEntryType.color})` } as React.CSSProperties}
+                        />
+                      </div>
+                      
+                      {/* Form Actions */}
+                      <div className="flex gap-2 pt-1">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1 h-8 text-xs" 
+                          onClick={() => { setShowQForm(false); setEditingQId(null); }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          className={`flex-1 h-8 text-xs font-semibold ${selectedEntryType.bgClass} hover:${selectedEntryType.bgClass}/90`}
+                          onClick={handleSaveQuestion} 
+                          disabled={!qForm.label.trim() || qSaving}
+                        >
+                          {qSaving ? <Clock className="w-3.5 h-3.5 animate-spin" /> : editingQId ? "Update question" : "Add question"}
+                        </Button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Empty State */}
+                {questions.length === 0 && !showQForm && (
+                  <div className="text-center py-8">
+                    <div className="w-14 h-14 rounded-full bg-muted/40 flex items-center justify-center mx-auto mb-3">
+                      <HelpCircle className="w-7 h-7 text-muted-foreground/30" />
+                    </div>
+                    <p className="text-sm font-medium text-muted-foreground">No custom questions yet</p>
+                    <p className="text-xs text-muted-foreground/60 mt-1 max-w-xs mx-auto">
+                      Collect T-shirt sizes, meal preferences, job titles, emergency contacts — anything you need from attendees
+                    </p>
+                    <Button variant="outline" size="sm" className="mt-4 h-8 text-xs gap-1.5" onClick={openAddQuestion}>
+                      <Plus className="w-3.5 h-3.5" />
+                      Add your first question
+                    </Button>
+                  </div>
+                )}
+
+                {/* Questions List */}
+                {questions.length > 0 && (
+                  <div className="space-y-2">
+                    {questions.map((q, idx) => {
+                      const typeInfo = QUESTION_TYPES.find((t) => t.value === q.type) ?? QUESTION_TYPES[0];
+                      return (
+                        <div 
+                          key={q.id} 
+                          className="flex items-center gap-2.5 bg-card border border-border/50 rounded-xl px-3 py-2.5 group hover:border-border transition-colors"
+                        >
+                          {/* Reorder Controls */}
+                          <div className="flex flex-col gap-0.5 flex-shrink-0">
+                            <button
+                              onClick={() => handleMoveQuestion(q, "up")}
+                              disabled={idx === 0}
+                              className="text-muted-foreground/40 hover:text-muted-foreground disabled:opacity-20 transition-colors p-0.5"
+                            >
+                              <ChevronUp className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() => handleMoveQuestion(q, "down")}
+                              disabled={idx === questions.length - 1}
+                              className="text-muted-foreground/40 hover:text-muted-foreground disabled:opacity-20 transition-colors p-0.5"
+                            >
+                              <ChevronDown className="w-3 h-3" />
+                            </button>
+                          </div>
+                          
+                          {/* Type Icon */}
+                          <div className="text-muted-foreground/60 flex-shrink-0">
+                            {typeInfo.icon}
+                          </div>
+                          
+                          {/* Question Info */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{q.label}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[10px] text-muted-foreground">{typeInfo.label}</span>
+                              {q.required && (
+                                <span className={`text-[10px] font-bold ${selectedEntryType.bgClass}/10 ${selectedEntryType.textClass} px-1 rounded`}>Required</span>
+                              )}
+                              {q.type === "select" && q.options && (
+                                <span className="text-[10px] text-muted-foreground/60 truncate max-w-[120px]">
+                                  {q.options}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Actions */}
+                          <div className="flex items-center gap-1 transition-opacity flex-shrink-0">
+                            <button
+                              onClick={() => openEditQuestion(q)}
+                              className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-lg hover:bg-muted"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteQuestion(q.id)}
+                              className="text-muted-foreground hover:text-destructive transition-colors p-1.5 rounded-lg hover:bg-destructive/10"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Response Viewer */}
+              {questions.length > 0 && (
+                <div className="pt-1 border-t border-border/40 px-4 pb-4">
+                  <button
+                    onClick={() => { 
+                      setShowResponses((v) => { 
+                        if (!v) fetchResponses(); 
+                        return !v; 
+                      }); 
+                    }}
+                    className={`flex items-center gap-2 text-xs text-muted-foreground hover:${selectedEntryType.textClass} transition-colors py-2`}
+                  >
+                    <BarChart2 className="w-3.5 h-3.5" />
+                    {showResponses ? "Hide responses" : "View all responses"}
+                    <ChevronDownIcon className={`w-3.5 h-3.5 transition-transform ${showResponses ? "rotate-180" : ""}`} />
+                  </button>
+                  
+                  <AnimatePresence>
+                    {showResponses && (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }} 
+                        animate={{ opacity: 1, height: "auto" }} 
+                        exit={{ opacity: 0, height: 0 }} 
+                        className="overflow-hidden"
+                      >
+                        {responses.answers.length === 0 ? (
+                          <div className="text-center py-6 text-xs text-muted-foreground">
+                            No responses collected yet
+                          </div>
+                        ) : (
+                          (() => {
+                            // Group answers by respondent
+                            type Respondent = { key: string; phone: string | null | undefined; answers: Map<string, string> };
+                            const map = new Map<string, Respondent>();
+                            
+                            for (const ans of responses.answers) {
+                              const key = ans.orderId ?? ans.rsvpId ?? ans.respondentPhone ?? ans.id;
+                              if (!map.has(key)) {
+                                map.set(key, { key, phone: ans.respondentPhone || null, answers: new Map() });
+                              }
+                              map.get(key)!.answers.set(ans.questionId, ans.answer);
+                            }
+                            
+                            const rows = Array.from(map.values());
+                            
+                            return (
+                              <div className={`overflow-x-auto rounded-xl border ${selectedEntryType.borderClass}/40 mt-2`}>
+                                <table className="w-full text-xs">
+                                  <thead>
+                                    <tr className={`${selectedEntryType.bgClass}/10 border-b ${selectedEntryType.borderClass}/40`}>
+                                      <th className="text-left px-3 py-2 font-semibold text-muted-foreground whitespace-nowrap">
+                                        Respondent
+                                      </th>
+                                      {responses.questions.map((q) => (
+                                        <th 
+                                          key={q.id} 
+                                          className="text-left px-3 py-2 font-semibold text-muted-foreground whitespace-nowrap max-w-[140px]"
+                                        >
+                                          <span className="truncate block max-w-[140px]">{q.label}</span>
+                                        </th>
+                                      ))}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {rows.map((row, i) => (
+                                      <tr 
+                                        key={row.key} 
+                                        className={`border-b border-border/20 ${i % 2 === 0 ? "" : "bg-muted/10"}`}
+                                      >
+                                        <td className="px-3 py-2 font-mono text-muted-foreground whitespace-nowrap">
+                                          {row.phone ?? "—"}
+                                        </td>
+                                        {responses.questions.map((q) => (
+                                          <td key={q.id} className="px-3 py-2 max-w-[160px]">
+                                            <span className="truncate block">
+                                              {row.answers.get(q.id) || "—"}
+                                            </span>
+                                          </td>
+                                        ))}
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            );
+                          })()
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+            </div>
 
           </motion.div>
         )}

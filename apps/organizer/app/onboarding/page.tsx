@@ -121,7 +121,7 @@ export default function OnboardingPage() {
             {/* Progress Bar Background */}
             <div className="absolute top-0 left-0 right-0 h-1 bg-muted/50 rounded-full overflow-hidden">
               <motion.div
-                className="h-full bg-gradient-to-r from-primary via-lime-500 to-lime-600"
+                className="h-full bg-chart-2"
                 initial={{ width: 0 }}
                 animate={{ width: `${progressPercentage}%` }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
@@ -140,9 +140,9 @@ export default function OnboardingPage() {
                     <motion.div
                       className={`relative size-10 sm:size-12 rounded-full flex items-center justify-center transition-all duration-300 ${
                         isCompleted
-                          ? "bg-gradient-to-br from-lime-500 to-lime-600 shadow-lg shadow-lime-500/30"
+                          ? "bg-chart-2 shadow-lg shadow-chart-2/30"
                           : isCurrent
-                            ? "bg-gradient-to-br from-primary to-primary/80 shadow-lg shadow-primary/30 ring-4 ring-primary/20"
+                            ? "bg-primary shadow-lg shadow-primary/30 ring-4 ring-primary/20"
                             : "bg-muted/60 border-2 border-border/50"
                       }`}
                       animate={isCurrent ? { scale: [1, 1.05, 1] } : { scale: 1 }}
@@ -223,7 +223,7 @@ export default function OnboardingPage() {
               form="onboarding-form"
               size="lg"
               disabled={isSubmitting}
-              className="flex-1 h-12 font-semibold bg-gradient-to-r from-primary to-lime-600 hover:from-primary/90 hover:to-lime-600/90 shadow-lg shadow-primary/20"
+              className="flex-1 h-12 font-semibold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
             >
               {isSubmitting ? (
                 <>

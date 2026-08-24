@@ -20,12 +20,8 @@ import {
   TicketIcon,
   Wallet01Icon,
   UserGroupIcon,
-  Edit01Icon,
-  ViewIcon,
-  Share01Icon,
-  Copy01Icon,
-  Delete02Icon,
 } from "@hugeicons/core-free-icons"
+import { Eye, Pencil, Share2, Copy, Trash2 } from "lucide-react"
 import { StatsGrid } from "@/components/dashboard/stats-grid"
 import { CreateEventDialog } from "../../../components/events/create-event-dialog"
 import { ShareEventDialog } from "../../../components/events/share-event-dialog"
@@ -282,7 +278,7 @@ export default function EventsPage() {
   const eventActions: RowAction<EventRow>[] = [
     {
       label: "View",
-      icon: ViewIcon,
+      icon: Eye,
       primary: true,
       iconOnly: true,
       onClick: (row) => {
@@ -291,7 +287,7 @@ export default function EventsPage() {
     },
     {
       label: "Edit",
-      icon: Edit01Icon,
+      icon: Pencil,
       primary: true,
       iconOnly: true,
       onClick: (row) => {
@@ -301,7 +297,7 @@ export default function EventsPage() {
     },
     {
       label: "Share",
-      icon: Share01Icon,
+      icon: Share2,
       primary: true,
       iconOnly: true,
       onClick: (row) => {
@@ -314,7 +310,7 @@ export default function EventsPage() {
     },
     {
       label: "Duplicate",
-      icon: Copy01Icon,
+      icon: Copy,
       onClick: (row) => {
         // TODO: Duplicate event
         console.log("Duplicate event", row.id)
@@ -322,7 +318,7 @@ export default function EventsPage() {
     },
     {
       label: "Delete",
-      icon: Delete02Icon,
+      icon: Trash2,
       variant: "destructive",
       onClick: (row) => {
         // TODO: Confirm and delete
@@ -365,12 +361,12 @@ export default function EventsPage() {
             placeholder="Search events..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-9 rounded-xl"
           />
         </div>
 
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-40">
+          <SelectTrigger className="w-full sm:w-40 rounded-xl">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>

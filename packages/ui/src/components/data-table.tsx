@@ -19,6 +19,20 @@ import {
 } from "@workspace/ui/components/dropdown-menu"
 import { Button } from "@workspace/ui/components/button"
 
+// Helper to check if icon is a Hugeicons icon
+function isHugeiconsIcon(icon: any): icon is HugeiconsIconProps["icon"] {
+  return Array.isArray(icon)
+}
+
+// Helper to render icon (Hugeicons or Lucide)
+function renderIcon(icon: HugeiconsIconProps["icon"] | React.ComponentType<any>, className: string) {
+  if (isHugeiconsIcon(icon)) {
+    return <HugeiconsIcon icon={icon} strokeWidth={2} className={className} />
+  }
+  const IconComponent = icon as React.ComponentType<any>
+  return <IconComponent className={className} />
+}
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 export type SortDirection = "asc" | "desc"
@@ -46,8 +60,8 @@ export type Column<T> = {
 export type RowAction<T> = {
   /** Action label */
   label: string
-  /** Icon component from hugeicons */
-  icon?: HugeiconsIconProps["icon"]
+  /** Icon component from hugeicons or lucide */
+  icon?: HugeiconsIconProps["icon"] | React.ComponentType<any>
   /** Click handler */
   onClick: (row: T) => void
   /** Variant for styling */
@@ -116,9 +130,7 @@ function ActionButtons<T>({ row, actions }: { row: T; actions: RowAction<T>[] })
           )}
           title={action.label}
         >
-          {action.icon && (
-            <HugeiconsIcon icon={action.icon} strokeWidth={2} className="size-4" />
-          )}
+          {action.icon && renderIcon(action.icon, "size-4")}
           {!action.iconOnly && <span className="ml-1.5">{action.label}</span>}
         </Button>
       ))}
@@ -150,9 +162,7 @@ function ActionButtons<T>({ row, actions }: { row: T; actions: RowAction<T>[] })
                   action.onClick(row)
                 }}
               >
-                {action.icon && (
-                  <HugeiconsIcon icon={action.icon} strokeWidth={2} className="size-4" />
-                )}
+                {action.icon && renderIcon(action.icon, "size-4")}
                 {action.label}
               </DropdownMenuItem>
             ))}
