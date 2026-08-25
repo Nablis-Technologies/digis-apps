@@ -3,11 +3,27 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
+import { useGetMeQuery } from "@workspace/store/reducers/authApi"
+import { useListOwnerOrganizationsQuery } from "@workspace/store/reducers/organizationsApi"
+import { useListPublicCategoriesQuery } from "@workspace/store/reducers/categoriesApi"
+import { 
+  useCreateEventMutation, 
+  usePublishEventMutation,
+  useCreateEventDateMutation,
+  useCreateEventProductMutation,
+  useActivateEventProductMutation,
+  useCreateAccessCodeMutation,
+  useCreateInvitationMutation,
+  useCreateRegistrationFormMutation,
+  useCreateRegistrationFormVersionMutation,
+  usePublishRegistrationFormVersionMutation,
+} from "@workspace/store/reducers/eventsApi"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowLeft01Icon,
@@ -245,6 +261,25 @@ interface CreateEventFormProps {
 
 export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   const router = useRouter()
+  
+  // API mutations & queries
+  const [createEvent, { isLoading: isCreatingEvent }] = useCreateEventMutation()
+  const [publishEvent, { isLoading: isPublishingEvent }] = usePublishEventMutation()
+  const [createEventDate] = useCreateEventDateMutation()
+  const [createEventProduct] = useCreateEventProductMutation()
+  const [activateEventProduct] = useActivateEventProductMutation()
+  const [createAccessCode] = useCreateAccessCodeMutation()
+  const [createInvitation] = useCreateInvitationMutation()
+  const [createRegistrationForm] = useCreateRegistrationFormMutation()
+  const [createRegistrationFormVersion] = useCreateRegistrationFormVersionMutation()
+  const [publishRegistrationFormVersion] = usePublishRegistrationFormVersionMutation()
+  
+  // Get current user data, organizations, and categories
+  const { data: userData } = useGetMeQuery()
+  const { data: organizationsData, isLoading: isLoadingOrgs } = useListOwnerOrganizationsQuery()
+  const { data: categoriesData } = useListPublicCategoriesQuery()
+  
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [step, setStep] = useState(0)
   const [error, setError] = useState("")
   const [fieldErrors, setFieldErrors] = useState<{ title?: string; date?: string; location?: string }>({})
@@ -438,85 +473,402 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
 
   const handleCreate = async (publish: boolean) => {
     setError("")
+    setFieldErrors({})
+    
     const dateTime = date && time ? `${date}T${time}:00` : ""
-    if (!title || !dateTime || !location) {
+    
+    // Validation
+    const errors: { title?: string; date?: string; location?: string } = {}
+    if (!title.trim()) errors.title = "Event title is required"
+    if (!dateTime) errors.date = "Event date and time are required"
+    if (!location.trim()) errors.location = "Venue or location is required"
+    
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
       setError("Please fill in all required fields.")
       return
     }
+
+    // Check if user has an organization
+    if (!organizationsData?.data || organizationsData.data.length === 0) {
+      toast.error("You need to create an organization first before creating events.")
+      setError("No organization found. Please complete the onboarding process.")
+      return
+    }
+
+    const organizationId = organizationsData.data[0].id // Use first organization
 
     let validTypes = ticketTypes.filter((t) => t.name && Number(t.quantity) > 0)
     if (entryType === "ticketed" && validTypes.length === 0) {
       setError("Add at least one ticket type with name and quantity.")
       return
     }
-    if (entryType !== "ticketed") {
-      validTypes = [{ name: "Registration", price: "0", quantity: rsvpCapacity || "9999", description: "", maxPerPerson: "", salesStart: "", salesEnd: "" }]
-    }
 
-    if (isRecurring) {
-      if (generatedDates.length < 2) {
-        setError("Add at least 2 dates to create a series.")
-        return
-      }
-      setIsCreating(true)
+    if (isRecurring && generatedDates.length < 2) {
+      setError("Add at least 2 dates to create a series.")
+      return
     }
 
     setIsCreating(true)
+
+    let stepLabel = "create-event"
+
     try {
-      const payload = {
-        title,
-        description: description || undefined,
-        date: new Date(dateTime).toISOString(),
-        endDate: endDate && endTime ? new Date(`${endDate}T${endTime}:00`).toISOString() : undefined,
-        location,
-        onlineUrl: onlineUrl || undefined,
-        bannerImage: bannerImage || undefined,
-        visibility,
-        entryType,
-        requiresApproval: requiresApproval || undefined,
-        rsvpCapacity: rsvpCapacity ? Number(rsvpCapacity) : undefined,
-        ticketTypes: validTypes.map((t) => ({
-          name: t.name,
-          price: Number(t.price) || 0,
-          quantity: Number(t.quantity),
-          description: t.description || undefined,
-          maxPerPerson: t.maxPerPerson ? Number(t.maxPerPerson) : undefined,
-          salesStart: t.salesStart ? new Date(t.salesStart).toISOString() : undefined,
-          salesEnd: t.salesEnd ? new Date(t.salesEnd).toISOString() : undefined,
-        })),
-        inviteCodes: inviteCodes.map((c) => ({
-          code: c.code,
-          label: c.label || undefined,
-          maxUses: c.useType === "single" ? 1 : c.useType === "limited" ? Number(c.maxUses) || undefined : undefined,
-          expiresAt: c.hasExpiry && c.expiresAt ? new Date(c.expiresAt).toISOString() : undefined,
-        })),
-        guests: guests.map((g) => ({
-          name: g.name || undefined,
-          contact: g.contact,
-          personalLink: g.personalLink || undefined,
-          allowedGuests: g.allowedGuests,
-        })),
-        customQuestions: questions.map((q) => ({
-          id: q.id,
-          label: q.label,
-          type: q.type,
-          required: q.required,
-          placeholder: q.placeholder || undefined,
-          options: q.options || undefined,
-        })),
-        publish,
+      // Determine category IDs to attach
+      let categoryIds = [...selectedCategories]
+      if (categoryIds.length === 0 && categoriesData?.data?.[0]?.id) {
+        categoryIds = [categoriesData.data[0].id]
       }
-      console.log("Create event payload:", payload)
-      if (onSuccess) onSuccess()
-      else router.push(`/organizer/events`)
-    } catch (err) {
-      setError((err as Error).message || "Failed to create event.")
+
+      // Step 1: Create the event (draft)
+      stepLabel = "create-event"
+      toast.loading("Creating event...")
+      const eventResult = await createEvent({
+        event: {
+          title: title.trim(),
+          description: description.trim() || undefined,
+          visibility,
+          timezone: "Africa/Addis_Ababa",
+          currency: "ETB",
+          organization_id: organizationId,
+          category_ids: categoryIds,
+        },
+      }).unwrap()
+
+      const eventId = eventResult.data.id
+      toast.dismiss()
+      toast.loading("Setting up event schedule...")
+
+      // Step 2: Add event date(s)
+      stepLabel = "create-event-date"
+      const startDateTime = new Date(dateTime).toISOString()
+      const endDateTime = (showEndDateTime && endDate && endTime) 
+        ? new Date(`${endDate}T${endTime}:00`).toISOString() 
+        : undefined
+
+      const dateResult = await createEventDate({
+        eventId,
+        date: {
+          name: "Main Event",
+          starts_at: startDateTime,
+          ends_at: endDateTime,
+          timezone: "Africa/Addis_Ababa",
+        },
+      }).unwrap()
+
+      const eventDateId = dateResult.data.id
+      toast.dismiss()
+      toast.loading("Setting up entry & tickets...")
+
+      // Step 3: Add event products (tickets / RSVP / Free / Invite)
+      stepLabel = "create-event-product"
+      if (entryType === "ticketed" && validTypes.length > 0) {
+        for (let idx = 0; idx < validTypes.length; idx++) {
+          const t = validTypes[idx]
+          const priceAmount = Math.round((Number(t.price) || 0) * 100)
+          const prodResult = await createEventProduct({
+            eventId,
+            idempotencyKey: `prod-${eventId}-${idx}-${Date.now()}`,
+            product: {
+              name: t.name,
+              type: "ticket",
+              description: t.description || undefined,
+              allow_custom_price: false,
+              sales_start_at: t.salesStart ? new Date(t.salesStart).toISOString() : undefined,
+              sales_end_at: t.salesEnd ? new Date(t.salesEnd).toISOString() : undefined,
+              min_per_order: 1,
+              max_per_order: t.maxPerPerson ? Number(t.maxPerPerson) : 10,
+              sort_order: idx + 1,
+              ticket_type_attributes: {
+                approval_mode: "automatic",
+                audience: "public",
+                date_selection: "fixed",
+                admissions_per_unit: 1,
+              },
+              price_attributes: {
+                type: "base",
+                currency: "ETB",
+                amount_minor: priceAmount,
+                active_from: new Date().toISOString(),
+              },
+              inventory_configuration: {
+                mode: "per_date",
+                dates: [
+                  {
+                    event_date_id: eventDateId,
+                    capacity: Number(t.quantity) || 100,
+                  },
+                ],
+              },
+            },
+          }).unwrap()
+
+          if (prodResult.data?.id) {
+            try {
+              await activateEventProduct({ eventId, productId: prodResult.data.id }).unwrap()
+            } catch {
+              // Activation may require published event or full verification
+            }
+          }
+        }
+      } else if (entryType === "rsvp") {
+        const rsvpCap = rsvpCapacity ? Number(rsvpCapacity) : 1000
+        const rsvpResult = await createEventProduct({
+          eventId,
+          idempotencyKey: `rsvp-${eventId}-${Date.now()}`,
+          product: {
+            name: "RSVP",
+            type: "ticket",
+            description: "RSVP Registration",
+            allow_custom_price: false,
+            min_per_order: 1,
+            max_per_order: 5,
+            sort_order: 1,
+            ticket_type_attributes: {
+              approval_mode: requiresApproval ? "manual" : "automatic",
+              audience: "public",
+              date_selection: "fixed",
+              admissions_per_unit: 1,
+            },
+            price_attributes: {
+              type: "base",
+              currency: "ETB",
+              amount_minor: 0,
+              active_from: new Date().toISOString(),
+            },
+            inventory_configuration: {
+              mode: "per_date",
+              dates: [
+                {
+                  event_date_id: eventDateId,
+                  capacity: rsvpCap,
+                },
+              ],
+            },
+          },
+        }).unwrap()
+
+        if (rsvpResult.data?.id) {
+          try {
+            await activateEventProduct({ eventId, productId: rsvpResult.data.id }).unwrap()
+          } catch {
+            // Activation optional at draft time
+          }
+        }
+      } else if (entryType === "free") {
+        const freeResult = await createEventProduct({
+          eventId,
+          idempotencyKey: `free-${eventId}-${Date.now()}`,
+          product: {
+            name: "Free Admission",
+            type: "ticket",
+            description: "General free admission",
+            allow_custom_price: false,
+            min_per_order: 1,
+            max_per_order: 10,
+            sort_order: 1,
+            ticket_type_attributes: {
+              approval_mode: "automatic",
+              audience: "public",
+              date_selection: "fixed",
+              admissions_per_unit: 1,
+            },
+            price_attributes: {
+              type: "base",
+              currency: "ETB",
+              amount_minor: 0,
+              active_from: new Date().toISOString(),
+            },
+            inventory_configuration: {
+              mode: "per_date",
+              dates: [
+                {
+                  event_date_id: eventDateId,
+                  capacity: 5000,
+                },
+              ],
+            },
+          },
+        }).unwrap()
+
+        if (freeResult.data?.id) {
+          try {
+            await activateEventProduct({ eventId, productId: freeResult.data.id }).unwrap()
+          } catch {
+            // Activation optional at draft time
+          }
+        }
+      } else if (entryType === "invite_only") {
+        const inviteResult = await createEventProduct({
+          eventId,
+          idempotencyKey: `invite-${eventId}-${Date.now()}`,
+          product: {
+            name: "Invite Only Admission",
+            type: "ticket",
+            description: "Exclusive guest admission",
+            allow_custom_price: false,
+            min_per_order: 1,
+            max_per_order: 5,
+            sort_order: 1,
+            ticket_type_attributes: {
+              approval_mode: "automatic",
+              audience: "invite_only",
+              date_selection: "fixed",
+              admissions_per_unit: 1,
+            },
+            price_attributes: {
+              type: "base",
+              currency: "ETB",
+              amount_minor: 0,
+              active_from: new Date().toISOString(),
+            },
+            inventory_configuration: {
+              mode: "per_date",
+              dates: [
+                {
+                  event_date_id: eventDateId,
+                  capacity: 1000,
+                },
+              ],
+            },
+          },
+        }).unwrap()
+
+        const productId = inviteResult.data?.id
+        if (productId) {
+          try {
+            await activateEventProduct({ eventId, productId }).unwrap()
+          } catch {
+            // Activation optional at draft time
+          }
+
+          // Add access codes
+          if (inviteCodes.length > 0) {
+            await Promise.all(
+              inviteCodes.map((c) =>
+                createAccessCode({
+                  eventId,
+                  productId,
+                  idempotencyKey: `code-${productId}-${c._id}`,
+                  accessCode: {
+                    code: c.code,
+                    label: c.label || undefined,
+                    max_uses: c.useType === "single" ? 1 : c.useType === "limited" ? Number(c.maxUses) : null,
+                    active: true,
+                    expires_at: c.hasExpiry && c.expiresAt ? new Date(c.expiresAt).toISOString() : undefined,
+                  },
+                }).unwrap()
+              )
+            )
+          }
+
+          // Add invitations (guest list)
+          if (guests.length > 0) {
+            await Promise.all(
+              guests.map((g) =>
+                createInvitation({
+                  eventId,
+                  productId,
+                  idempotencyKey: `inv-${productId}-${g._id}`,
+                  invitation: {
+                    name: g.name || undefined,
+                    email: g.contact.includes("@") ? g.contact : undefined,
+                    phone: !g.contact.includes("@") ? g.contact : undefined,
+                    allowed_quantity: g.allowedGuests || 1,
+                  },
+                }).unwrap()
+              )
+            )
+          }
+        }
+      }
+
+      // Step 4: Add custom questions (Registration Form & Version)
+      if (questions.length > 0) {
+        toast.dismiss()
+        toast.loading("Setting up registration questions...")
+        const formResult = await createRegistrationForm({
+          eventId,
+          form: { name: "Attendee Registration", active: true },
+        }).unwrap()
+
+        const formId = formResult.data?.id
+        if (formId) {
+          const mappedQuestions = questions.map((q, idx) => ({
+            key: `question_${idx + 1}`,
+            type: (q.type === "textarea"
+              ? "long_text"
+              : q.type === "number"
+              ? "number"
+              : q.type === "select"
+              ? "single_choice"
+              : q.type === "checkbox"
+              ? "checkbox"
+              : "short_text") as any,
+            response_scope: "registration" as const,
+            sensitivity: "standard" as const,
+            label: q.label,
+            help_text: q.placeholder || undefined,
+            required: q.required,
+            position: idx,
+            options: q.options ? q.options.split(",").map((o) => o.trim()).filter(Boolean) : undefined,
+          }))
+
+          const versionResult = await createRegistrationFormVersion({
+            eventId,
+            formId,
+            version: 1,
+            questions: mappedQuestions,
+          }).unwrap()
+
+          const versionId = versionResult.data?.id
+          if (versionId) {
+            try {
+              await publishRegistrationFormVersion({
+                eventId,
+                formId,
+                versionId,
+                idempotencyKey: `rf-pub-${formId}-${versionId}`,
+              }).unwrap()
+            } catch {
+              // Form version publish can proceed
+            }
+          }
+        }
+      }
+
+      // Step 5: Publish if requested
+      if (publish) {
+        toast.dismiss()
+        toast.loading("Publishing event...")
+        await publishEvent({
+          id: eventId,
+          idempotencyKey: `event-publish-${eventId}-${Date.now()}`,
+        }).unwrap()
+      }
+
+      // Success!
+      toast.dismiss()
+      toast.success(publish ? "Event published successfully!" : "Event saved as draft")
+      
+      if (onSuccess) {
+        onSuccess()
+      } else {
+        router.push(`/organizer/events/${eventId}`)
+      }
+      
+    } catch (err: any) {
+      toast.dismiss()
+      const errorMessage = err?.data?.message || err?.message || "Failed to create event. Please try again."
+      toast.error(errorMessage)
+      setError(errorMessage)
+      console.error("Event creation error:", err)
     } finally {
       setIsCreating(false)
     }
   }
 
-  const isLoading = isCreating
+  const isLoading = isCreating || isCreatingEvent || isPublishingEvent
   const generatedDates = (() => {
     if (!date || !time) return []
     if (recurrenceType === "custom") return customDates
@@ -694,6 +1046,38 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                 onChange={(e) => setDescription(e.target.value)}
                 className="flex min-h-[100px] w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none disabled:cursor-not-allowed disabled:opacity-50 resize-none"
               />
+            </div>
+
+            {/* Category Selection */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Categories</Label>
+              <div className="flex flex-wrap gap-2">
+                {categoriesData?.data && categoriesData.data.length > 0 ? (
+                  categoriesData.data.map((cat) => {
+                    const isSelected = selectedCategories.includes(cat.id)
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCategories((prev) =>
+                            isSelected ? prev.filter((id) => id !== cat.id) : [...prev, cat.id]
+                          )
+                        }}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                          isSelected
+                            ? `${selectedEntryType.bgClass} text-white ${selectedEntryType.borderClass} shadow-xs`
+                            : "border-border/60 bg-card/60 hover:border-border text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {cat.name}
+                      </button>
+                    )
+                  })
+                ) : (
+                  <p className="text-xs text-muted-foreground">Loading categories...</p>
+                )}
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

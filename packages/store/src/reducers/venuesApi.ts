@@ -64,6 +64,23 @@ export const venuesApi = createApi({
   baseQuery: baseQueryWithReauth,
   tagTypes: ["Venues"],
   endpoints: (builder) => ({
+    listPublicVenues: builder.query<PaginatedResponse<Venue>, ListVenuesParams | void>({
+      query: (params) => ({
+        url: "/venues",
+        params: params ?? undefined,
+      }),
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.data.map(({ id }) => ({ type: "Venues" as const, id })),
+              { type: "Venues", id: "PUBLIC_LIST" },
+            ]
+          : [{ type: "Venues", id: "PUBLIC_LIST" }],
+    }),
+    getPublicVenue: builder.query<SingleResponse<Venue>, string>({
+      query: (id) => `/venues/${id}`,
+      providesTags: (_result, _error, id) => [{ type: "Venues", id }],
+    }),
     listVenues: builder.query<PaginatedResponse<Venue>, ListVenuesParams | void>({
       query: (params) => ({
         url: "/admin/venues",
@@ -87,7 +104,7 @@ export const venuesApi = createApi({
         method: "POST",
         body,
       }),
-      invalidatesTags: [{ type: "Venues", id: "LIST" }],
+      invalidatesTags: [{ type: "Venues", id: "LIST" }, { type: "Venues", id: "PUBLIC_LIST" }],
     }),
     updateVenue: builder.mutation<SingleResponse<Venue>, { id: string; body: UpdateVenuePayload }>({
       query: ({ id, body }) => ({
@@ -95,22 +112,29 @@ export const venuesApi = createApi({
         method: "PATCH",
         body,
       }),
-      invalidatesTags: (_result, _error, { id }) => [{ type: "Venues", id }],
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: "Venues", id },
+        { type: "Venues", id: "LIST" },
+        { type: "Venues", id: "PUBLIC_LIST" },
+      ],
     }),
     deleteVenue: builder.mutation<void, string>({
       query: (id) => ({
         url: `/admin/venues/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: [{ type: "Venues", id: "LIST" }],
+      invalidatesTags: [{ type: "Venues", id: "LIST" }, { type: "Venues", id: "PUBLIC_LIST" }],
     }),
   }),
 })
 
 export const {
+  useListPublicVenuesQuery,
+  useGetPublicVenueQuery,
   useListVenuesQuery,
   useGetVenueQuery,
   useCreateVenueMutation,
   useUpdateVenueMutation,
   useDeleteVenueMutation,
 } = venuesApi
+

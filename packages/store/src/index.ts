@@ -7,6 +7,7 @@ import { categoriesApi } from "./reducers/categoriesApi"
 import { venuesApi } from "./reducers/venuesApi"
 import { artistsApi } from "./reducers/artistsApi"
 import { organizationsApi } from "./reducers/organizationsApi"
+import { eventsApi } from "./reducers/eventsApi"
 
 export const store = configureStore({
   reducer: {
@@ -18,6 +19,7 @@ export const store = configureStore({
     [venuesApi.reducerPath]: venuesApi.reducer,
     [artistsApi.reducerPath]: artistsApi.reducer,
     [organizationsApi.reducerPath]: organizationsApi.reducer,
+    [eventsApi.reducerPath]: eventsApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
@@ -29,6 +31,7 @@ export const store = configureStore({
       venuesApi.middleware,
       artistsApi.middleware,
       organizationsApi.middleware,
+      eventsApi.middleware,
     ),
 })
 
