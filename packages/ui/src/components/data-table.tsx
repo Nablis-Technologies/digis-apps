@@ -2,13 +2,36 @@
 
 import { cn } from "@workspace/ui/lib/utils"
 import { HugeiconsIcon } from "@hugeicons/react"
+import type { HugeiconsIconProps } from "@hugeicons/react"
 import {
   ArrowUp02Icon,
   ArrowDown02Icon,
   ChevronLeftIcon,
   ChevronRightIcon,
   FileEmpty01Icon,
+  MoreVerticalIcon,
 } from "@hugeicons/core-free-icons"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@workspace/ui/components/dropdown-menu"
+import { Button } from "@workspace/ui/components/button"
+
+// Helper to check if icon is a Hugeicons icon
+function isHugeiconsIcon(icon: any): icon is HugeiconsIconProps["icon"] {
+  return Array.isArray(icon)
+}
+
+// Helper to render icon (Hugeicons or Lucide)
+function renderIcon(icon: HugeiconsIconProps["icon"] | React.ComponentType<any>, className: string) {
+  if (isHugeiconsIcon(icon)) {
+    return <HugeiconsIcon icon={icon} strokeWidth={2} className={className} />
+  }
+  const IconComponent = icon as React.ComponentType<any>
+  return <IconComponent className={className} />
+}
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -32,6 +55,21 @@ export type Column<T> = {
   className?: string
   /** Hide on mobile (<768px) */
   hideOnMobile?: boolean
+}
+
+export type RowAction<T> = {
+  /** Action label */
+  label: string
+  /** Icon component from hugeicons or lucide */
+  icon?: HugeiconsIconProps["icon"] | React.ComponentType<any>
+  /** Click handler */
+  onClick: (row: T) => void
+  /** Variant for styling */
+  variant?: "default" | "destructive"
+  /** Whether to show in primary actions (max 3) */
+  primary?: boolean
+  /** Show only icon without label (for primary actions) */
+  iconOnly?: boolean
 }
 
 export type PaginationState = {
@@ -58,8 +96,81 @@ type DataTableProps<T> = {
   onPageChange?: (page: number) => void
   /** Click handler for rows */
   onRowClick?: (row: T) => void
-  /** Actions rendered in the last column */
+  /** Actions rendered in the last column (legacy - kept for backward compatibility) */
   renderActions?: (row: T) => React.ReactNode
+  /** New actions system - array of action objects */
+  actions?: RowAction<T>[] | ((row: T) => RowAction<T>[])
+}
+
+// ─── Action Buttons ─────────────────────────────────────────────────────────
+
+function ActionButtons<T>({ row, actions }: { row: T; actions: RowAction<T>[] }) {
+  const primaryActions = actions.filter((a) => a.primary).slice(0, 3)
+  const secondaryActions = actions.filter((a) => !a.primary)
+  const hasMore = secondaryActions.length > 0 || actions.filter((a) => a.primary).length > 3
+  const moreActions = [
+    ...actions.filter((a) => a.primary).slice(3),
+    ...secondaryActions,
+  ]
+
+  return (
+    <div className="flex items-center justify-center gap-1">
+      {primaryActions.map((action, index) => (
+        <Button
+          key={index}
+          variant={action.variant === "destructive" ? "destructive" : "ghost"}
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation()
+            action.onClick(row)
+          }}
+          className={cn(
+            "h-8 text-muted-foreground hover:text-foreground",
+            action.iconOnly ? "w-8 p-0" : "px-2"
+          )}
+          title={action.label}
+        >
+          {action.icon && renderIcon(action.icon, "size-4")}
+          {!action.iconOnly && <span className="ml-1.5">{action.label}</span>}
+        </Button>
+      ))}
+
+      {hasMore && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+              onClick={(e) => e.stopPropagation()}
+              title="More actions"
+            >
+              <HugeiconsIcon
+                icon={MoreVerticalIcon}
+                strokeWidth={2}
+                className="size-4"
+              />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {moreActions.map((action, index) => (
+              <DropdownMenuItem
+                key={index}
+                variant={action.variant}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  action.onClick(row)
+                }}
+              >
+                {action.icon && renderIcon(action.icon, "size-4")}
+                {action.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </div>
+  )
 }
 
 // ─── Skeleton Rows ──────────────────────────────────────────────────────────
@@ -137,7 +248,7 @@ function SortIndicator({
           <HugeiconsIcon
             icon={ArrowDown02Icon}
             strokeWidth={2}
-            className="-mt-1 size-2.5 text-muted-foreground/30"
+            className="size-2.5 -mt-1 text-muted-foreground/30"
           />
         </div>
       )}
@@ -185,10 +296,7 @@ function TablePagination({
 
           {generatePageNumbers(page, totalPages).map((p, i) =>
             p === "..." ? (
-              <span
-                key={`ellipsis-${i}`}
-                className="px-1 text-muted-foreground/40"
-              >
+              <span key={`ellipsis-${i}`} className="px-1 text-muted-foreground/40">
                 ...
               </span>
             ) : (
@@ -262,8 +370,9 @@ export function DataTable<T>({
   onPageChange,
   onRowClick,
   renderActions,
+  actions,
 }: DataTableProps<T>) {
-  const hasActions = !!renderActions
+  const hasActions = !!renderActions || !!actions
 
   return (
     <div className="overflow-hidden rounded-xl border border-border/50 bg-card shadow-xs">
@@ -276,9 +385,8 @@ export function DataTable<T>({
                 <th
                   key={col.header}
                   className={cn(
-                    "px-4 py-3.5 text-left text-xs font-semibold tracking-wider text-muted-foreground uppercase",
-                    col.sortable &&
-                      "cursor-pointer select-none hover:text-foreground",
+                    "px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground",
+                    col.sortable && "cursor-pointer select-none hover:text-foreground",
                     col.hideOnMobile && "hidden md:table-cell",
                     col.className
                   )}
@@ -308,7 +416,7 @@ export function DataTable<T>({
                 </th>
               ))}
               {hasActions && (
-                <th className="px-4 py-3.5 text-right text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                <th className="px-4 py-3.5 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Actions
                 </th>
               )}
@@ -322,42 +430,44 @@ export function DataTable<T>({
             ) : data.length === 0 ? (
               <TableEmpty message={emptyMessage} />
             ) : (
-              data.map((row) => (
-                <tr
-                  key={keyExtractor(row)}
-                  onClick={() => onRowClick?.(row)}
-                  className={cn(
-                    "border-b border-border/25 transition-colors last:border-0",
-                    onRowClick && "cursor-pointer",
-                    "hover:bg-accent/30"
-                  )}
-                >
-                  {columns.map((col) => (
-                    <td
-                      key={col.header}
-                      className={cn(
-                        "px-4 py-3.5 text-sm",
-                        col.hideOnMobile && "hidden md:table-cell",
-                        col.className
-                      )}
-                    >
-                      {col.cell
-                        ? col.cell(row)
-                        : col.accessorKey
-                          ? String(row[col.accessorKey] ?? "")
-                          : null}
-                    </td>
-                  ))}
-                  {hasActions && (
-                    <td
-                      className="px-4 py-3.5 text-right"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {renderActions(row)}
-                    </td>
-                  )}
-                </tr>
-              ))
+              data.map((row) => {
+                const rowActions = typeof actions === "function" ? actions(row) : actions
+                return (
+                  <tr
+                    key={keyExtractor(row)}
+                    onClick={() => onRowClick?.(row)}
+                    className={cn(
+                      "border-b border-border/25 transition-colors last:border-0",
+                      onRowClick && "cursor-pointer",
+                      "hover:bg-accent/30"
+                    )}
+                  >
+                    {columns.map((col) => (
+                      <td
+                        key={col.header}
+                        className={cn(
+                          "px-4 py-3.5 text-sm",
+                          col.hideOnMobile && "hidden md:table-cell",
+                          col.className
+                        )}
+                      >
+                        {col.cell
+                          ? col.cell(row)
+                          : col.accessorKey
+                            ? String(row[col.accessorKey] ?? "")
+                            : null}
+                      </td>
+                    ))}
+                    {hasActions && (
+                      <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                        {renderActions
+                          ? renderActions(row)
+                          : rowActions && <ActionButtons row={row} actions={rowActions} />}
+                      </td>
+                    )}
+                  </tr>
+                )
+              })
             )}
           </tbody>
         </table>

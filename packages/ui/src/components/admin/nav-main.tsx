@@ -60,9 +60,7 @@ function NavItem({
   // Determine if this item or any of its children is active
   const isActive = hasSubItems
     ? item.items!.some((sub) => pathname.startsWith(sub.url))
-    : item.url === "/admin"
-      ? pathname === item.url
-      : pathname.startsWith(item.url)
+    : item.url === pathname // Exact match for single items
 
   const [open, setOpen] = useState(isActive)
 

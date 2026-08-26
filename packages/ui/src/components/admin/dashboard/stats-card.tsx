@@ -5,7 +5,7 @@ import type { HugeiconsIconProps } from "@hugeicons/react"
 import { cn } from "@workspace/ui/lib/utils"
 import { Area, AreaChart } from "recharts"
 
-interface StatsCardProps {
+export interface StatsCardProps {
   title: string
   value: string | number
   icon: HugeiconsIconProps["icon"]

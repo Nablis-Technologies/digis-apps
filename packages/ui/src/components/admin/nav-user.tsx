@@ -46,35 +46,30 @@ export function NavUser({
 
   return (
     <SidebarMenu>
-      <SidebarMenuItem>
-        <SidebarMenuButton
-          size="lg"
-          className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-        >
+      <SidebarMenuItem className="flex items-center gap-1">
+        <SidebarMenuButton size="lg" className="flex-1 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
           <Avatar className="h-8 w-8 rounded-lg">
             <AvatarFallback className="rounded-lg text-xs font-medium">
               {initials}
             </AvatarFallback>
           </Avatar>
           <div className="grid flex-1 text-left text-sm leading-tight">
-            <span className="truncate font-medium">{user.email}</span>
+            <span className="truncate font-medium">
+              {user.email}
+            </span>
             <span className="truncate text-xs">
               {user.phone ? user.phone : ""}
             </span>
           </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
-          >
-            <HugeiconsIcon
-              icon={LogoutIcon}
-              strokeWidth={2}
-              className="size-4"
-            />
-          </button>
         </SidebarMenuButton>
+        <button
+          type="button"
+          onClick={handleLogout}
+          disabled={isLoggingOut}
+          className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+        >
+          <HugeiconsIcon icon={LogoutIcon} strokeWidth={2} className="size-4" />
+        </button>
       </SidebarMenuItem>
     </SidebarMenu>
   )

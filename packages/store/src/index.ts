@@ -9,6 +9,7 @@ import { artistsApi } from "./reducers/artistsApi"
 import { organizationsApi } from "./reducers/organizationsApi"
 import { membershipsApi } from "./reducers/membershipsApi"
 import { eventsApi } from "./reducers/eventsApi"
+import { organizerEventsApi } from "./reducers/organizerEventsApi"
 import { legalApi } from "./reducers/legalApi"
 import { dataRetentionApi } from "./reducers/dataRetentionApi"
 import { ticketingApi } from "./reducers/ticketingApi"
@@ -27,6 +28,7 @@ export const store = configureStore({
     [organizationsApi.reducerPath]: organizationsApi.reducer,
     [membershipsApi.reducerPath]: membershipsApi.reducer,
     [eventsApi.reducerPath]: eventsApi.reducer,
+    [organizerEventsApi.reducerPath]: organizerEventsApi.reducer,
     [legalApi.reducerPath]: legalApi.reducer,
     [dataRetentionApi.reducerPath]: dataRetentionApi.reducer,
     [ticketingApi.reducerPath]: ticketingApi.reducer,
@@ -45,6 +47,7 @@ export const store = configureStore({
       organizationsApi.middleware,
       membershipsApi.middleware,
       eventsApi.middleware,
+      organizerEventsApi.middleware,
       legalApi.middleware,
       dataRetentionApi.middleware,
       ticketingApi.middleware,

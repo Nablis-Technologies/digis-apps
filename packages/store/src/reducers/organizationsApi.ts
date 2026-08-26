@@ -64,8 +64,9 @@ interface UpdateOrgPayload {
 export const organizationsApi = createApi({
   reducerPath: "organizationsApi",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["Organizations"],
+  tagTypes: ["Organizations", "OwnerOrganizations"],
   endpoints: (builder) => ({
+    // ─── Admin Endpoints (for admin app) ─────────────────────────────────────
     listOrganizations: builder.query<
       PaginatedResponse<Organization>,
       ListOrgsParams | void
@@ -156,6 +157,73 @@ export const organizationsApi = createApi({
       }),
       invalidatesTags: (_result, _error, { id }) => [{ type: "Organizations", id }],
     }),
+
+    // ─── Owner Endpoints (for organizer app) ─────────────────────────────────
+    listOwnerOrganizations: builder.query<PaginatedResponse<Organization>, ListOrgsParams | void>({
+      query: (params) => ({
+        url: "/organizations/owner",
+        params: params ?? undefined,
+      }),
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.data.map(({ id }) => ({ type: "OwnerOrganizations" as const, id })),
+              { type: "OwnerOrganizations", id: "LIST" },
+            ]
+          : [{ type: "OwnerOrganizations", id: "LIST" }],
+    }),
+    getOwnerOrganization: builder.query<SingleResponse<Organization>, string>({
+      query: (id) => `/organizations/owner/${id}`,
+      providesTags: (_result, _error, id) => [{ type: "OwnerOrganizations", id }],
+    }),
+    createOwnerOrganization: builder.mutation<SingleResponse<Organization>, CreateOrgPayload>({
+      query: (body) => ({
+        url: "/organizations/owner",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: [{ type: "OwnerOrganizations", id: "LIST" }],
+    }),
+    updateOwnerOrganization: builder.mutation<SingleResponse<Organization>, { id: string; body: UpdateOrgPayload }>({
+      query: ({ id, body }) => ({
+        url: `/organizations/owner/${id}`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: "OwnerOrganizations", id },
+        { type: "OwnerOrganizations", id: "LIST" },
+      ],
+    }),
+    deleteOwnerOrganization: builder.mutation<void, string>({
+      query: (id) => ({
+        url: `/organizations/owner/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: [{ type: "OwnerOrganizations", id: "LIST" }],
+    }),
+
+    // Verification
+    submitVerification: builder.mutation<SingleResponse<Organization>, string>({
+      query: (organizationId) => ({
+        url: `/organizations/owner/${organizationId}/verification/submit`,
+        method: "POST",
+      }),
+      invalidatesTags: (_result, _error, id) => [
+        { type: "OwnerOrganizations", id },
+        { type: "OwnerOrganizations", id: "LIST" },
+      ],
+    }),
+    resubmitVerification: builder.mutation<SingleResponse<Organization>, string>({
+      query: (organizationId) => ({
+        url: `/organizations/owner/${organizationId}/verification/resubmit`,
+        method: "POST",
+      }),
+      invalidatesTags: (_result, _error, id) => [
+        { type: "OwnerOrganizations", id },
+        { type: "OwnerOrganizations", id: "LIST" },
+      ],
+    }),
   }),
 })
 
@@ -169,4 +237,12 @@ export const {
   useApproveVerificationMutation,
   useRejectVerificationMutation,
   useRequestVerificationModificationMutation,
+  useListOwnerOrganizationsQuery,
+  useGetOwnerOrganizationQuery,
+  useCreateOwnerOrganizationMutation,
+  useUpdateOwnerOrganizationMutation,
+  useDeleteOwnerOrganizationMutation,
+  useSubmitVerificationMutation,
+  useResubmitVerificationMutation,
 } = organizationsApi
+
