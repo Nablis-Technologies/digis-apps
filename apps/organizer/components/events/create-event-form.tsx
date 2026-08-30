@@ -15,6 +15,7 @@ import { useListPublicCategoriesQuery } from "@workspace/store/reducers/categori
 import { 
   useCreateEventMutation, 
   usePublishEventMutation,
+  useCreateEventMediaMutation,
   useCreateEventDateMutation,
   useCreateEventProductMutation,
   useActivateEventProductMutation,
@@ -273,6 +274,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   const [createRegistrationForm] = useCreateRegistrationFormMutation()
   const [createRegistrationFormVersion] = useCreateRegistrationFormVersionMutation()
   const [publishRegistrationFormVersion] = usePublishRegistrationFormVersionMutation()
+  const [createEventMedia] = useCreateEventMediaMutation()
   
   // Get current user data, organizations, and categories
   const { data: userData } = useGetMeQuery()
@@ -295,7 +297,8 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   const [endTime, setEndTime] = useState("")
   const [location, setLocation] = useState("")
   const [onlineUrl, setOnlineUrl] = useState("")
-  const [bannerImage, setBannerImage] = useState("")
+  const [bannerFile, setBannerFile] = useState<File | null>(null)
+  const [bannerPreview, setBannerPreview] = useState("")
 
   const [requiresApproval, setRequiresApproval] = useState(false)
   const [rsvpCapacity, setRsvpCapacity] = useState("")
@@ -329,7 +332,6 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   // Toggle states for optional sections
   const [showEndDateTime, setShowEndDateTime] = useState(false)
   const [showOnlineLink, setShowOnlineLink] = useState(false)
-  const [showBannerImage, setShowBannerImage] = useState(false)
   const [showTicketOptionalFields, setShowTicketOptionalFields] = useState<{ [key: number]: boolean }>({})
 
   const [isRecurring, setIsRecurring] = useState(false)
@@ -511,6 +513,12 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
 
     setIsCreating(true)
 
+    if (!bannerFile) {
+      setError("Please upload a banner image to continue.")
+      setIsCreating(false)
+      return
+    }
+
     let stepLabel = "create-event"
 
     try {
@@ -537,6 +545,20 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
 
       const eventId = eventResult.data.id
       toast.dismiss()
+
+      // Step 1b: Upload banner image (required)
+      if (bannerFile) {
+        toast.loading("Uploading banner image...")
+        const mediaFormData = new FormData()
+        mediaFormData.append("event_media[type]", "cover")
+        mediaFormData.append("event_media[position]", "0")
+        mediaFormData.append("event_media[alt_text]", title || "")
+        mediaFormData.append("event_media[caption]", "")
+        mediaFormData.append("file", bannerFile)
+        await createEventMedia({ eventId, formData: mediaFormData }).unwrap()
+        toast.dismiss()
+      }
+
       toast.loading("Setting up event schedule...")
 
       // Step 2: Add event date(s)
@@ -1215,73 +1237,53 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
               </AnimatePresence>
             </div>
 
-            {/* Optional: Banner Image */}
-            <div className={`rounded-2xl border transition-colors ${showBannerImage ? `${selectedEntryType.borderClass} ${selectedEntryType.bgClass}/10` : "border-border/50 bg-card/50"}`}>
-              <div
-                role="button"
-                tabIndex={0}
-                className="w-full flex items-center gap-3 p-4 text-left cursor-pointer"
-                onClick={() => setShowBannerImage((v) => !v)}
-                onKeyDown={(e) => e.key === "Enter" && setShowBannerImage((v) => !v)}
-              >
-                <div className={`p-2 rounded-xl flex-shrink-0 transition-colors ${showBannerImage ? `${selectedEntryType.bgClass}/15` : "bg-muted"}`}>
-                  <HugeiconsIcon icon={ImageAddIcon} strokeWidth={2} className={`w-4 h-4 ${showBannerImage ? selectedEntryType.textClass : "text-muted-foreground"}`} />
+            {/* Required: Banner Image (uploaded file) */}
+            <div className="rounded-2xl border border-border/50 bg-card/50">
+              <div className="w-full flex items-center gap-3 p-4">
+                <div className={`p-2 rounded-xl flex-shrink-0 bg-muted`}>
+                  <HugeiconsIcon icon={ImageAddIcon} strokeWidth={2} className="w-4 h-4 text-muted-foreground" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm">Banner Image</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Optional — add a cover image for the event</p>
+                  <p className="font-semibold text-sm">
+                    Banner Image <span className="text-destructive">*</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Upload a cover image for the event</p>
                 </div>
-                <Switch 
-                  checked={showBannerImage} 
-                  onCheckedChange={setShowBannerImage} 
-                  className="flex-shrink-0 data-checked:[&]:bg-[var(--event-color)]" 
-                  style={{ "--event-color": `var(${selectedEntryType.color})` } as React.CSSProperties}
-                  onClick={(e) => e.stopPropagation()} 
-                />
               </div>
-              <AnimatePresence initial={false}>
-                {showBannerImage && (
-                  <motion.div
-                    key="banner-image-body"
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2, ease: "easeInOut" }}
-                    className="overflow-hidden"
-                  >
-                    <div className="px-4 pb-4 space-y-3 border-t border-border/40 pt-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-medium">Image URL</Label>
-                        <div className="relative">
-                          <HugeiconsIcon
-                            icon={ImageAddIcon}
-                            strokeWidth={2}
-                            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
-                          />
-                          <Input
-                            id="banner"
-                            placeholder="https://..."
-                            value={bannerImage}
-                            onChange={(e) => setBannerImage(e.target.value)}
-                            className="h-9 text-sm pl-10"
-                          />
-                        </div>
-                      </div>
-                      {bannerImage && (
-                        <div className="space-y-1.5">
-                          <p className="text-xs font-medium">Preview</p>
-                          <img
-                            src={bannerImage}
-                            alt="Banner preview"
-                            className="h-32 w-full object-cover rounded-xl"
-                            onError={(e) => (e.currentTarget.style.display = "none")}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
+              <div className="px-4 pb-4 space-y-3 border-t border-border/40 pt-3">
+                <input
+                  id="banner"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] ?? null
+                    setBannerFile(file)
+                    if (bannerPreview) URL.revokeObjectURL(bannerPreview)
+                    setBannerPreview(file ? URL.createObjectURL(file) : "")
+                  }}
+                />
+                <Label
+                  htmlFor="banner"
+                  className="flex items-center justify-center gap-2 h-10 w-full rounded-xl border border-dashed border-border cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                >
+                  <HugeiconsIcon icon={Upload01Icon} strokeWidth={2} className="size-4" />
+                  {bannerFile ? bannerFile.name : "Choose image to upload"}
+                </Label>
+                {bannerPreview && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium">Preview</p>
+                    <img
+                      src={bannerPreview}
+                      alt="Banner preview"
+                      className="h-32 w-full object-cover rounded-xl"
+                    />
+                  </div>
                 )}
-              </AnimatePresence>
+                {!bannerFile && (
+                  <p className="text-xs text-destructive">A banner image is required to create the event.</p>
+                )}
+              </div>
             </div>
 
           </motion.div>
@@ -2579,12 +2581,11 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
             <div className="grid md:grid-cols-[300px_1fr] gap-5">
               {/* Left: Event Banner */}
               <div className="bg-card border border-border/60 rounded-2xl overflow-hidden">
-                {bannerImage ? (
+                {bannerPreview ? (
                   <img
-                    src={bannerImage}
+                    src={bannerPreview}
                     alt={title}
                     className="w-full h-full object-cover"
-                    onError={(e) => (e.currentTarget.style.display = "none")}
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center p-8">
@@ -2865,10 +2866,11 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
             <Button
               className="flex-1 h-11 font-semibold"
               onClick={() => {
-                const errors: { title?: string; date?: string; location?: string } = {}
+                const errors: { title?: string; date?: string; location?: string; banner?: string } = {}
                 if (!title) errors.title = "Event name is required"
                 if (!date) errors.date = "Date is required"
                 if (!location) errors.location = "Location is required"
+                if (!bannerFile) errors.banner = "Banner image is required"
                 setFieldErrors(errors)
                 if (Object.keys(errors).length > 0) return
                 setError("")
