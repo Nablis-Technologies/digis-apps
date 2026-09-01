@@ -14,6 +14,10 @@ import {
   Mail01Icon,
   File01Icon,
   LockIcon,
+  BankIcon,
+  WalletIcon,
+  ReceiptDollarIcon,
+  RadarIcon,
 } from "@hugeicons/core-free-icons"
 import type { NavSection, NavSecondaryItem } from "@workspace/ui/components/admin/app-sidebar"
 
@@ -79,12 +83,42 @@ const navSections: NavSection[] = [
     ],
   },
   {
+    title: "Finance",
+    items: [
+      {
+        title: "Payouts",
+        url: "/admin/payouts",
+        icon: <HugeiconsIcon icon={BankIcon} strokeWidth={2} />,
+      },
+      {
+        title: "Refunds",
+        url: "/admin/refunds",
+        icon: <HugeiconsIcon icon={WalletIcon} strokeWidth={2} />,
+      },
+    ],
+  },
+  {
+    title: "Commercial",
+    items: [
+      {
+        title: "Fee Schedules & Programs",
+        url: "/admin/commercial",
+        icon: <HugeiconsIcon icon={ReceiptDollarIcon} strokeWidth={2} />,
+      },
+    ],
+  },
+  {
     title: "System",
     items: [
       {
         title: "Settings",
         url: "/admin/settings",
         icon: <HugeiconsIcon icon={Settings05Icon} strokeWidth={2} />,
+      },
+      {
+        title: "System Readiness",
+        url: "/admin/system/readiness",
+        icon: <HugeiconsIcon icon={RadarIcon} strokeWidth={2} />,
       },
     ],
   },

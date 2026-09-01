@@ -15,6 +15,10 @@ import { dataRetentionApi } from "./reducers/dataRetentionApi"
 import { ticketingApi } from "./reducers/ticketingApi"
 import { eventScheduleApi } from "./reducers/eventScheduleApi"
 import { registrationApi } from "./reducers/registrationApi"
+import { financeApi } from "./reducers/financeApi"
+import { refundsApi } from "./reducers/refundsApi"
+import { commercialApi } from "./reducers/commercialApi"
+import { systemApi } from "./reducers/systemApi"
 
 export const store = configureStore({
   reducer: {
@@ -34,6 +38,10 @@ export const store = configureStore({
     [ticketingApi.reducerPath]: ticketingApi.reducer,
     [eventScheduleApi.reducerPath]: eventScheduleApi.reducer,
     [registrationApi.reducerPath]: registrationApi.reducer,
+    [financeApi.reducerPath]: financeApi.reducer,
+    [refundsApi.reducerPath]: refundsApi.reducer,
+    [commercialApi.reducerPath]: commercialApi.reducer,
+    [systemApi.reducerPath]: systemApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
@@ -52,7 +60,11 @@ export const store = configureStore({
       dataRetentionApi.middleware,
       ticketingApi.middleware,
       eventScheduleApi.middleware,
-      registrationApi.middleware
+      registrationApi.middleware,
+      financeApi.middleware,
+      refundsApi.middleware,
+      commercialApi.middleware,
+      systemApi.middleware
     ),
 })
 
