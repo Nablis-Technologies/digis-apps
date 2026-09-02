@@ -299,6 +299,9 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   const [onlineUrl, setOnlineUrl] = useState("")
   const [bannerFile, setBannerFile] = useState<File | null>(null)
   const [bannerPreview, setBannerPreview] = useState("")
+  const [galleryFiles, setGalleryFiles] = useState<{ file: File; preview: string }[]>([])
+
+  const MAX_GALLERY = 20
 
   const [requiresApproval, setRequiresApproval] = useState(false)
   const [rsvpCapacity, setRsvpCapacity] = useState("")
@@ -556,6 +559,21 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
         mediaFormData.append("event_media[caption]", "")
         mediaFormData.append("file", bannerFile)
         await createEventMedia({ eventId, formData: mediaFormData }).unwrap()
+        toast.dismiss()
+      }
+
+      // Step 1c: Upload gallery images (optional)
+      if (galleryFiles.length > 0) {
+        toast.loading(`Uploading ${galleryFiles.length} gallery image${galleryFiles.length > 1 ? "s" : ""}...`)
+        for (let idx = 0; idx < galleryFiles.length; idx++) {
+          const galleryFormData = new FormData()
+          galleryFormData.append("event_media[type]", "gallery")
+          galleryFormData.append("event_media[position]", String(idx + 1))
+          galleryFormData.append("event_media[alt_text]", `${title || "Gallery"} ${idx + 1}`)
+          galleryFormData.append("event_media[caption]", "")
+          galleryFormData.append("file", galleryFiles[idx].file)
+          await createEventMedia({ eventId, formData: galleryFormData }).unwrap()
+        }
         toast.dismiss()
       }
 
@@ -1282,6 +1300,78 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                 )}
                 {!bannerFile && (
                   <p className="text-xs text-destructive">A banner image is required to create the event.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Optional: Gallery Images */}
+            <div className="rounded-2xl border border-border/50 bg-card/50">
+              <div className="w-full flex items-center gap-3 p-4">
+                <div className="p-2 rounded-xl flex-shrink-0 bg-muted">
+                  <HugeiconsIcon icon={ImageAddIcon} strokeWidth={2} className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm">Gallery Images</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Optional — add up to {MAX_GALLERY} images ({galleryFiles.length}/{MAX_GALLERY})
+                  </p>
+                </div>
+              </div>
+              <div className="px-4 pb-4 space-y-3 border-t border-border/40 pt-3">
+                {galleryFiles.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2">
+                    {galleryFiles.map((item, idx) => (
+                      <div key={idx} className="relative group">
+                        <img
+                          src={item.preview}
+                          alt={`Gallery ${idx + 1}`}
+                          className="h-24 w-full object-cover rounded-xl"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            URL.revokeObjectURL(item.preview)
+                            setGalleryFiles((prev) => prev.filter((_, i) => i !== idx))
+                          }}
+                          className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-3" />
+                        </button>
+                        <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                          {idx + 1}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {galleryFiles.length < MAX_GALLERY && (
+                  <>
+                    <input
+                      id="gallery"
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files ?? [])
+                        const remaining = MAX_GALLERY - galleryFiles.length
+                        const toAdd = files.slice(0, remaining)
+                        const newItems = toAdd.map((file) => ({
+                          file,
+                          preview: URL.createObjectURL(file),
+                        }))
+                        setGalleryFiles((prev) => [...prev, ...newItems])
+                        e.target.value = ""
+                      }}
+                    />
+                    <Label
+                      htmlFor="gallery"
+                      className="flex items-center justify-center gap-2 h-10 w-full rounded-xl border border-dashed border-border cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                    >
+                      <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-4" />
+                      Add gallery images
+                    </Label>
+                  </>
                 )}
               </div>
             </div>
