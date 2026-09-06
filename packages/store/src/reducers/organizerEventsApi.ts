@@ -5,6 +5,19 @@ import { baseQueryWithReauth } from "../api"
 // Type Definitions
 // ─────────────────────────────────────────────────────────────────────────────
 
+export interface EventDateVenue {
+  id: string
+  name: string
+  city?: string | null
+}
+
+export interface EventDateCapacity {
+  limit?: number | null
+  held?: number | null
+  issued?: number | null
+  available?: number | null
+}
+
 export interface Event {
   id: string
   title: string
@@ -18,6 +31,19 @@ export interface Event {
   published_at?: string | null
   created_at: string
   updated_at: string
+  event_media?: EventMedia[]
+  categories?: Array<{ id: string; name: string; slug: string }>
+  event_dates?: Array<{
+    id: string
+    name?: string | null
+    doors_at?: string | null
+    starts_at: string
+    ends_at?: string | null
+    timezone?: string
+    status?: string
+    venue?: EventDateVenue | null
+    capacity?: EventDateCapacity | null
+  }>
   [key: string]: unknown
 }
 
@@ -25,6 +51,7 @@ export interface EventDate {
   id: string
   event_id: string
   venue_id?: string | null
+  venue?: EventDateVenue | null
   name?: string | null
   doors_at?: string | null
   starts_at: string
@@ -32,6 +59,7 @@ export interface EventDate {
   timezone: string
   status?: string
   venue_capacity?: number | null
+  capacity?: EventDateCapacity | null
   created_at?: string
   updated_at?: string
 }
@@ -192,6 +220,14 @@ export interface EventMedia {
   position: number
   alt_text?: string | null
   caption?: string | null
+  file?: {
+    filename: string
+    content_type: string
+    byte_size: number
+    url: string
+    thumbnail: string
+    medium: string
+  } | null
   file_url?: string | null
   created_at?: string
   updated_at?: string

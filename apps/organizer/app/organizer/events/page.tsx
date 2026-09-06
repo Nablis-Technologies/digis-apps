@@ -25,19 +25,26 @@ import { Eye, Pencil, Share2, Copy, Trash2 } from "lucide-react"
 import { StatsGrid } from "@/components/dashboard/stats-grid"
 import { CreateEventDialog } from "../../../components/events/create-event-dialog"
 import { ShareEventDialog } from "../../../components/events/share-event-dialog"
-import { sampleEvents } from "@/lib/sample-data"
 import { formatNumber, formatCurrencyShort, formatCurrency, formatDateTime, calculatePercentage } from "@/lib/utils"
-import { EventCard } from "../../../components/events/event-card"
-import { EventListItem } from "../../../components/events/event-list-item"
 import { ViewToggle, type ViewMode } from "../../../components/events/view-toggle"
 import { EmptyState } from "../../../components/events/empty-state"
+import { ApiEventCard } from "../../../components/events/api-event-card"
+import { useListEventsQuery } from "@workspace/store/reducers/organizerEventsApi"
+import type { Event } from "@workspace/store/reducers/organizerEventsApi"
+import { Skeleton } from "@/components/ui/skeleton"
+
+// Helper to get cover image from event_media
+function getCoverImage(event: Event): string {
+  const coverMedia = event.event_media?.find(media => media.type === "cover")
+  return coverMedia?.file?.medium || coverMedia?.file?.url || ""
+}
 
 // Event row type for DataTable
 type EventRow = {
   id: string
   name: string
   bannerUrl: string
-  category: string
+  categories: string[]
   venue: string
   city: string
   startAt: string
@@ -59,14 +66,16 @@ type BadgeVariant =
   | "orange"
   | "outline"
 
-function getStatusVariant(status: EventRow["status"]): BadgeVariant {
-  switch (status) {
-    case "Live":
+function getStatusVariant(status: string): BadgeVariant {
+  switch (status.toLowerCase()) {
+    case "live":
       return "success"
-    case "Published":
+    case "published":
       return "info"
-    case "Draft":
+    case "draft":
       return "outline"
+    default:
+      return "default"
   }
 }
 
@@ -91,75 +100,83 @@ export default function EventsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
-  const [selectedEventForShare, setSelectedEventForShare] = useState<typeof sampleEvents[0] | null>(null)
+  const [selectedEventForShare, setSelectedEventForShare] = useState<Event | null>(null)
 
-  // Prepare event data for table
+  // Fetch events from API
+  const { data: eventsResponse, isLoading, error } = useListEventsQuery({
+    page: 1,
+    per_page: 100,
+    order_by: "created_at",
+    order_direction: "desc",
+  })
+
+  const events = eventsResponse?.data || []
+
+  // Prepare event data for table - using real API data
   const eventsForTable: EventRow[] = useMemo(
     () =>
-      sampleEvents.map((event) => {
-        const totalSold = event.tiers.reduce((s, t) => s + t.sold, 0)
-        const totalCapacity = event.tiers.reduce((s, t) => s + t.total, 0)
-        const totalRevenue = event.tiers.reduce((s, t) => s + t.sold * t.price, 0)
+      events.map((event) => {
+        // For now, using mock tier data since API doesn't return this yet
+        // TODO: Replace with real product/ticket data from API
+        const totalSold = 0
+        const totalCapacity = 0
+        const totalRevenue = 0
+        
+        const categories = event.categories?.map(cat => cat.name) || []
+        const primaryDate = event.event_dates?.[0]
+        
         return {
           id: event.id,
-          name: event.name,
-          bannerUrl: event.bannerUrl,
-          category: event.category,
-          venue: event.venue,
-          city: event.city,
-          startAt: event.startAt,
-          status: event.status,
+          name: event.title,
+          bannerUrl: getCoverImage(event),
+          categories: categories,
+          venue: primaryDate?.venue?.name ?? "TBD",
+          city: primaryDate?.venue?.city ?? "Addis Ababa",
+          startAt: primaryDate?.starts_at ?? event.created_at,
+          status: (event.status.charAt(0).toUpperCase() + event.status.slice(1)) as "Live" | "Published" | "Draft",
           totalSold,
           totalCapacity,
           totalRevenue,
         }
       }),
-    []
+    [events]
   )
 
   // Filter events based on search and status
   const filteredEvents = useMemo(() => {
-    return sampleEvents.filter((event) => {
-      const matchesSearch = event.name.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesStatus = statusFilter === "all" || event.status === statusFilter
+    return events.filter((event) => {
+      const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesStatus = statusFilter === "all" || event.status === statusFilter.toLowerCase()
       return matchesSearch && matchesStatus
     })
-  }, [searchQuery, statusFilter])
+  }, [events, searchQuery, statusFilter])
 
   // Filter table events
   const filteredTableEvents = useMemo(() => {
     return eventsForTable.filter((event) => {
-      const matchesSearch = event.name.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesStatus = statusFilter === "all" || event.status === statusFilter
+      const matchesSearch = event.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        event.categories.some(cat => cat.toLowerCase().includes(searchQuery.toLowerCase()))
+      const matchesStatus = statusFilter === "all" || event.status.toLowerCase() === statusFilter.toLowerCase()
       return matchesSearch && matchesStatus
     })
   }, [eventsForTable, searchQuery, statusFilter])
 
   const hasFilters = searchQuery !== "" || statusFilter !== "all"
 
-  // Analytics across all events
-  const ticketsSold = sampleEvents.reduce(
-    (sum, event) => sum + event.tiers.reduce((s, tier) => s + tier.sold, 0),
-    0
-  )
-  const totalCapacity = sampleEvents.reduce(
-    (sum, event) => sum + event.tiers.reduce((s, tier) => s + tier.total, 0),
-    0
-  )
-  const totalRevenue = sampleEvents.reduce(
-    (sum, event) =>
-      sum + event.tiers.reduce((s, tier) => s + tier.sold * tier.price, 0),
-    0
-  )
+  // Analytics across all events (using mock data for now)
+  // TODO: Replace with real analytics from API
+  const ticketsSold = 0
+  const totalCapacity = 0
+  const totalRevenue = 0
 
   const statsCards = [
     {
       key: "total-events",
       title: "Total Events",
-      value: formatNumber(sampleEvents.length),
+      value: formatNumber(events.length),
       icon: Calendar03Icon,
       trend: { value: "+12%", positive: true },
-      sparklineData: [16, 18, 19, 21, 22, 23, sampleEvents.length],
+      sparklineData: [16, 18, 19, 21, 22, 23, events.length],
       sparklineColor: "var(--chart-1)",
     },
     {
@@ -186,7 +203,7 @@ export default function EventsPage() {
       value: formatNumber(totalCapacity),
       icon: UserGroupIcon,
       trend: {
-        value: `${Math.round((ticketsSold / totalCapacity) * 100)}% sold`,
+        value: totalCapacity > 0 ? `${Math.round((ticketsSold / totalCapacity) * 100)}% sold` : "N/A",
         positive: true,
       },
       sparklineData: [2200, 2400, 2600, 2700, 2800, 2900, totalCapacity],
@@ -194,28 +211,45 @@ export default function EventsPage() {
     },
   ]
 
-  // Table columns (same as dashboard)
+  // Table columns
   const eventColumns: Column<EventRow>[] = [
     {
       header: "Event",
       accessorKey: "name",
       cell: (row: EventRow) => (
         <div className="flex items-center gap-3">
-          <div className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-muted">
-            <img
-              src={row.bannerUrl}
-              alt={row.name}
-              className="h-full w-full object-cover"
-            />
-          </div>
+          {row.bannerUrl ? (
+            <div className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-muted">
+              <img
+                src={row.bannerUrl}
+                alt={row.name}
+                className="h-full w-full object-cover"
+              />
+            </div>
+          ) : (
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-olive-100 to-olive-200 dark:from-olive-900 dark:to-olive-800">
+              <HugeiconsIcon icon={Calendar03Icon} className="size-5 text-olive-500 dark:text-olive-400" />
+            </div>
+          )}
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{row.name}</p>
-            <Badge 
-              variant={getCategoryVariant(row.category)} 
-              className="mt-1 border border-current/20"
-            >
-              {row.category}
-            </Badge>
+            <div className="mt-1 flex flex-wrap items-center gap-1">
+              {row.categories.length > 0 ? (
+                row.categories.map((category, idx) => (
+                  <Badge 
+                    key={idx}
+                    variant={getCategoryVariant(category)} 
+                    className="border border-current/20"
+                  >
+                    {category}
+                  </Badge>
+                ))
+              ) : (
+                <Badge variant="outline" className="border border-current/20">
+                  Uncategorized
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
       ),
@@ -236,6 +270,9 @@ export default function EventsPage() {
     {
       header: "Tickets",
       cell: (row: EventRow) => {
+        if (row.totalCapacity === 0) {
+          return <span className="text-xs text-muted-foreground">No tickets yet</span>
+        }
         const pct = calculatePercentage(row.totalSold, row.totalCapacity)
         return (
           <div className="flex items-center gap-3">
@@ -301,7 +338,7 @@ export default function EventsPage() {
       primary: true,
       iconOnly: true,
       onClick: (row) => {
-        const event = sampleEvents.find((e) => e.id === row.id)
+        const event = events.find((e) => e.id === row.id)
         if (event) {
           setSelectedEventForShare(event)
           setShareDialogOpen(true)
@@ -328,6 +365,52 @@ export default function EventsPage() {
       },
     },
   ]
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <Skeleton className="h-9 w-48" />
+            <Skeleton className="mt-2 h-4 w-64" />
+          </div>
+          <Skeleton className="h-10 w-36" />
+        </div>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-32" />
+          ))}
+        </div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <Skeleton key={i} className="h-64" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Events</h1>
+            <p className="text-muted-foreground">
+              Create and manage your events
+            </p>
+          </div>
+        </div>
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+          <p className="text-sm text-destructive">
+            Failed to load events. Please try again later.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -390,13 +473,16 @@ export default function EventsPage() {
             {viewMode === "grid" ? (
               <div className="grid gap-6 sm:grid-cols-2">
                 {filteredEvents.map((event, index) => (
-                  <EventCard key={event.id} event={event} index={index} />
+                  <ApiEventCard key={event.id} event={event} index={index} />
                 ))}
               </div>
             ) : (
               <div className="space-y-4">
                 {filteredEvents.map((event, index) => (
-                  <EventListItem key={event.id} event={event} index={index} />
+                  <div key={event.id} className="rounded-lg border p-4">
+                    <h3 className="font-semibold">{event.title}</h3>
+                    <p className="text-sm text-muted-foreground">{event.status}</p>
+                  </div>
                 ))}
               </div>
             )}
@@ -418,7 +504,7 @@ export default function EventsPage() {
             ) : (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {filteredEvents.map((event, index) => (
-                  <EventCard key={event.id} event={event} index={index} />
+                  <ApiEventCard key={event.id} event={event} index={index} />
                 ))}
               </div>
             )}

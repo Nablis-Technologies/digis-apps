@@ -12,21 +12,30 @@ import {
 import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
 import { Label } from "@workspace/ui/components/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@workspace/ui/components/select"
 import { toastSuccess, toastError } from "@workspace/ui/lib/toast"
 import {
   useCreateEventDateMutation,
   useUpdateEventDateMutation,
   type EventDate,
 } from "@workspace/store/reducers/eventScheduleApi"
+import { useListVenuesQuery } from "@workspace/store/reducers/venuesApi"
 
 type FormData = {
   name: string
   starts_at: string
   ends_at: string
+  venue_id: string
   venue_capacity: string
 }
 
-const empty: FormData = { name: "", starts_at: "", ends_at: "", venue_capacity: "" }
+const empty: FormData = { name: "", starts_at: "", ends_at: "", venue_id: "", venue_capacity: "" }
 
 export function EventDateDialog({
   open,
@@ -45,7 +54,12 @@ export function EventDateDialog({
 
   const [createDate, { isLoading: isCreating }] = useCreateEventDateMutation()
   const [updateDate, { isLoading: isUpdating }] = useUpdateEventDateMutation()
+  const { data: venuesData, isLoading: venuesLoading } = useListVenuesQuery(
+    { page: 1, per_page: 100 },
+    { skip: !open }
+  )
   const submitting = isCreating || isUpdating
+  const venues = venuesData?.data ?? []
 
   useEffect(() => {
     if (open) {
@@ -55,6 +69,7 @@ export function EventDateDialog({
               name: eventDate.name ?? "",
               starts_at: eventDate.starts_at ? new Date(eventDate.starts_at).toISOString().slice(0, 16) : "",
               ends_at: eventDate.ends_at ? new Date(eventDate.ends_at).toISOString().slice(0, 16) : "",
+              venue_id: eventDate.venue_id ?? eventDate.venue?.id ?? "",
               venue_capacity: eventDate.venue_capacity ? String(eventDate.venue_capacity) : "",
             }
           : empty
@@ -87,6 +102,7 @@ export function EventDateDialog({
               name: form.name || undefined,
               starts_at: new Date(form.starts_at).toISOString(),
               ends_at: new Date(form.ends_at).toISOString(),
+              venue_id: form.venue_id || undefined,
               venue_capacity: form.venue_capacity ? Number(form.venue_capacity) : undefined,
             },
           },
@@ -140,6 +156,25 @@ export function EventDateDialog({
                   </Label>
                   <Input id="ends_at" type="datetime-local" value={form.ends_at} onChange={(e) => update("ends_at", e.target.value)} required />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="venue_id">Venue</Label>
+                {venuesLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading venues...</p>
+                ) : (
+                  <Select value={form.venue_id} onValueChange={(v) => update("venue_id", v)}>
+                    <SelectTrigger id="venue_id" className="w-full">
+                      <SelectValue placeholder="Select a venue..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {venues.map((v) => (
+                        <SelectItem key={v.id} value={v.id}>
+                          {v.name}{v.city ? ` — ${v.city}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="venue_capacity">Venue capacity</Label>

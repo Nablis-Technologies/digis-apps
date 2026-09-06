@@ -2,16 +2,24 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence, Reorder } from "framer-motion"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useGetMeQuery } from "@workspace/store/reducers/authApi"
 import { useListOwnerOrganizationsQuery } from "@workspace/store/reducers/organizationsApi"
 import { useListPublicCategoriesQuery } from "@workspace/store/reducers/categoriesApi"
+import { useListPublicVenuesQuery } from "@workspace/store/reducers/venuesApi"
 import { 
   useCreateEventMutation, 
   usePublishEventMutation,
@@ -52,7 +60,6 @@ import {
   BookmarkIcon,
   Tick02Icon,
   ImageAddIcon,
-  Clock03Icon,
 } from "@hugeicons/core-free-icons"
 import { 
   HelpCircle, 
@@ -280,11 +287,12 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   const { data: userData } = useGetMeQuery()
   const { data: organizationsData, isLoading: isLoadingOrgs } = useListOwnerOrganizationsQuery()
   const { data: categoriesData } = useListPublicCategoriesQuery()
+  const { data: venuesData, isLoading: isLoadingVenues } = useListPublicVenuesQuery({ page: 1, per_page: 100 })
   
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [step, setStep] = useState(0)
   const [error, setError] = useState("")
-  const [fieldErrors, setFieldErrors] = useState<{ title?: string; date?: string; location?: string }>({})
+  const [fieldErrors, setFieldErrors] = useState<{ title?: string; date?: string; endDate?: string; location?: string }>({})
 
   const [entryType, setEntryType] = useState<EntryType>("ticketed")
   const [visibility, setVisibility] = useState<Visibility>("public")
@@ -295,7 +303,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   const [time, setTime] = useState("19:00")
   const [endDate, setEndDate] = useState("")
   const [endTime, setEndTime] = useState("")
-  const [location, setLocation] = useState("")
+  const [venueId, setVenueId] = useState("")
   const [onlineUrl, setOnlineUrl] = useState("")
   const [bannerFile, setBannerFile] = useState<File | null>(null)
   const [bannerPreview, setBannerPreview] = useState("")
@@ -333,8 +341,16 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   const [editGuestForm, setEditGuestForm] = useState({ name: "", contact: "", personalLink: "", allowedGuests: 0 })
 
   // Toggle states for optional sections
-  const [showEndDateTime, setShowEndDateTime] = useState(false)
   const [showOnlineLink, setShowOnlineLink] = useState(false)
+  const [showGallery, setShowGallery] = useState(false)
+
+  const toggleGallery = (next: boolean) => {
+    if (!next) {
+      galleryFiles.forEach((item) => URL.revokeObjectURL(item.preview))
+      setGalleryFiles([])
+    }
+    setShowGallery(next)
+  }
   const [showTicketOptionalFields, setShowTicketOptionalFields] = useState<{ [key: number]: boolean }>({})
 
   const [isRecurring, setIsRecurring] = useState(false)
@@ -481,12 +497,14 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
     setFieldErrors({})
     
     const dateTime = date && time ? `${date}T${time}:00` : ""
+    const endDateTimeInput = endDate && endTime ? `${endDate}T${endTime}:00` : ""
     
     // Validation
-    const errors: { title?: string; date?: string; location?: string } = {}
+    const errors: { title?: string; date?: string; endDate?: string; location?: string } = {}
     if (!title.trim()) errors.title = "Event title is required"
     if (!dateTime) errors.date = "Event date and time are required"
-    if (!location.trim()) errors.location = "Venue or location is required"
+    if (!endDateTimeInput) errors.endDate = "Event end date and time are required"
+    if (!venueId) errors.location = "Please select a venue"
     
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors)
@@ -582,9 +600,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
       // Step 2: Add event date(s)
       stepLabel = "create-event-date"
       const startDateTime = new Date(dateTime).toISOString()
-      const endDateTime = (showEndDateTime && endDate && endTime) 
-        ? new Date(`${endDate}T${endTime}:00`).toISOString() 
-        : undefined
+      const endDateTime = new Date(endDateTimeInput).toISOString()
 
       const dateResult = await createEventDate({
         eventId,
@@ -593,6 +609,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
           starts_at: startDateTime,
           ends_at: endDateTime,
           timezone: "Africa/Addis_Ababa",
+          venue_id: venueId,
         },
       }).unwrap()
 
@@ -1132,68 +1149,44 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
               </div>
             </div>
 
-            {/* Optional: End Date/Time */}
-            <div className={`rounded-2xl border transition-colors ${showEndDateTime ? `${selectedEntryType.borderClass} ${selectedEntryType.bgClass}/10` : "border-border/50 bg-card/50"}`}>
-              <div
-                role="button"
-                tabIndex={0}
-                className="w-full flex items-center gap-3 p-4 text-left cursor-pointer"
-                onClick={() => setShowEndDateTime((v) => !v)}
-                onKeyDown={(e) => e.key === "Enter" && setShowEndDateTime((v) => !v)}
-              >
-                <div className={`p-2 rounded-xl flex-shrink-0 transition-colors ${showEndDateTime ? `${selectedEntryType.bgClass}/15` : "bg-muted"}`}>
-                  <HugeiconsIcon icon={Clock03Icon} strokeWidth={2} className={`w-4 h-4 ${showEndDateTime ? selectedEntryType.textClass : "text-muted-foreground"}`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm">End Date & Time</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Optional — set when the event concludes</p>
-                </div>
-                <Switch 
-                  checked={showEndDateTime} 
-                  onCheckedChange={setShowEndDateTime} 
-                  className="flex-shrink-0 data-checked:[&]:bg-[var(--event-color)]" 
-                  style={{ "--event-color": `var(${selectedEntryType.color})` } as React.CSSProperties}
-                  onClick={(e) => e.stopPropagation()} 
-                />
+            {/* End Date/Time (required) */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">End Date <span className="text-destructive">*</span></Label>
+                <Input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); if (fieldErrors.endDate) setFieldErrors((p) => ({ ...p, endDate: undefined })) }} className={`h-11 ${fieldErrors.endDate ? "border-destructive focus-visible:border-destructive" : ""}`} />
+                {fieldErrors.endDate && <p className="text-destructive text-xs">{fieldErrors.endDate}</p>}
               </div>
-              <AnimatePresence initial={false}>
-                {showEndDateTime && (
-                  <motion.div
-                    key="end-datetime-body"
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2, ease: "easeInOut" }}
-                    className="overflow-hidden"
-                  >
-                    <div className="px-4 pb-4 space-y-3 border-t border-border/40 pt-3">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs font-medium">End Date</Label>
-                          <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-9 text-sm" />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs font-medium">End Time</Label>
-                          <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="h-9 text-sm" />
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">End Time <span className="text-destructive">*</span></Label>
+                <Input type="time" value={endTime} onChange={(e) => { setEndTime(e.target.value); if (fieldErrors.endDate) setFieldErrors((p) => ({ ...p, endDate: undefined })) }} className={`h-11 ${fieldErrors.endDate ? "border-destructive focus-visible:border-destructive" : ""}`} />
+              </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="location" className="text-sm font-semibold">
                 Venue / Location <span className="text-destructive">*</span>
               </Label>
-              <Input
-                id="location"
-                placeholder="e.g. Millennium Hall, Addis Ababa"
-                value={location}
-                onChange={(e) => { setLocation(e.target.value); if (fieldErrors.location) setFieldErrors((p) => ({ ...p, location: undefined })) }}
-                className={`h-11 ${fieldErrors.location ? "border-destructive focus-visible:border-destructive" : ""}`}
-              />
+              {isLoadingVenues ? (
+                <p className="text-xs text-muted-foreground">Loading venues...</p>
+              ) : venuesData?.data && venuesData.data.length > 0 ? (
+                <Select
+                  value={venueId}
+                  onValueChange={(v) => { setVenueId(v); if (fieldErrors.location) setFieldErrors((p) => ({ ...p, location: undefined })) }}
+                >
+                  <SelectTrigger id="location" className={`h-11 w-full ${fieldErrors.location ? "border-destructive" : ""}`}>
+                    <SelectValue placeholder="Select a venue..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {venuesData.data.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.name}{v.city ? ` — ${v.city}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="text-xs text-muted-foreground">No venues available. Please ask an admin to create one first.</p>
+              )}
               {fieldErrors.location && <p className="text-destructive text-xs">{fieldErrors.location}</p>}
             </div>
 
@@ -1305,10 +1298,16 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
             </div>
 
             {/* Optional: Gallery Images */}
-            <div className="rounded-2xl border border-border/50 bg-card/50">
-              <div className="w-full flex items-center gap-3 p-4">
-                <div className="p-2 rounded-xl flex-shrink-0 bg-muted">
-                  <HugeiconsIcon icon={ImageAddIcon} strokeWidth={2} className="w-4 h-4 text-muted-foreground" />
+            <div className={`rounded-2xl border transition-colors ${showGallery ? `${selectedEntryType.borderClass} ${selectedEntryType.bgClass}/10` : "border-border/50 bg-card/50"}`}>
+              <div
+                role="button"
+                tabIndex={0}
+                className="w-full flex items-center gap-3 p-4 text-left cursor-pointer"
+                onClick={() => toggleGallery(!showGallery)}
+                onKeyDown={(e) => e.key === "Enter" && toggleGallery(!showGallery)}
+              >
+                <div className={`p-2 rounded-xl flex-shrink-0 transition-colors ${showGallery ? `${selectedEntryType.bgClass}/15` : "bg-muted"}`}>
+                  <HugeiconsIcon icon={ImageAddIcon} strokeWidth={2} className={`w-4 h-4 ${showGallery ? selectedEntryType.textClass : "text-muted-foreground"}`} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm">Gallery Images</p>
@@ -1316,64 +1315,98 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                     Optional — add up to {MAX_GALLERY} images ({galleryFiles.length}/{MAX_GALLERY})
                   </p>
                 </div>
+                <Switch
+                  checked={showGallery}
+                  onCheckedChange={(v) => toggleGallery(v)}
+                  className="flex-shrink-0 data-checked:[&]:bg-[var(--event-color)]"
+                  style={{ "--event-color": `var(${selectedEntryType.color})` } as React.CSSProperties}
+                  onClick={(e) => e.stopPropagation()}
+                />
               </div>
-              <div className="px-4 pb-4 space-y-3 border-t border-border/40 pt-3">
-                {galleryFiles.length > 0 && (
-                  <div className="grid grid-cols-3 gap-2">
-                    {galleryFiles.map((item, idx) => (
-                      <div key={idx} className="relative group">
-                        <img
-                          src={item.preview}
-                          alt={`Gallery ${idx + 1}`}
-                          className="h-24 w-full object-cover rounded-xl"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            URL.revokeObjectURL(item.preview)
-                            setGalleryFiles((prev) => prev.filter((_, i) => i !== idx))
-                          }}
-                          className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-3" />
-                        </button>
-                        <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full">
-                          {idx + 1}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+              <AnimatePresence initial={false}>
+                {showGallery && (
+                  <motion.div
+                    key="gallery-body"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-4 pb-4 space-y-3 border-t border-border/40 pt-3">
+                      {galleryFiles.length > 0 && (
+                        <>
+                          <p className="text-xs text-muted-foreground">Drag images to reorder — position 1 uploads first.</p>
+                          <Reorder.Group
+                            axis="x"
+                            values={galleryFiles}
+                            onReorder={setGalleryFiles}
+                            className="grid grid-cols-3 gap-2 list-none p-0 m-0"
+                          >
+                            {galleryFiles.map((item, idx) => (
+                              <Reorder.Item
+                                key={item.preview}
+                                value={item}
+                                className="relative group cursor-grab active:cursor-grabbing"
+                                whileDrag={{ scale: 1.05, zIndex: 10 }}
+                              >
+                                <img
+                                  src={item.preview}
+                                  alt={`Gallery ${idx + 1}`}
+                                  className="h-24 w-full object-cover rounded-xl pointer-events-none"
+                                />
+                                <button
+                                  type="button"
+                                  onPointerDown={(e) => e.stopPropagation()}
+                                  onClick={() => {
+                                    URL.revokeObjectURL(item.preview)
+                                    setGalleryFiles((prev) => prev.filter((g) => g.preview !== item.preview))
+                                  }}
+                                  className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-3" />
+                                </button>
+                                <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                                  {idx + 1}
+                                </span>
+                              </Reorder.Item>
+                            ))}
+                          </Reorder.Group>
+                        </>
+                      )}
+                      {galleryFiles.length < MAX_GALLERY && (
+                        <>
+                          <input
+                            id="gallery"
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            onChange={(e) => {
+                              const files = Array.from(e.target.files ?? [])
+                              const remaining = MAX_GALLERY - galleryFiles.length
+                              const toAdd = files.slice(0, remaining)
+                              const newItems = toAdd.map((file) => ({
+                                file,
+                                preview: URL.createObjectURL(file),
+                              }))
+                              setGalleryFiles((prev) => [...prev, ...newItems])
+                              e.target.value = ""
+                            }}
+                          />
+                          <Label
+                            htmlFor="gallery"
+                            className="flex items-center justify-center gap-2 h-10 w-full rounded-xl border border-dashed border-border cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                          >
+                            <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-4" />
+                            Add gallery images
+                          </Label>
+                        </>
+                      )}
+                    </div>
+                  </motion.div>
                 )}
-                {galleryFiles.length < MAX_GALLERY && (
-                  <>
-                    <input
-                      id="gallery"
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                      onChange={(e) => {
-                        const files = Array.from(e.target.files ?? [])
-                        const remaining = MAX_GALLERY - galleryFiles.length
-                        const toAdd = files.slice(0, remaining)
-                        const newItems = toAdd.map((file) => ({
-                          file,
-                          preview: URL.createObjectURL(file),
-                        }))
-                        setGalleryFiles((prev) => [...prev, ...newItems])
-                        e.target.value = ""
-                      }}
-                    />
-                    <Label
-                      htmlFor="gallery"
-                      className="flex items-center justify-center gap-2 h-10 w-full rounded-xl border border-dashed border-border cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-                    >
-                      <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-4" />
-                      Add gallery images
-                    </Label>
-                  </>
-                )}
-              </div>
+              </AnimatePresence>
             </div>
 
           </motion.div>
@@ -2741,10 +2774,10 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                       <span>{time}</span>
                     </div>
                   )}
-                  {location && (
+                  {venueId && (
                     <div className="flex items-center gap-1.5">
                       <span>•</span>
-                      <span>{location}</span>
+                      <span>{venuesData?.data?.find((v) => v.id === venueId)?.name || "Selected venue"}</span>
                     </div>
                   )}
                 </div>
@@ -2956,10 +2989,11 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
             <Button
               className="flex-1 h-11 font-semibold"
               onClick={() => {
-                const errors: { title?: string; date?: string; location?: string; banner?: string } = {}
+                const errors: { title?: string; date?: string; endDate?: string; location?: string; banner?: string } = {}
                 if (!title) errors.title = "Event name is required"
                 if (!date) errors.date = "Date is required"
-                if (!location) errors.location = "Location is required"
+                if (!endDate || !endTime) errors.endDate = "End date and time are required"
+                if (!venueId) errors.location = "Please select a venue"
                 if (!bannerFile) errors.banner = "Banner image is required"
                 setFieldErrors(errors)
                 if (Object.keys(errors).length > 0) return

@@ -3,6 +3,42 @@ import { baseQueryWithReauth } from "../api"
 import type { Organization } from "./organizationsApi"
 import type { Category } from "./categoriesApi"
 
+export interface EventMedia {
+  id: string
+  type: "cover" | "gallery"
+  position: number
+  alt_text: string | null
+  caption: string | null
+  event_id: string
+  created_by_id: string
+  created_at: string
+  updated_at: string
+  file: {
+    filename: string
+    content_type: string
+    byte_size: number
+    url: string
+    thumbnail: string
+    medium: string
+  } | null
+}
+
+export interface EventDateVenue {
+  id: string
+  name: string
+  city?: string | null
+}
+
+export interface EventDateSummary {
+  id: string
+  name?: string | null
+  doors_at?: string | null
+  starts_at: string
+  ends_at?: string | null
+  status?: string
+  venue?: EventDateVenue | null
+}
+
 export interface Event {
   id: string
   slug: string
@@ -19,6 +55,8 @@ export interface Event {
   updated_at: string
   organization?: Organization
   categories?: Category[]
+  event_media?: EventMedia[]
+  event_dates?: EventDateSummary[]
 }
 
 interface ListEventsParams {
@@ -68,7 +106,7 @@ export const eventsApi = createApi({
   endpoints: (builder) => ({
     listEvents: builder.query<PaginatedResponse<Event>, ListEventsParams | void>({
       query: (params) => ({
-        url: "/admin/events",
+        url: "/events",
         params: params ?? undefined,
       }),
       providesTags: (result) =>
@@ -80,12 +118,12 @@ export const eventsApi = createApi({
           : [{ type: "Events", id: "LIST" }],
     }),
     getEvent: builder.query<SingleResponse<Event>, string>({
-      query: (id) => `/admin/events/${id}`,
+      query: (id) => `/events/${id}`,
       providesTags: (_result, _error, id) => [{ type: "Events", id }],
     }),
     createEvent: builder.mutation<SingleResponse<Event>, CreateEventPayload>({
       query: (body) => ({
-        url: "/admin/events",
+        url: "/events",
         method: "POST",
         body,
       }),
@@ -96,7 +134,7 @@ export const eventsApi = createApi({
       { id: string; body: UpdateEventPayload }
     >({
       query: ({ id, body }) => ({
-        url: `/admin/events/${id}`,
+        url: `/events/${id}`,
         method: "PATCH",
         body,
       }),
@@ -104,21 +142,21 @@ export const eventsApi = createApi({
     }),
     deleteEvent: builder.mutation<void, string>({
       query: (id) => ({
-        url: `/admin/events/${id}`,
+        url: `/events/${id}`,
         method: "DELETE",
       }),
       invalidatesTags: [{ type: "Events", id: "LIST" }],
     }),
     publishEvent: builder.mutation<void, string>({
       query: (id) => ({
-        url: `/admin/events/${id}/publish`,
+        url: `/events/${id}/publish`,
         method: "POST",
       }),
       invalidatesTags: (_result, _error, id) => [{ type: "Events", id }],
     }),
     unpublishEvent: builder.mutation<void, string>({
       query: (id) => ({
-        url: `/admin/events/${id}/unpublish`,
+        url: `/events/${id}/unpublish`,
         method: "POST",
       }),
       invalidatesTags: (_result, _error, id) => [{ type: "Events", id }],

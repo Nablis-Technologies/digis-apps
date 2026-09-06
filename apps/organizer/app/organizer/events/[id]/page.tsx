@@ -3,7 +3,6 @@
 import { use, useState } from "react"
 import { motion } from "framer-motion"
 import { notFound } from "next/navigation"
-import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -29,6 +28,7 @@ import {
   GlobeIcon,
   Store01Icon,
   LayoutTopIcon,
+  Image01Icon,
 } from "@hugeicons/core-free-icons"
 import {
   Area,
@@ -40,9 +40,10 @@ import {
   YAxis,
 } from "recharts"
 import { StatsGrid } from "@/components/dashboard/stats-grid"
-import { sampleEvents } from "@/lib/sample-data"
 import { formatDate, formatCurrency, formatCurrencyShort, formatNumber, calculatePercentage } from "@/lib/utils"
 import { ShareEventDialog } from "@/organizer-components/events/share-event-dialog"
+import { useGetEventQuery } from "@workspace/store/reducers/organizerEventsApi"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface EventDetailPageProps {
   params: Promise<{
@@ -127,20 +128,50 @@ function SalesTooltip({
 export default function EventDetailPage({ params }: EventDetailPageProps) {
   const { id } = use(params)
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
-  const event = sampleEvents.find((e) => e.id === id)
+  
+  // Fetch event from API
+  const { data: eventResponse, isLoading, error } = useGetEventQuery(id)
+  const event = eventResponse?.data
 
-  if (!event) {
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="flex items-start gap-4">
+          <Skeleton className="size-20 rounded-lg" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+        </div>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-32" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !event) {
     notFound()
   }
 
-  const totalTickets = event.tiers.reduce((sum, tier) => sum + tier.total, 0)
-  const soldTickets = event.tiers.reduce((sum, tier) => sum + tier.sold, 0)
-  const totalRevenue = event.tiers.reduce(
-    (sum, tier) => sum + tier.sold * tier.price,
-    0
-  )
+  // Get cover image
+  const coverImage = event.event_media?.find(m => m.type === "cover")
+  const coverImageUrl = coverImage?.file?.thumbnail || coverImage?.file?.url
+
+  // Get gallery images
+  const galleryImages = event.event_media
+    ?.filter(m => m.type === "gallery")
+    ?.sort((a, b) => a.position - b.position) || []
+
+  // TODO: Replace with real ticket/product data from API
+  const totalTickets = 0
+  const soldTickets = 0
+  const totalRevenue = 0
   const remainingTickets = totalTickets - soldTickets
-  const sellThrough = calculatePercentage(soldTickets, totalTickets)
+  const sellThrough = totalTickets > 0 ? calculatePercentage(soldTickets, totalTickets) : 0
 
   const statsCards = [
     {
@@ -181,7 +212,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
   // Sales & revenue overview (7 days leading up to the event start)
   const salesOverviewData = SALES_WEIGHTS.map((weight, index) => {
-    const date = new Date(event.startAt)
+    const date = new Date(event.created_at)
     date.setDate(date.getDate() - (SALES_WEIGHTS.length - 1 - index))
     return {
       date: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
@@ -199,7 +230,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     revenue: Math.round(totalRevenue * channel.weight),
   }))
 
-  // Ticket tier rows for DataTable
+  // Ticket tier rows for DataTable (empty for now until API provides product data)
   type TierRow = {
     id: string
     name: string
@@ -211,16 +242,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     sellThrough: number
   }
 
-  const tierRows: TierRow[] = event.tiers.map((tier) => ({
-    id: tier.id,
-    name: tier.name,
-    price: tier.price,
-    sold: tier.sold,
-    total: tier.total,
-    remaining: tier.total - tier.sold,
-    revenue: tier.sold * tier.price,
-    sellThrough: calculatePercentage(tier.sold, tier.total),
-  }))
+  const tierRows: TierRow[] = []
 
   const tierColumns: Column<TierRow>[] = [
     {
@@ -319,13 +341,15 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     },
   ]
 
-  const getStatusColor = (status: typeof event.status) => {
-    switch (status) {
-      case "Live":
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "live":
         return "bg-chart-1/10 text-chart-1 dark:bg-chart-1/20 dark:text-chart-1"
-      case "Published":
+      case "published":
         return "bg-chart-2/10 text-chart-2 dark:bg-chart-2/20 dark:text-chart-2"
-      case "Draft":
+      case "draft":
+        return "bg-muted text-muted-foreground"
+      default:
         return "bg-muted text-muted-foreground"
     }
   }
@@ -339,22 +363,37 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         transition={{ duration: 0.4 }}
         className="flex items-start gap-4"
       >
-        <div className="relative size-20 overflow-hidden rounded-lg">
-          <Image
-            src={event.bannerUrl}
-            alt={event.name}
-            fill
-            className="object-cover object-top"
-            placeholder="empty"
-          />
-        </div>
+        {coverImageUrl ? (
+          <div className="relative size-20 overflow-hidden rounded-lg">
+            <img
+              src={coverImageUrl}
+              alt={event.title}
+              className="h-full w-full object-cover"
+            />
+          </div>
+        ) : (
+          <div className="flex size-20 items-center justify-center rounded-lg bg-gradient-to-br from-olive-100 to-olive-200 dark:from-olive-900 dark:to-olive-800">
+            <HugeiconsIcon icon={Image01Icon} className="size-8 text-olive-500 dark:text-olive-400" />
+          </div>
+        )}
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <Badge className={getStatusColor(event.status)}>{event.status}</Badge>
-            <span className="text-sm text-muted-foreground">{formatNumber(soldTickets)}/{formatNumber(totalTickets)} sold</span>
+            <Badge className={getStatusColor(event.status)}>
+              {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+            </Badge>
+            {totalTickets > 0 && (
+              <span className="text-sm text-muted-foreground">
+                {formatNumber(soldTickets)}/{formatNumber(totalTickets)} sold
+              </span>
+            )}
           </div>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight">{event.name}</h1>
-          <p className="text-sm text-muted-foreground">{formatDate(event.startAt)} · {event.venue}, {event.city}</p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight">{event.title}</h1>
+          <p className="text-sm text-muted-foreground">
+            {formatDate(event.created_at)} · {event.timezone}
+          </p>
+          {event.description && (
+            <p className="mt-2 text-sm text-muted-foreground">{event.description}</p>
+          )}
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" className="gap-2">
@@ -396,6 +435,63 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         <TabsContent value="overview" className="flex flex-col gap-4">
           {/* Top Analytics */}
           <StatsGrid cards={statsCards} />
+
+          {/* Event Gallery */}
+          {galleryImages.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05, duration: 0.4 }}
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <HugeiconsIcon icon={Image01Icon} strokeWidth={2} className="size-5" />
+                    Event Gallery
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    {galleryImages.length} {galleryImages.length === 1 ? 'image' : 'images'}
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                    {galleryImages.map((media, idx) => (
+                      <motion.div
+                        key={media.id}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: idx * 0.05, duration: 0.3 }}
+                        className="group relative aspect-square overflow-hidden rounded-lg border bg-muted"
+                      >
+                        {media.file ? (
+                          <>
+                            <img
+                              src={media.file.medium || media.file.url}
+                              alt={media.alt_text || `Gallery image ${idx + 1}`}
+                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0 opacity-0 transition-opacity group-hover:opacity-100" />
+                            {(media.alt_text || media.caption) && (
+                              <div className="absolute bottom-0 left-0 right-0 p-2 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+                                <p className="font-medium">{media.alt_text}</p>
+                                {media.caption && (
+                                  <p className="text-white/80">{media.caption}</p>
+                                )}
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center">
+                            <HugeiconsIcon icon={Image01Icon} className="size-8 text-muted-foreground" />
+                          </div>
+                        )}
+                      </motion.div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
 
           <div className="grid gap-6 md:grid-cols-2">
             {/* Ticket Tiers */}
@@ -443,7 +539,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Average Ticket Price</span>
                       <span className="text-lg font-bold">
-                        {formatCurrency(totalRevenue / soldTickets)}
+                        {soldTickets > 0 ? formatCurrency(totalRevenue / soldTickets) : "N/A"}
                       </span>
                     </div>
                     <Separator />
