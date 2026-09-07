@@ -121,7 +121,7 @@ Apps must **never** call `fetch`/`axios`/RTK directly against the API; use the
 exported RTK Query hooks (`useXQuery` / `useXMutation`).
 
 **Every endpoint MUST match the canonical contract in
-`Digis API_collection (2).json` (Postman v2.1).** Before adding or editing an
+`Digis API_collection.json` (Postman v2.1).** Before adding or editing an
 endpoint, open that file and confirm:
 - HTTP method and full path (e.g. `POST /auth/login`, `GET /organizations/owner/:id`).
 - Query params and request body shape (match the example `raw` bodies exactly).
@@ -146,7 +146,7 @@ endpoint, open that file and confirm:
   (`useXQuery`, `useXMutation`, exported type, cookie key, endpoint string).
 
 **DO NOT**
-- Add endpoints that are NOT in `Digis API_collection (2).json`. If the contract is
+- Add endpoints that are NOT in `Digis API_collection.json`. If the contract is
   missing an endpoint you need, **flag it** — do not invent paths or payloads.
 - Change a `reducerPath`, hook name, or response type shape in a breaking way
   without updating all consumers in the same change.
