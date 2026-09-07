@@ -25,7 +25,11 @@ export interface Event {
   visibility: "public" | "private"
   timezone: string
   currency: string
-  organization_id: string
+  // Top-level id is returned once the backend deploys it in the index/show
+  // projection; the nested summary is always rendered, so treat both as the
+  // source of truth.
+  organization_id?: string
+  organization?: { id: string; name: string; slug: string }
   category_ids: string[]
   status: "draft" | "published" | "cancelled" | "completed"
   published_at?: string | null
@@ -261,6 +265,8 @@ interface ListEventsParams {
   order_direction?: "asc" | "desc"
   "q[status_eq]"?: string
   "q[visibility_eq]"?: string
+  "q[organization_id_eq]"?: string
+  "q[organization_id_in]"?: string | string[]
 }
 
 export interface CreateEventPayload {

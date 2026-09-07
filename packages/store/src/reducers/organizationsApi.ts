@@ -50,7 +50,23 @@ interface CreateOrgPayload {
   organization: {
     name: string
     description?: string
-    owner_id: string
+    organizer_type?: "individual" | "company" | "ngo" | "government" | "collective"
+    category?: string
+    contact_phone?: string
+    contact_email?: string
+    website_url?: string
+    tin_number?: string
+    address_line1?: string
+    address_line2?: string
+    city?: string
+    region?: string
+    estimated_audience?: string
+    event_frequency?: string
+    social_links?: Record<string, string>
+    // NOTE: the backend (admin + owner create) does not permit owner_id —
+    // ownership is derived from the auth token. Kept as optional so existing
+    // callers still compile; it is ignored server-side.
+    owner_id?: string
   }
 }
 
@@ -202,6 +218,23 @@ export const organizationsApi = createApi({
       }),
       invalidatesTags: [{ type: "OwnerOrganizations", id: "LIST" }],
     }),
+    // Owner document upload (multipart/form-data). Keys per contract:
+    // profile, banner, business_license, tin_certificate. All four must be
+    // attached before POST .../verification/submit accepts the organization.
+    uploadOwnerOrganizationDocuments: builder.mutation<
+      SingleResponse<Organization>,
+      { id: string; formData: FormData }
+    >({
+      query: ({ id, formData }) => ({
+        url: `/organizations/owner/${id}/documents`,
+        method: "PATCH",
+        body: formData,
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: "OwnerOrganizations", id },
+        { type: "OwnerOrganizations", id: "LIST" },
+      ],
+    }),
 
     // Verification
     submitVerification: builder.mutation<SingleResponse<Organization>, string>({
@@ -242,6 +275,7 @@ export const {
   useCreateOwnerOrganizationMutation,
   useUpdateOwnerOrganizationMutation,
   useDeleteOwnerOrganizationMutation,
+  useUploadOwnerOrganizationDocumentsMutation,
   useSubmitVerificationMutation,
   useResubmitVerificationMutation,
 } = organizationsApi

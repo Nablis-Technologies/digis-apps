@@ -21,7 +21,7 @@ import {
   Wallet01Icon,
   UserGroupIcon,
 } from "@hugeicons/core-free-icons"
-import { Eye, Pencil, Share2, Copy, Trash2 } from "lucide-react"
+import { Eye, Pencil, Share2, Copy, Trash2, Rocket } from "lucide-react"
 import { StatsGrid } from "@/components/dashboard/stats-grid"
 import { CreateEventDialog } from "../../../components/events/create-event-dialog"
 import { ShareEventDialog } from "../../../components/events/share-event-dialog"
@@ -29,9 +29,11 @@ import { formatNumber, formatCurrencyShort, formatCurrency, formatDateTime, calc
 import { ViewToggle, type ViewMode } from "../../../components/events/view-toggle"
 import { EmptyState } from "../../../components/events/empty-state"
 import { ApiEventCard } from "../../../components/events/api-event-card"
-import { useListEventsQuery } from "@workspace/store/reducers/organizerEventsApi"
+import { useListEventsQuery, usePublishEventMutation } from "@workspace/store/reducers/organizerEventsApi"
 import type { Event } from "@workspace/store/reducers/organizerEventsApi"
+import { useListOwnerOrganizationsQuery } from "@workspace/store/reducers/organizationsApi"
 import { Skeleton } from "@/components/ui/skeleton"
+import { toast } from "sonner"
 
 // Helper to get cover image from event_media
 function getCoverImage(event: Event): string {
@@ -101,8 +103,20 @@ export default function EventsPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
   const [selectedEventForShare, setSelectedEventForShare] = useState<Event | null>(null)
+  const [publishEvent] = usePublishEventMutation()
 
   // Fetch events from API
+  // NOTE: the backend policy scope now returns ONLY events the current user
+  // can manage (own orgs + co-organizer links + manager assignments).
+  // Public discovery lives on GET /public/events and must never appear here.
+  // As defense-in-depth (stale cache, admin token, pre-fix data), we also
+  // filter client-side to the user's own organization(s).
+  const { data: organizationsData } = useListOwnerOrganizationsQuery()
+  const myOrganizationIds = useMemo(
+    () => new Set((organizationsData?.data ?? []).map((org) => org.id)),
+    [organizationsData]
+  )
+
   const { data: eventsResponse, isLoading, error } = useListEventsQuery({
     page: 1,
     per_page: 100,
@@ -110,7 +124,16 @@ export default function EventsPage() {
     order_direction: "desc",
   })
 
-  const events = eventsResponse?.data || []
+  const events = useMemo(() => {
+    const all = eventsResponse?.data || []
+    // Only apply the client filter once we know the user's orgs; otherwise
+    // (e.g. orgs query still loading) fall back to the server-scoped result.
+    if (myOrganizationIds.size === 0) return all
+    return all.filter((event) => {
+      const orgId = event.organization_id ?? event.organization?.id
+      return orgId !== undefined && myOrganizationIds.has(orgId)
+    })
+  }, [eventsResponse, myOrganizationIds])
 
   // Prepare event data for table - using real API data
   const eventsForTable: EventRow[] = useMemo(
@@ -331,6 +354,28 @@ export default function EventsPage() {
         // TODO: Open edit dialog
         console.log("Edit event", row.id)
       },
+    },
+    {
+      label: "Publish",
+      icon: Rocket,
+      primary: true,
+      iconOnly: true,
+      variant: "success",
+      onClick: async (row) => {
+        try {
+          await publishEvent({
+            id: row.id,
+            idempotencyKey: `event-publish-${row.id}-${Date.now()}`,
+          }).unwrap()
+          toast.success("Event published successfully!")
+        } catch (err: any) {
+          const errorMessage = err?.data?.message || err?.message || "Failed to publish event"
+          toast.error(errorMessage)
+          console.error("Publish error:", err)
+        }
+      },
+      // Only show for draft events
+      hidden: (row) => row.status.toLowerCase() !== "draft",
     },
     {
       label: "Share",

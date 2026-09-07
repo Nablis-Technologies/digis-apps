@@ -3,10 +3,14 @@
 import { motion } from "framer-motion"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Calendar03Icon, Location01Icon, Image01Icon } from "@hugeicons/core-free-icons"
+import { Calendar03Icon, Location01Icon, Image01Icon, Rocket01Icon } from "@hugeicons/core-free-icons"
 import { formatDate, formatNumber, calculatePercentage } from "@/lib/utils"
 import type { Event } from "@workspace/store/reducers/organizerEventsApi"
+import { usePublishEventMutation } from "@workspace/store/reducers/organizerEventsApi"
+import { toast } from "sonner"
+import { useState } from "react"
 
 interface ApiEventCardProps {
   event: Event
@@ -20,6 +24,9 @@ function getCoverImage(event: Event): string {
 }
 
 export function ApiEventCard({ event, index = 0 }: ApiEventCardProps) {
+  const [publishEvent, { isLoading: isPublishing }] = usePublishEventMutation()
+  const [isLocalPublishing, setIsLocalPublishing] = useState(false)
+  
   // TODO: Replace with real ticket data from API when available
   const totalTickets = 0
   const soldTickets = 0
@@ -32,6 +39,27 @@ export function ApiEventCard({ event, index = 0 }: ApiEventCardProps) {
     ? `${primaryDate.venue.name}${primaryDate.venue.city ? `, ${primaryDate.venue.city}` : ""}`
     : "TBD"
   const dateLabel = primaryDate?.starts_at ? formatDate(primaryDate.starts_at) : formatDate(event.created_at)
+
+  const handlePublish = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    setIsLocalPublishing(true)
+    try {
+      await publishEvent({
+        id: event.id,
+        idempotencyKey: `event-publish-${event.id}-${Date.now()}`,
+      }).unwrap()
+      
+      toast.success("Event published successfully!")
+    } catch (err: any) {
+      const errorMessage = err?.data?.message || err?.message || "Failed to publish event"
+      toast.error(errorMessage)
+      console.error("Publish error:", err)
+    } finally {
+      setIsLocalPublishing(false)
+    }
+  }
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -101,7 +129,20 @@ export function ApiEventCard({ event, index = 0 }: ApiEventCardProps) {
               </Badge>
             </div>
             
-
+            {/* Publish Button Overlay for Draft Events */}
+            {event.status.toLowerCase() === "draft" && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                <Button
+                  size="lg"
+                  onClick={handlePublish}
+                  disabled={isPublishing || isLocalPublishing}
+                  className="gap-2 bg-gradient-to-r from-emerald-500 to-lime-500 font-bold text-white shadow-xl hover:from-emerald-600 hover:to-lime-600"
+                >
+                  <HugeiconsIcon icon={Rocket01Icon} strokeWidth={2} className="size-5" />
+                  {isPublishing || isLocalPublishing ? "Publishing..." : "Publish Now"}
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Content */}

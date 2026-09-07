@@ -15,7 +15,7 @@ export const ONBOARDING_STEPS = [
     id: 2,
     title: "Business Details",
     description: "Your business information",
-    fields: ["licenseFile", "tin", "bankName", "accountNumber", "address"],
+    fields: ["businessName", "organizer_type", "tin", "bankName", "accountNumber", "address", "city"],
   },
   {
     id: 3,
@@ -35,38 +35,40 @@ export const ONBOARDING_STEPS = [
     description: "Review and agree to terms",
     fields: ["agreedToTerms", "agreedToFees", "agreedToDataAccuracy"],
   },
+  {
+    id: 6,
+    title: "Verification",
+    description: "Upload documents & submit for review",
+    fields: ["profileFile", "bannerFile", "businessLicenseFile", "tinCertificateFile"],
+  },
 ]
 
 export const EVENT_TYPES = [
-  { value: "concert", label: "Concert" },
+  { value: "music", label: "Music" },
+  { value: "sports", label: "Sports" },
   { value: "conference", label: "Conference" },
+  { value: "comedy", label: "Comedy" },
+  { value: "theater", label: "Theater" },
   { value: "festival", label: "Festival" },
   { value: "workshop", label: "Workshop" },
-  { value: "seminar", label: "Seminar" },
   { value: "exhibition", label: "Exhibition" },
-  { value: "sports", label: "Sports" },
-  { value: "theater", label: "Theater" },
-  { value: "comedy", label: "Comedy Show" },
-  { value: "networking", label: "Networking" },
-  { value: "charity", label: "Charity Event" },
-  { value: "fashion", label: "Fashion Show" },
-  { value: "art", label: "Art Event" },
-  { value: "food", label: "Food & Drink" },
+  { value: "other", label: "Other" },
 ]
 
 export const AUDIENCE_SIZES = [
-  { value: "0-100", label: "Small (0-100)" },
-  { value: "100-500", label: "Medium (100-500)" },
-  { value: "500-1000", label: "Large (500-1,000)" },
-  { value: "1000-5000", label: "Very Large (1,000-5,000)" },
-  { value: "5000+", label: "Massive (5,000+)" },
+  { value: "under_100", label: "Small (Under 100)" },
+  { value: "100_500", label: "Medium (100-500)" },
+  { value: "500_1000", label: "Large (500-1,000)" },
+  { value: "1000_5000", label: "Very Large (1,000-5,000)" },
+  { value: "5000_plus", label: "Massive (5,000+)" },
 ]
 
 export const EVENT_FREQUENCIES = [
-  { value: "first-time", label: "First Time" },
-  { value: "occasionally", label: "Occasionally (1-3 per year)" },
-  { value: "regularly", label: "Regularly (4-12 per year)" },
-  { value: "frequently", label: "Frequently (12+ per year)" },
+  { value: "one_time", label: "One Time" },
+  { value: "monthly", label: "Monthly" },
+  { value: "quarterly", label: "Quarterly" },
+  { value: "weekly", label: "Weekly" },
+  { value: "seasonal", label: "Seasonal" },
 ]
 
 export const PAYOUT_METHODS = [

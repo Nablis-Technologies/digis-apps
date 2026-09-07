@@ -20,12 +20,22 @@ export const profileSchema = z.object({
 export type ProfileFormData = z.infer<typeof profileSchema>
 
 // Step 2: Business Information
+export const ORGANIZER_TYPES = [
+  "individual",
+  "company",
+  "ngo",
+  "government",
+  "collective",
+] as const
+
 export const businessSchema = z.object({
-  licenseFile: z.instanceof(File).optional().or(z.string().optional()),
+  businessName: z.string().min(2, "Organization name must be at least 2 characters"),
+  organizer_type: z.enum(ORGANIZER_TYPES).default("individual"),
   tin: z.string().min(10, "TIN must be at least 10 characters"),
   bankName: z.string().min(2, "Bank name is required"),
   accountNumber: z.string().min(5, "Account number is required"),
   address: z.string().min(10, "Address must be at least 10 characters"),
+  city: z.string().min(2, "City is required"),
 })
 
 export type BusinessFormData = z.infer<typeof businessSchema>
@@ -54,6 +64,32 @@ export const agreementSchema = z.object({
 })
 
 export type AgreementFormData = z.infer<typeof agreementSchema>
+
+// Step 6: Verification documents — all four are REQUIRED by the backend
+// (PATCH /organizations/owner/:id/documents) before the organization can be
+// submitted for verification. Keys must match the contract exactly.
+const verificationFile = (label: string) =>
+  z
+    .instanceof(File, { message: `${label} is required` })
+    .refine((f) => f.size <= 10 * 1024 * 1024, {
+      message: `${label} must be smaller than 10MB`,
+    })
+    .refine(
+      (f) =>
+        ["application/pdf", "image/jpeg", "image/jpg", "image/png"].includes(
+          f.type
+        ),
+      { message: `${label} must be a PDF, JPG, or PNG file` }
+    )
+
+export const verificationSchema = z.object({
+  profileFile: verificationFile("Profile logo"),
+  bannerFile: verificationFile("Banner image"),
+  businessLicenseFile: verificationFile("Business license"),
+  tinCertificateFile: verificationFile("TIN certificate"),
+})
+
+export type VerificationFormData = z.infer<typeof verificationSchema>
 
 // Event creation schema
 export const eventSchema = z.object({

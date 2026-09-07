@@ -541,6 +541,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
     }
 
     let stepLabel = "create-event"
+    let createdEventId: string | null = null
 
     try {
       // Determine category IDs to attach
@@ -565,6 +566,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
       }).unwrap()
 
       const eventId = eventResult.data.id
+      createdEventId = eventId
       toast.dismiss()
 
       // Step 1b: Upload banner image (required)
@@ -916,7 +918,15 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
       
     } catch (err: any) {
       toast.dismiss()
-      const errorMessage = err?.data?.message || err?.message || "Failed to create event. Please try again."
+      // The event itself may already exist at this point (publish runs last).
+      // A 403 here almost always means the organization is not verified yet —
+      // say so plainly instead of surfacing the raw "not authorized" error.
+      const isPublishForbidden =
+        createdEventId !== null &&
+        (err?.status === 403 || err?.data?.code === "not_authorized")
+      const errorMessage = isPublishForbidden
+        ? "Event saved as a draft — publishing requires a verified organization. Submit your organization for verification, then publish again after approval."
+        : err?.data?.message || err?.message || "Failed to create event. Please try again."
       toast.error(errorMessage)
       setError(errorMessage)
       console.error("Event creation error:", err)
@@ -1256,7 +1266,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm">
-                    Banner Image <span className="text-destructive">*</span>
+                    Cover Image <span className="text-destructive">*</span>
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">Upload a cover image for the event</p>
                 </div>
@@ -1284,11 +1294,17 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                 {bannerPreview && (
                   <div className="space-y-1.5">
                     <p className="text-xs font-medium">Preview</p>
-                    <img
-                      src={bannerPreview}
-                      alt="Banner preview"
-                      className="h-32 w-full object-cover rounded-xl"
-                    />
+                    <div className="grid grid-cols-3 gap-2">
+                      <div></div>
+                      <div className="bg-card border border-border/60 rounded-xl overflow-hidden">
+                        <img
+                          src={bannerPreview}
+                          alt="Banner preview"
+                          className="w-full h-full object-cover aspect-[4/5]"
+                        />
+                      </div>
+                      <div></div>
+                    </div>
                   </div>
                 )}
                 {!bannerFile && (
@@ -1350,11 +1366,13 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                                 className="relative group cursor-grab active:cursor-grabbing"
                                 whileDrag={{ scale: 1.05, zIndex: 10 }}
                               >
-                                <img
-                                  src={item.preview}
-                                  alt={`Gallery ${idx + 1}`}
-                                  className="h-24 w-full object-cover rounded-xl pointer-events-none"
-                                />
+                                <div className="bg-card border border-border/60 rounded-xl overflow-hidden">
+                                  <img
+                                    src={item.preview}
+                                    alt={`Gallery ${idx + 1}`}
+                                    className="w-full h-full object-cover aspect-[4/5] pointer-events-none"
+                                  />
+                                </div>
                                 <button
                                   type="button"
                                   onPointerDown={(e) => e.stopPropagation()}
