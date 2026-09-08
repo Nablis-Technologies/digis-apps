@@ -374,14 +374,12 @@ export default function EventsPage() {
           console.error("Publish error:", err)
         }
       },
-      // Only show for draft events
-      hidden: (row) => row.status.toLowerCase() !== "draft",
+      // Only show for draft events (remove publish icon if published or live)
+      hidden: (row: EventRow) => row.status?.toLowerCase() !== "draft",
     },
     {
       label: "Share",
       icon: Share2,
-      primary: true,
-      iconOnly: true,
       onClick: (row) => {
         const event = events.find((e) => e.id === row.id)
         if (event) {
