@@ -2,6 +2,8 @@
  * Utility functions for DEGES Organizer Platform
  */
 
+export { cn } from "@workspace/ui/lib/utils"
+
 /**
  * Currency formatter for Ethiopian Birr
  */

@@ -578,7 +578,23 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
         mediaFormData.append("event_media[alt_text]", title || "")
         mediaFormData.append("event_media[caption]", "")
         mediaFormData.append("file", bannerFile)
-        await createEventMedia({ eventId, formData: mediaFormData }).unwrap()
+        try {
+          await createEventMedia({ eventId, formData: mediaFormData }).unwrap()
+        } catch (mediaErr: any) {
+          const errDetail =
+            mediaErr?.data?.errors?.type?.[0] ||
+            mediaErr?.data?.error ||
+            mediaErr?.data?.message ||
+            ""
+          if (
+            errDetail.toLowerCase().includes("cover") ||
+            errDetail.toLowerCase().includes("already")
+          ) {
+            console.warn("Event already has a cover, continuing setup")
+          } else {
+            throw mediaErr
+          }
+        }
         toast.dismiss()
       }
 

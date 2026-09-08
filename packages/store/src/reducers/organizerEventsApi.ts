@@ -21,6 +21,7 @@ export interface EventDateCapacity {
 export interface Event {
   id: string
   title: string
+  slug?: string
   description: string | null
   visibility: "public" | "private"
   timezone: string
@@ -273,6 +274,7 @@ export interface CreateEventPayload {
   event: {
     title: string
     description?: string
+    slug?: string
     visibility: "public" | "private"
     timezone?: string
     currency?: string
@@ -706,7 +708,11 @@ export const organizerEventsApi = createApi({
         method: "POST",
         body: formData,
       }),
-      invalidatesTags: (_result, _error, { eventId }) => [{ type: "EventMedia", id: eventId }],
+      invalidatesTags: (_result, _error, { eventId }) => [
+        { type: "EventMedia", id: eventId },
+        { type: "Events", id: eventId },
+        { type: "Events", id: "LIST" },
+      ],
     }),
 
     updateEventMedia: builder.mutation<
@@ -721,6 +727,8 @@ export const organizerEventsApi = createApi({
       invalidatesTags: (_result, _error, { mediaId, eventId }) => [
         { type: "EventMedia", id: mediaId },
         { type: "EventMedia", id: eventId },
+        { type: "Events", id: eventId },
+        { type: "Events", id: "LIST" },
       ],
     }),
 
@@ -729,7 +737,11 @@ export const organizerEventsApi = createApi({
         url: `/events/${eventId}/event_media/${mediaId}`,
         method: "DELETE",
       }),
-      invalidatesTags: (_result, _error, { eventId }) => [{ type: "EventMedia", id: eventId }],
+      invalidatesTags: (_result, _error, { eventId }) => [
+        { type: "EventMedia", id: eventId },
+        { type: "Events", id: eventId },
+        { type: "Events", id: "LIST" },
+      ],
     }),
 
     reorderEventMedia: builder.mutation<SingleResponse<EventMedia[]>, { eventId: string; orderedIds: string[] }>({

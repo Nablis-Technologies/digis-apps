@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Calendar03Icon, Location01Icon, Image01Icon, Rocket01Icon } from "@hugeicons/core-free-icons"
+import { Calendar03Icon, Location01Icon, Image01Icon, Rocket01Icon, Edit01Icon } from "@hugeicons/core-free-icons"
 import { formatDate, formatNumber, calculatePercentage } from "@/lib/utils"
 import type { Event } from "@workspace/store/reducers/organizerEventsApi"
 import { usePublishEventMutation } from "@workspace/store/reducers/organizerEventsApi"
@@ -15,15 +15,18 @@ import { useState } from "react"
 interface ApiEventCardProps {
   event: Event
   index?: number
+  onEdit?: (event: Event) => void
 }
 
 // Helper to get cover image
 function getCoverImage(event: Event): string {
-  const coverMedia = event.event_media?.find(media => media.type === "cover")
-  return coverMedia?.file?.medium || coverMedia?.file?.url || ""
+  const coverMedia = event.event_media?.find(
+    media => media.type?.toLowerCase() === "cover" || Number(media.position) === 0
+  )
+  return coverMedia?.file?.medium || coverMedia?.file?.url || coverMedia?.file_url || ""
 }
 
-export function ApiEventCard({ event, index = 0 }: ApiEventCardProps) {
+export function ApiEventCard({ event, index = 0, onEdit }: ApiEventCardProps) {
   const [publishEvent, { isLoading: isPublishing }] = usePublishEventMutation()
   const [isLocalPublishing, setIsLocalPublishing] = useState(false)
   
@@ -122,8 +125,21 @@ export function ApiEventCard({ event, index = 0 }: ApiEventCardProps) {
                 <HugeiconsIcon icon={Image01Icon} className="size-16 text-olive-400 dark:text-olive-600" />
               </div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0" />
-            <div className="absolute right-2 top-2">
+            <div className="absolute right-2 top-2 z-10 flex items-center gap-1.5">
+              {onEdit && event.status?.toLowerCase() === "draft" && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    onEdit(event)
+                  }}
+                  className="flex size-7 items-center justify-center rounded-full bg-background/85 text-muted-foreground shadow-sm backdrop-blur-md transition-colors hover:text-foreground hover:bg-background"
+                  title="Edit Event"
+                >
+                  <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} className="size-3.5" />
+                </button>
+              )}
               <Badge className={getStatusColor(event.status)}>
                 {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
               </Badge>

@@ -24,6 +24,7 @@ import {
 import { Eye, Pencil, Share2, Copy, Trash2, Rocket } from "lucide-react"
 import { StatsGrid } from "@/components/dashboard/stats-grid"
 import { CreateEventDialog } from "../../../components/events/create-event-dialog"
+import { EditEventDialog } from "../../../components/events/edit-event-dialog"
 import { ShareEventDialog } from "../../../components/events/share-event-dialog"
 import { formatNumber, formatCurrencyShort, formatCurrency, formatDateTime, calculatePercentage } from "@/lib/utils"
 import { ViewToggle, type ViewMode } from "../../../components/events/view-toggle"
@@ -37,8 +38,10 @@ import { toast } from "sonner"
 
 // Helper to get cover image from event_media
 function getCoverImage(event: Event): string {
-  const coverMedia = event.event_media?.find(media => media.type === "cover")
-  return coverMedia?.file?.medium || coverMedia?.file?.url || ""
+  const coverMedia = event.event_media?.find(
+    media => media.type?.toLowerCase() === "cover" || Number(media.position) === 0
+  )
+  return coverMedia?.file?.medium || coverMedia?.file?.url || coverMedia?.file_url || ""
 }
 
 // Event row type for DataTable
@@ -101,6 +104,8 @@ export default function EventsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [selectedEventForEdit, setSelectedEventForEdit] = useState<Event | null>(null)
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
   const [selectedEventForShare, setSelectedEventForShare] = useState<Event | null>(null)
   const [publishEvent] = usePublishEventMutation()
@@ -351,9 +356,14 @@ export default function EventsPage() {
       primary: true,
       iconOnly: true,
       onClick: (row) => {
-        // TODO: Open edit dialog
-        console.log("Edit event", row.id)
+        const found = events.find((e) => e.id === row.id)
+        if (found) {
+          setSelectedEventForEdit(found)
+          setEditDialogOpen(true)
+        }
       },
+      // Published events cannot be modified per backend policy; only show for drafts
+      hidden: (row: EventRow) => row.status?.toLowerCase() !== "draft",
     },
     {
       label: "Publish",
@@ -380,6 +390,8 @@ export default function EventsPage() {
     {
       label: "Share",
       icon: Share2,
+      primary: true,
+      iconOnly: true,
       onClick: (row) => {
         const event = events.find((e) => e.id === row.id)
         if (event) {
@@ -547,12 +559,29 @@ export default function EventsPage() {
             ) : (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {filteredEvents.map((event, index) => (
-                  <ApiEventCard key={event.id} event={event} index={index} />
+                  <ApiEventCard
+                    key={event.id}
+                    event={event}
+                    index={index}
+                    onEdit={(e) => {
+                      setSelectedEventForEdit(e)
+                      setEditDialogOpen(true)
+                    }}
+                  />
                 ))}
               </div>
             )}
           </div>
         </>
+      )}
+
+      {/* Edit Event Dialog */}
+      {selectedEventForEdit && (
+        <EditEventDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          event={selectedEventForEdit}
+        />
       )}
 
       {/* Share Event Dialog */}

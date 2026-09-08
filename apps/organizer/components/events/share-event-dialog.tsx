@@ -31,7 +31,10 @@ export function ShareEventDialog({ open, onOpenChange, event }: ShareEventDialog
         id: event.id,
         name: event.title,
         category: event.categories?.[0]?.name || event.category_ids?.[0] || "Event",
-        bannerUrl: event.event_media?.find(m => m.type === "cover")?.file?.medium || event.event_media?.find(m => m.type === "cover")?.file?.url || "/assets/placeholder-event.jpg",
+        bannerUrl: (() => {
+          const cover = event.event_media?.find(m => m.type?.toLowerCase() === "cover" || Number(m.position) === 0)
+          return cover?.file?.medium || cover?.file?.url || cover?.file_url || "/assets/placeholder-event.jpg"
+        })(),
         venue: event.event_dates?.[0]?.venue?.name || "TBD",
         city: event.event_dates?.[0]?.venue?.city || "Addis Ababa",
         startAt: event.event_dates?.[0]?.starts_at || event.created_at,

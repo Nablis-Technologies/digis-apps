@@ -9,7 +9,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   FileEmpty01Icon,
-  MoreHorizontalIcon,
+  MoreVerticalIcon,
 } from "@hugeicons/core-free-icons"
 import {
   DropdownMenu,
@@ -154,7 +154,7 @@ function ActionButtons<T>({ row, actions }: { row: T; actions: RowAction<T>[] })
               title="More actions"
             >
               <HugeiconsIcon
-                icon={MoreHorizontalIcon}
+                icon={MoreVerticalIcon}
                 strokeWidth={2}
                 className="size-4"
               />

@@ -42,6 +42,7 @@ import {
 import { StatsGrid } from "@/components/dashboard/stats-grid"
 import { formatDate, formatCurrency, formatCurrencyShort, formatNumber, calculatePercentage } from "@/lib/utils"
 import { ShareEventDialog } from "@/organizer-components/events/share-event-dialog"
+import { EditEventDialog } from "@/organizer-components/events/edit-event-dialog"
 import { useGetEventQuery } from "@workspace/store/reducers/organizerEventsApi"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -128,6 +129,7 @@ function SalesTooltip({
 export default function EventDetailPage({ params }: EventDetailPageProps) {
   const { id } = use(params)
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
   
   // Fetch event from API
   const { data: eventResponse, isLoading, error } = useGetEventQuery(id)
@@ -158,8 +160,10 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   }
 
   // Get cover image
-  const coverImage = event.event_media?.find(m => m.type === "cover")
-  const coverImageUrl = coverImage?.file?.thumbnail || coverImage?.file?.url
+  const coverImage = event.event_media?.find(
+    m => m.type?.toLowerCase() === "cover" || Number(m.position) === 0
+  )
+  const coverImageUrl = coverImage?.file?.medium || coverImage?.file?.thumbnail || coverImage?.file?.url || coverImage?.file_url
 
   // Get gallery images
   const galleryImages = event.event_media
@@ -404,10 +408,12 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             <HugeiconsIcon icon={Share01Icon} strokeWidth={2} className="size-4" />
             Share
           </Button>
-          <Button size="sm" className="gap-2">
-            <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} className="size-4" />
-            View event page
-          </Button>
+          {event.status?.toLowerCase() === "draft" && (
+            <Button size="sm" className="gap-2" onClick={() => setEditDialogOpen(true)}>
+              <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} className="size-4" />
+              Edit event
+            </Button>
+          )}
         </div>
       </motion.div>
 
@@ -717,6 +723,13 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         open={shareDialogOpen}
         onOpenChange={setShareDialogOpen}
         event={event}
+      />
+
+      {/* Edit Event Dialog */}
+      <EditEventDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        event={event || null}
       />
     </div>
   )
