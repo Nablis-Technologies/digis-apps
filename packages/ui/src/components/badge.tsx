@@ -40,6 +40,8 @@ const badgeVariants = cva(
   }
 )
 
+export type BadgeVariant = NonNullable<VariantProps<typeof badgeVariants>["variant"]>
+
 function Badge({
   className,
   variant = "default",
@@ -56,6 +58,205 @@ function Badge({
       className={cn(badgeVariants({ variant }), className)}
       {...props}
     />
+  )
+}
+
+// ─── Category Badge Dictionary & Helper ──────────────────────────────────────
+
+export const CATEGORY_BADGE_DICTIONARY: Record<string, BadgeVariant> = {
+  // Entertainment & Music
+  music: "violet",
+  concert: "violet",
+  nightlife: "violet",
+  party: "violet",
+  festival: "violet",
+
+  // Arts & Culture
+  "arts & culture": "pink",
+  art: "pink",
+  arts: "pink",
+  culture: "pink",
+  theatre: "pink",
+  comedy: "pink",
+  film: "pink",
+
+  // Education & Workshops
+  workshop: "info",
+  education: "info",
+  training: "info",
+  seminar: "info",
+  webinar: "info",
+  classes: "info",
+
+  // Tech & Business
+  technology: "orange",
+  tech: "orange",
+  business: "orange",
+  conference: "orange",
+  startup: "orange",
+  networking: "orange",
+
+  // Sports & Wellness
+  sports: "success",
+  fitness: "success",
+  health: "success",
+  wellness: "success",
+  yoga: "success",
+  outdoor: "success",
+
+  // Food & Community
+  "food & drink": "warning",
+  food: "warning",
+  dining: "warning",
+  cooking: "warning",
+  charity: "success",
+  community: "pink",
+}
+
+export function getCategoryBadgeVariant(category: string): BadgeVariant {
+  const normalized = category.toLowerCase().trim()
+  if (CATEGORY_BADGE_DICTIONARY[normalized]) {
+    return CATEGORY_BADGE_DICTIONARY[normalized]
+  }
+  const fallbackPalette: BadgeVariant[] = [
+    "violet",
+    "pink",
+    "orange",
+    "info",
+    "success",
+    "warning",
+    "default",
+  ]
+  const hash = normalized.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0)
+  return fallbackPalette[hash % fallbackPalette.length]
+}
+
+export interface CategoryBadgeProps extends React.ComponentProps<typeof Badge> {
+  category: string
+}
+
+export function CategoryBadge({
+  category,
+  className,
+  variant,
+  ...props
+}: CategoryBadgeProps) {
+  const resolvedVariant = variant || getCategoryBadgeVariant(category)
+
+  return (
+    <Badge
+      variant={resolvedVariant}
+      className={cn("border-0 shadow-none text-[11px] h-5 px-2.5 font-medium", className)}
+      {...props}
+    >
+      {category}
+    </Badge>
+  )
+}
+
+// ─── Status Badge Dictionary & Helper ────────────────────────────────────────
+
+export interface StatusBadgeConfig {
+  variant: BadgeVariant
+  dotClass: string
+  label?: string
+}
+
+export const STATUS_BADGE_DICTIONARY: Record<string, StatusBadgeConfig> = {
+  live: {
+    variant: "success",
+    dotClass: "bg-emerald-500 animate-pulse",
+    label: "Live",
+  },
+  published: {
+    variant: "info",
+    dotClass: "bg-sky-500",
+    label: "Published",
+  },
+  draft: {
+    variant: "warning",
+    dotClass: "bg-amber-500",
+    label: "Draft",
+  },
+  scheduled: {
+    variant: "info",
+    dotClass: "bg-sky-500",
+    label: "Scheduled",
+  },
+  completed: {
+    variant: "secondary",
+    dotClass: "bg-muted-foreground",
+    label: "Completed",
+  },
+  cancelled: {
+    variant: "destructive",
+    dotClass: "bg-red-500",
+    label: "Cancelled",
+  },
+  archived: {
+    variant: "outline",
+    dotClass: "bg-muted-foreground",
+    label: "Archived",
+  },
+  active: {
+    variant: "success",
+    dotClass: "bg-emerald-500",
+    label: "Active",
+  },
+  inactive: {
+    variant: "secondary",
+    dotClass: "bg-muted-foreground",
+    label: "Inactive",
+  },
+  pending: {
+    variant: "warning",
+    dotClass: "bg-amber-500",
+    label: "Pending",
+  },
+}
+
+export function getStatusBadgeConfig(status?: string): StatusBadgeConfig {
+  const normalized = (status || "").toLowerCase().trim()
+  if (STATUS_BADGE_DICTIONARY[normalized]) {
+    return STATUS_BADGE_DICTIONARY[normalized]
+  }
+  return {
+    variant: "secondary",
+    dotClass: "bg-muted-foreground",
+    label: status ? status.charAt(0).toUpperCase() + status.slice(1) : "Unknown",
+  }
+}
+
+export interface StatusBadgeProps extends Omit<React.ComponentProps<typeof Badge>, "children"> {
+  status?: string
+  showDot?: boolean
+  label?: string
+}
+
+export function StatusBadge({
+  status = "draft",
+  showDot = true,
+  label,
+  className,
+  variant,
+  ...props
+}: StatusBadgeProps) {
+  const config = getStatusBadgeConfig(status)
+  const resolvedVariant = variant || config.variant
+  const displayLabel = label || config.label || status
+
+  return (
+    <Badge
+      variant={resolvedVariant}
+      className={cn(
+        "border-0 shadow-none text-[11px] font-semibold h-6 px-2.5 gap-1.5 capitalize",
+        className
+      )}
+      {...props}
+    >
+      {showDot && <span className={cn("size-1.5 rounded-full shrink-0", config.dotClass)} />}
+      <span>{displayLabel}</span>
+    </Badge>
   )
 }
 

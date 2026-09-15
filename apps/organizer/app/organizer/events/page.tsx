@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import { cn } from "@workspace/ui/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
+import { Badge, CategoryBadge, StatusBadge } from "@/components/ui/badge"
 import {
   Select,
   SelectContent,
@@ -57,46 +58,6 @@ type EventRow = {
   totalSold: number
   totalCapacity: number
   totalRevenue: number
-}
-
-type BadgeVariant =
-  | "default"
-  | "secondary"
-  | "destructive"
-  | "success"
-  | "warning"
-  | "info"
-  | "violet"
-  | "pink"
-  | "orange"
-  | "outline"
-
-function getStatusVariant(status: string): BadgeVariant {
-  switch (status.toLowerCase()) {
-    case "live":
-      return "success"
-    case "published":
-      return "info"
-    case "draft":
-      return "outline"
-    default:
-      return "default"
-  }
-}
-
-function getCategoryVariant(category: string): BadgeVariant {
-  const variants: BadgeVariant[] = [
-    "violet",
-    "pink",
-    "orange",
-    "info",
-    "success",
-    "warning",
-  ]
-  const hash = category
-    .split("")
-    .reduce((acc, ch) => acc + ch.charCodeAt(0), 0)
-  return variants[hash % variants.length]
 }
 
 export default function EventsPage() {
@@ -264,16 +225,13 @@ export default function EventsPage() {
             <div className="mt-1 flex flex-wrap items-center gap-1">
               {row.categories.length > 0 ? (
                 row.categories.map((category, idx) => (
-                  <Badge 
+                  <CategoryBadge 
                     key={idx}
-                    variant={getCategoryVariant(category)} 
-                    className="border border-current/20"
-                  >
-                    {category}
-                  </Badge>
+                    category={category}
+                  />
                 ))
               ) : (
-                <Badge variant="outline" className="border border-current/20">
+                <Badge variant="outline" className="border-0 shadow-none text-[11px] h-5 px-2 font-medium text-muted-foreground/60">
                   Uncategorized
                 </Badge>
               )}
@@ -332,9 +290,7 @@ export default function EventsPage() {
       header: "Status",
       accessorKey: "status",
       cell: (row: EventRow) => (
-        <Badge variant={getStatusVariant(row.status)}>
-          {row.status}
-        </Badge>
+        <StatusBadge status={row.status} />
       ),
     },
   ]
@@ -528,7 +484,19 @@ export default function EventsPage() {
             {viewMode === "grid" ? (
               <div className="grid gap-6 sm:grid-cols-2">
                 {filteredEvents.map((event, index) => (
-                  <ApiEventCard key={event.id} event={event} index={index} />
+                  <ApiEventCard
+                    key={event.id}
+                    event={event}
+                    index={index}
+                    onEdit={(e) => {
+                      setSelectedEventForEdit(e)
+                      setEditDialogOpen(true)
+                    }}
+                    onShare={(e) => {
+                      setSelectedEventForShare(e)
+                      setShareDialogOpen(true)
+                    }}
+                  />
                 ))}
               </div>
             ) : (
@@ -566,6 +534,18 @@ export default function EventsPage() {
                     onEdit={(e) => {
                       setSelectedEventForEdit(e)
                       setEditDialogOpen(true)
+                    }}
+                    onShare={(e) => {
+                      setSelectedEventForShare(e)
+                      setShareDialogOpen(true)
+                    }}
+                    onDuplicate={(e) => {
+                      console.log("Duplicate event", e.id)
+                    }}
+                    onDelete={(e) => {
+                      if (confirm(`Are you sure you want to delete "${e.title}"?`)) {
+                        console.log("Delete event", e.id)
+                      }
                     }}
                   />
                 ))}
