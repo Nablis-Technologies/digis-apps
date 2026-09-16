@@ -84,18 +84,84 @@ export const SUPPORT_OPTIONS = [
   { value: "whatsapp", label: "WhatsApp" },
 ]
 
-export const ETHIOPIAN_BANKS = [
-  { value: "cbe", label: "Commercial Bank of Ethiopia" },
-  { value: "awash", label: "Awash Bank" },
-  { value: "dashen", label: "Dashen Bank" },
-  { value: "boa", label: "Bank of Abyssinia" },
-  { value: "wegagen", label: "Wegagen Bank" },
-  { value: "nib", label: "NIB International Bank" },
-  { value: "coop", label: "Cooperative Bank of Oromia" },
-  { value: "lion", label: "Lion International Bank" },
-  { value: "oib", label: "Oromia International Bank" },
-  { value: "zemen", label: "Zemen Bank" },
-  { value: "bunna", label: "Bunna Bank" },
+export interface EthiopianBank {
+  value: string
+  label: string
+  shortName?: string
+}
+
+export const ETHIOPIAN_BANKS: EthiopianBank[] = [
+  { value: "cbe", label: "Commercial Bank of Ethiopia", shortName: "CBE" },
+  { value: "awash", label: "Awash Bank", shortName: "Awash" },
+  { value: "dashen", label: "Dashen Bank", shortName: "Dashen" },
+  { value: "boa", label: "Bank of Abyssinia", shortName: "Abyssinia" },
+  { value: "wegagen", label: "Wegagen Bank", shortName: "Wegagen" },
+  { value: "nib", label: "NIB International Bank", shortName: "NIB Bank" },
+  { value: "coop", label: "Cooperative Bank of Oromia", shortName: "Coop Bank" },
+  { value: "lion", label: "Lion International Bank", shortName: "Lion Bank" },
+  { value: "oib", label: "Oromia International Bank", shortName: "Oromia Bank" },
+  { value: "zemen", label: "Zemen Bank", shortName: "Zemen" },
+  { value: "bunna", label: "Bunna Bank", shortName: "Bunna" },
+  { value: "hibret", label: "Hibret Bank", shortName: "Hibret" },
+  { value: "berhan", label: "Berhan Bank", shortName: "Berhan" },
+]
+
+export const BANK_LOGOS: Record<string, string> = {
+  cbe: "/assets/CBE.jpeg",
+  awash: "/assets/AWASH.jpeg",
+  dashen: "/assets/DASHEN.png",
+  boa: "/assets/BOA.png",
+  wegagen: "/assets/WEGAGEN.png",
+  nib: "/assets/NIB.png",
+  coop: "/assets/COOP.png",
+  lion: "/assets/LION.jpeg",
+  oib: "/assets/OROMIA.png",
+  zemen: "/assets/ZEMEN.png",
+  bunna: "/assets/BUNNA.jpeg",
+  hibret: "/assets/HIBRET.jpeg",
+  berhan: "/assets/BERHAN.jpeg",
+}
+
+export interface MobileWalletProvider {
+  value: string
+  label: string
+  operator: string
+  color: string
+  shortCode: string
+  logo?: string
+}
+
+export const ETHIOPIAN_MOBILE_WALLETS: MobileWalletProvider[] = [
+  {
+    value: "telebirr",
+    label: "Telebirr",
+    operator: "Ethio Telecom",
+    color: "#0072BC",
+    shortCode: "09...",
+  },
+  {
+    value: "cbe_birr",
+    label: "CBE Birr",
+    operator: "Commercial Bank of Ethiopia",
+    color: "#7B2253",
+    shortCode: "09...",
+    logo: "/assets/CBE BIRR.jpeg",
+  },
+  {
+    value: "mpesa",
+    label: "M-Pesa",
+    operator: "Safaricom Ethiopia",
+    color: "#008751",
+    shortCode: "07...",
+  },
+  {
+    value: "awash_birr",
+    label: "Awash Birr",
+    operator: "Awash Bank",
+    color: "#003366",
+    shortCode: "09...",
+    logo: "/assets/AWASH BIRR.jpeg",
+  },
 ]
 
 // Service fee percentages

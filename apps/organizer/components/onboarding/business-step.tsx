@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { businessSchema, ORGANIZER_TYPES, type BusinessFormData } from "@/lib/schemas"
-import { ETHIOPIAN_BANKS } from "@/lib/constants"
+import { ETHIOPIAN_BANKS, BANK_LOGOS } from "@/lib/constants"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { BankIcon, Location01Icon, Building02Icon, IdIcon } from "@hugeicons/core-free-icons"
 import Image from "next/image"
@@ -23,24 +23,13 @@ interface BusinessStepProps {
   initialData?: Partial<BusinessFormData>
 }
 
-// Bank logos mapping to actual image files
-const BANK_LOGOS: Record<string, string> = {
-  cbe: "/assets/CBE.jpeg",
-  awash: "/assets/AWASH.jpeg",
-  dashen: "/assets/DASHEN.png",
-  boa: "/assets/BOA.png",
-  wegagen: "/assets/WEGAGEN.png",
-  nib: "/assets/NIB.png",
-  coop: "/assets/COOP.png",
-  lion: "/assets/LION.jpeg",
-  oib: "/assets/OROMIA.png",
-  zemen: "/assets/ZEMEN.png",
-  bunna: "/assets/BUNNA.jpeg",
-}
-
 export function BusinessStep({ onNext, initialData }: BusinessStepProps) {
   const [selectedBank, setSelectedBank] = useState<string>(initialData?.bankName || "")
   const [selectedOrgType, setSelectedOrgType] = useState<string>(initialData?.organizer_type || "individual")
+
+  const selectedBankObj = ETHIOPIAN_BANKS.find(
+    (b) => b.value.toLowerCase() === selectedBank?.toLowerCase()
+  )
 
   const {
     register,
@@ -144,17 +133,36 @@ export function BusinessStep({ onNext, initialData }: BusinessStepProps) {
                 id="bankName"
                 className="w-full h-12 justify-between bg-background/50 border-border/60 hover:border-primary transition-colors"
               >
-                <SelectValue placeholder="Select your bank" />
+                <SelectValue placeholder="Select your bank">
+                  {selectedBankObj ? (
+                    <div className="flex items-center gap-2.5 overflow-hidden">
+                      <div className="size-6 relative rounded bg-white p-0.5 border border-border/40 shrink-0 overflow-hidden">
+                        <Image
+                          src={BANK_LOGOS[selectedBankObj.value] || "/assets/CBE.jpeg"}
+                          alt={selectedBankObj.label}
+                          fill
+                          className="object-contain"
+                        />
+                      </div>
+                      <span className="font-medium text-foreground truncate">{selectedBankObj.label}</span>
+                    </div>
+                  ) : undefined}
+                </SelectValue>
               </SelectTrigger>
-              <SelectContent className="w-[--radix-select-trigger-width] min-w-72">
-                <div className="grid grid-cols-3 gap-2 p-1">
+              <SelectContent
+                className="z-[9999] w-[--radix-select-trigger-width] max-h-[340px] overflow-y-auto p-2"
+                position="popper"
+                align="start"
+              >
+                <div className="grid grid-cols-2 gap-2 p-1">
                   {ETHIOPIAN_BANKS.map((bank) => (
                     <SelectItem
                       key={bank.value}
                       value={bank.value}
-                      className="flex flex-col items-center justify-center gap-1.5 border border-border/60 rounded-lg p-2 cursor-pointer focus:bg-primary/5 data-[state=checked]:border-primary data-[state=checked]:bg-primary/5 [&>span:first-child]:hidden"
+                      title={bank.label}
+                      className="relative flex items-center gap-2.5 py-2 px-2.5 rounded-lg border border-border/50 bg-card/40 hover:bg-muted/70 hover:border-primary/50 data-[state=checked]:border-primary data-[state=checked]:bg-primary/10 data-[state=checked]:ring-1 data-[state=checked]:ring-primary cursor-pointer transition-all duration-150 group pr-6 [&>span:first-child]:top-2 [&>span:first-child]:right-2 [&>span:first-child]:size-3.5 [&>span:first-child]:text-primary *:[span]:last:w-full *:[span]:last:min-w-0 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2.5"
                     >
-                      <div className="size-10 relative rounded-lg bg-white p-1 flex items-center justify-center overflow-hidden">
+                      <div className="size-8 relative rounded-md bg-white p-0.5 border border-border/40 shrink-0 flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform overflow-hidden">
                         <Image
                           src={BANK_LOGOS[bank.value] || "/assets/CBE.jpeg"}
                           alt={bank.label}
@@ -162,9 +170,14 @@ export function BusinessStep({ onNext, initialData }: BusinessStepProps) {
                           className="object-contain p-0.5"
                         />
                       </div>
-                      <span className="text-[11px] font-medium text-center leading-tight">
-                        {bank.label}
-                      </span>
+                      <div className="flex flex-col min-w-0 text-left overflow-hidden">
+                        <span className="text-xs font-semibold text-foreground truncate">
+                          {bank.shortName || bank.label}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground truncate leading-none mt-0.5">
+                          {bank.label}
+                        </span>
+                      </div>
                     </SelectItem>
                   ))}
                 </div>

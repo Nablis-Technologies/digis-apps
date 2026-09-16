@@ -289,6 +289,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   const { data: categoriesData } = useListPublicCategoriesQuery()
   const { data: venuesData, isLoading: isLoadingVenues } = useListPublicVenuesQuery({ page: 1, per_page: 100 })
   
+  const [selectedOrgId, setSelectedOrgId] = useState<string>("")
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [step, setStep] = useState(0)
   const [error, setError] = useState("")
@@ -519,7 +520,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
       return
     }
 
-    const organizationId = organizationsData.data[0].id // Use first organization
+    const organizationId = selectedOrgId || organizationsData.data[0].id // Use selected or first organization
 
     let validTypes = ticketTypes.filter((t) => t.name && Number(t.quantity) > 0)
     if (entryType === "ticketed" && validTypes.length === 0) {
@@ -1104,6 +1105,48 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                 {visibility.charAt(0).toUpperCase() + visibility.slice(1)}
               </Badge>
             </div>
+
+            {/* Organization Info / Selector */}
+            {organizationsData?.data && organizationsData.data.length > 1 ? (
+              <div className="space-y-2">
+                <Label htmlFor="org-select" className="text-sm font-semibold">
+                  Hosting Organization <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={selectedOrgId || organizationsData.data[0]?.id || ""}
+                  onValueChange={(v) => setSelectedOrgId(v)}
+                >
+                  <SelectTrigger id="org-select" className="h-11 w-full">
+                    <SelectValue placeholder="Select hosting organization..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {organizationsData.data.map((org) => (
+                      <SelectItem key={org.id} value={org.id}>
+                        {org.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : organizationsData?.data && organizationsData.data.length === 1 ? (
+              <div className="flex items-center gap-2 rounded-xl border border-border/50 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">Hosting Organization:</span>
+                <span className="font-medium text-foreground">{organizationsData.data[0].name}</span>
+              </div>
+            ) : !isLoadingOrgs && (!organizationsData?.data || organizationsData.data.length === 0) ? (
+              <div className="flex items-center justify-between rounded-xl border border-warning/30 bg-warning/10 p-3 text-xs text-warning">
+                <span>No organization found. Please complete organizer onboarding first.</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => router.push("/onboarding")}
+                >
+                  Onboard Now
+                </Button>
+              </div>
+            ) : null}
 
             <div className="space-y-2">
               <Label htmlFor="title" className="text-sm font-semibold">

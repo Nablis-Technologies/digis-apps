@@ -476,7 +476,7 @@ export default function EventsPage() {
 
       {/* Events Display */}
       {filteredEvents.length === 0 ? (
-        <EmptyState hasFilters={hasFilters} />
+        <EmptyState hasFilters={hasFilters} onCreateEvent={() => setCreateDialogOpen(true)} />
       ) : (
         <>
           {/* Mobile: List/Grid View */}
