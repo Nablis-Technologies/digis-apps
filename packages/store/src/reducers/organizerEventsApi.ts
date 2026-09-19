@@ -5,19 +5,50 @@ import { baseQueryWithReauth } from "../api"
 // Type Definitions
 // ─────────────────────────────────────────────────────────────────────────────
 
+export interface EventDateVenue {
+  id: string
+  name: string
+  city?: string | null
+}
+
+export interface EventDateCapacity {
+  limit?: number | null
+  held?: number | null
+  issued?: number | null
+  available?: number | null
+}
+
 export interface Event {
   id: string
   title: string
+  slug?: string
   description: string | null
   visibility: "public" | "private"
   timezone: string
   currency: string
-  organization_id: string
+  // Top-level id is returned once the backend deploys it in the index/show
+  // projection; the nested summary is always rendered, so treat both as the
+  // source of truth.
+  organization_id?: string
+  organization?: { id: string; name: string; slug: string }
   category_ids: string[]
   status: "draft" | "published" | "cancelled" | "completed"
   published_at?: string | null
   created_at: string
   updated_at: string
+  event_media?: EventMedia[]
+  categories?: Array<{ id: string; name: string; slug: string }>
+  event_dates?: Array<{
+    id: string
+    name?: string | null
+    doors_at?: string | null
+    starts_at: string
+    ends_at?: string | null
+    timezone?: string
+    status?: string
+    venue?: EventDateVenue | null
+    capacity?: EventDateCapacity | null
+  }>
   [key: string]: unknown
 }
 
@@ -25,6 +56,7 @@ export interface EventDate {
   id: string
   event_id: string
   venue_id?: string | null
+  venue?: EventDateVenue | null
   name?: string | null
   doors_at?: string | null
   starts_at: string
@@ -32,6 +64,7 @@ export interface EventDate {
   timezone: string
   status?: string
   venue_capacity?: number | null
+  capacity?: EventDateCapacity | null
   created_at?: string
   updated_at?: string
 }
@@ -192,6 +225,14 @@ export interface EventMedia {
   position: number
   alt_text?: string | null
   caption?: string | null
+  file?: {
+    filename: string
+    content_type: string
+    byte_size: number
+    url: string
+    thumbnail: string
+    medium: string
+  } | null
   file_url?: string | null
   created_at?: string
   updated_at?: string
@@ -225,12 +266,15 @@ interface ListEventsParams {
   order_direction?: "asc" | "desc"
   "q[status_eq]"?: string
   "q[visibility_eq]"?: string
+  "q[organization_id_eq]"?: string
+  "q[organization_id_in]"?: string | string[]
 }
 
 export interface CreateEventPayload {
   event: {
     title: string
     description?: string
+    slug?: string
     visibility: "public" | "private"
     timezone?: string
     currency?: string
@@ -664,7 +708,11 @@ export const organizerEventsApi = createApi({
         method: "POST",
         body: formData,
       }),
-      invalidatesTags: (_result, _error, { eventId }) => [{ type: "EventMedia", id: eventId }],
+      invalidatesTags: (_result, _error, { eventId }) => [
+        { type: "EventMedia", id: eventId },
+        { type: "Events", id: eventId },
+        { type: "Events", id: "LIST" },
+      ],
     }),
 
     updateEventMedia: builder.mutation<
@@ -679,6 +727,8 @@ export const organizerEventsApi = createApi({
       invalidatesTags: (_result, _error, { mediaId, eventId }) => [
         { type: "EventMedia", id: mediaId },
         { type: "EventMedia", id: eventId },
+        { type: "Events", id: eventId },
+        { type: "Events", id: "LIST" },
       ],
     }),
 
@@ -687,7 +737,11 @@ export const organizerEventsApi = createApi({
         url: `/events/${eventId}/event_media/${mediaId}`,
         method: "DELETE",
       }),
-      invalidatesTags: (_result, _error, { eventId }) => [{ type: "EventMedia", id: eventId }],
+      invalidatesTags: (_result, _error, { eventId }) => [
+        { type: "EventMedia", id: eventId },
+        { type: "Events", id: eventId },
+        { type: "Events", id: "LIST" },
+      ],
     }),
 
     reorderEventMedia: builder.mutation<SingleResponse<EventMedia[]>, { eventId: string; orderedIds: string[] }>({

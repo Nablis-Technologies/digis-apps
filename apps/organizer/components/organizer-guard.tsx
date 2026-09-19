@@ -1,43 +1,51 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { isOnboardingComplete, getOrganizerAccount } from "@/lib/utils"
+import { useListOwnerOrganizationsQuery } from "@workspace/store/reducers/organizationsApi"
 
 export function OrganizerGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
-  const [isChecking, setIsChecking] = useState(true)
+  const { data, isLoading, isError } = useListOwnerOrganizationsQuery({ per_page: 5 })
+
+  const organizations = data?.data ?? []
+  const hasOrganizations = organizations.length > 0
+  const isOnboardingOrgRoute = pathname === "/organizer/onboarding-org" || pathname === "/onboarding"
 
   useEffect(() => {
-    const checkOnboarding = () => {
-      // Skip check if already on onboarding page
-      if (pathname === "/onboarding") {
-        setIsChecking(false)
-        return
-      }
+    if (isLoading) return
 
-      const account = getOrganizerAccount()
-      const isComplete = isOnboardingComplete()
-
-      // If no account or onboarding not complete, redirect to onboarding
-      if (!account || !isComplete) {
-        router.replace("/onboarding")
-        return
-      }
-
-      setIsChecking(false)
+    // If user has NO organizations and is not already on an onboarding route,
+    // redirect them to the organization onboarding page
+    if (!hasOrganizations && !isOnboardingOrgRoute) {
+      router.replace("/organizer/onboarding-org")
     }
+  }, [isLoading, hasOrganizations, isOnboardingOrgRoute, router])
 
-    checkOnboarding()
-  }, [pathname, router])
-
-  if (isChecking) {
+  if (isLoading) {
     return (
       <div className="flex min-h-svh items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="size-8 animate-spin rounded-full border-4 border-muted border-t-primary" />
-          <p className="text-sm text-muted-foreground">Checking account status...</p>
+          <p className="text-sm text-muted-foreground">Checking organizer workspaces...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // If user has no organizations and is on onboarding route, render children (the onboarding page)
+  if (!hasOrganizations && isOnboardingOrgRoute) {
+    return <>{children}</>
+  }
+
+  // If user has no organizations and not yet redirected, keep loading screen
+  if (!hasOrganizations && !isError) {
+    return (
+      <div className="flex min-h-svh items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="size-8 animate-spin rounded-full border-4 border-muted border-t-primary" />
+          <p className="text-sm text-muted-foreground">Preparing your workspace setup...</p>
         </div>
       </div>
     )

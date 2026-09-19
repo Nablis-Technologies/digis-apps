@@ -2,19 +2,29 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence, Reorder } from "framer-motion"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useGetMeQuery } from "@workspace/store/reducers/authApi"
 import { useListOwnerOrganizationsQuery } from "@workspace/store/reducers/organizationsApi"
+import { useActiveOrganization } from "../../providers/organization-provider"
 import { useListPublicCategoriesQuery } from "@workspace/store/reducers/categoriesApi"
+import { useListPublicVenuesQuery } from "@workspace/store/reducers/venuesApi"
 import { 
   useCreateEventMutation, 
   usePublishEventMutation,
+  useCreateEventMediaMutation,
   useCreateEventDateMutation,
   useCreateEventProductMutation,
   useActivateEventProductMutation,
@@ -51,7 +61,7 @@ import {
   BookmarkIcon,
   Tick02Icon,
   ImageAddIcon,
-  Clock03Icon,
+  AlertCircleIcon,
 } from "@hugeicons/core-free-icons"
 import { 
   HelpCircle, 
@@ -273,16 +283,19 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   const [createRegistrationForm] = useCreateRegistrationFormMutation()
   const [createRegistrationFormVersion] = useCreateRegistrationFormVersionMutation()
   const [publishRegistrationFormVersion] = usePublishRegistrationFormVersionMutation()
+  const [createEventMedia] = useCreateEventMediaMutation()
   
-  // Get current user data, organizations, and categories
+  // Get current user data, active organization, and categories
   const { data: userData } = useGetMeQuery()
-  const { data: organizationsData, isLoading: isLoadingOrgs } = useListOwnerOrganizationsQuery()
+  const { activeOrg, activeOrgId, organizations, isLoading: isLoadingOrgs } = useActiveOrganization()
   const { data: categoriesData } = useListPublicCategoriesQuery()
+  const { data: venuesData, isLoading: isLoadingVenues } = useListPublicVenuesQuery({ page: 1, per_page: 100 })
   
+  const [selectedOrgId, setSelectedOrgId] = useState<string>("")
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [step, setStep] = useState(0)
   const [error, setError] = useState("")
-  const [fieldErrors, setFieldErrors] = useState<{ title?: string; date?: string; location?: string }>({})
+  const [fieldErrors, setFieldErrors] = useState<{ title?: string; date?: string; endDate?: string; location?: string }>({})
 
   const [entryType, setEntryType] = useState<EntryType>("ticketed")
   const [visibility, setVisibility] = useState<Visibility>("public")
@@ -293,9 +306,13 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   const [time, setTime] = useState("19:00")
   const [endDate, setEndDate] = useState("")
   const [endTime, setEndTime] = useState("")
-  const [location, setLocation] = useState("")
+  const [venueId, setVenueId] = useState("")
   const [onlineUrl, setOnlineUrl] = useState("")
-  const [bannerImage, setBannerImage] = useState("")
+  const [bannerFile, setBannerFile] = useState<File | null>(null)
+  const [bannerPreview, setBannerPreview] = useState("")
+  const [galleryFiles, setGalleryFiles] = useState<{ file: File; preview: string }[]>([])
+
+  const MAX_GALLERY = 20
 
   const [requiresApproval, setRequiresApproval] = useState(false)
   const [rsvpCapacity, setRsvpCapacity] = useState("")
@@ -327,9 +344,16 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   const [editGuestForm, setEditGuestForm] = useState({ name: "", contact: "", personalLink: "", allowedGuests: 0 })
 
   // Toggle states for optional sections
-  const [showEndDateTime, setShowEndDateTime] = useState(false)
   const [showOnlineLink, setShowOnlineLink] = useState(false)
-  const [showBannerImage, setShowBannerImage] = useState(false)
+  const [showGallery, setShowGallery] = useState(false)
+
+  const toggleGallery = (next: boolean) => {
+    if (!next) {
+      galleryFiles.forEach((item) => URL.revokeObjectURL(item.preview))
+      setGalleryFiles([])
+    }
+    setShowGallery(next)
+  }
   const [showTicketOptionalFields, setShowTicketOptionalFields] = useState<{ [key: number]: boolean }>({})
 
   const [isRecurring, setIsRecurring] = useState(false)
@@ -474,14 +498,24 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   const handleCreate = async (publish: boolean) => {
     setError("")
     setFieldErrors({})
+
+    // If trying to publish with an unverified organization
+    if (publish && activeOrg && !activeOrg.verified) {
+      const msg = "You cannot publish events until your organization is verified. Please save as draft instead."
+      toast.error(msg)
+      setError(msg)
+      return
+    }
     
     const dateTime = date && time ? `${date}T${time}:00` : ""
+    const endDateTimeInput = endDate && endTime ? `${endDate}T${endTime}:00` : ""
     
     // Validation
-    const errors: { title?: string; date?: string; location?: string } = {}
+    const errors: { title?: string; date?: string; endDate?: string; location?: string } = {}
     if (!title.trim()) errors.title = "Event title is required"
     if (!dateTime) errors.date = "Event date and time are required"
-    if (!location.trim()) errors.location = "Venue or location is required"
+    if (!endDateTimeInput) errors.endDate = "Event end date and time are required"
+    if (!venueId) errors.location = "Please select a venue"
     
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors)
@@ -489,14 +523,13 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
       return
     }
 
-    // Check if user has an organization
-    if (!organizationsData?.data || organizationsData.data.length === 0) {
-      toast.error("You need to create an organization first before creating events.")
-      setError("No organization found. Please complete the onboarding process.")
+    // Check if user has an active organization
+    const organizationId = selectedOrgId || activeOrgId || activeOrg?.id
+    if (!organizationId) {
+      toast.error("You need an active organization to create events.")
+      setError("No active organization found. Please select or create an organization first.")
       return
     }
-
-    const organizationId = organizationsData.data[0].id // Use first organization
 
     let validTypes = ticketTypes.filter((t) => t.name && Number(t.quantity) > 0)
     if (entryType === "ticketed" && validTypes.length === 0) {
@@ -511,7 +544,14 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
 
     setIsCreating(true)
 
+    if (!bannerFile) {
+      setError("Please upload a banner image to continue.")
+      setIsCreating(false)
+      return
+    }
+
     let stepLabel = "create-event"
+    let createdEventId: string | null = null
 
     try {
       // Determine category IDs to attach
@@ -536,15 +576,59 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
       }).unwrap()
 
       const eventId = eventResult.data.id
+      createdEventId = eventId
       toast.dismiss()
+
+      // Step 1b: Upload banner image (required)
+      if (bannerFile) {
+        toast.loading("Uploading banner image...")
+        const mediaFormData = new FormData()
+        mediaFormData.append("event_media[type]", "cover")
+        mediaFormData.append("event_media[position]", "0")
+        mediaFormData.append("event_media[alt_text]", title || "")
+        mediaFormData.append("event_media[caption]", "")
+        mediaFormData.append("file", bannerFile)
+        try {
+          await createEventMedia({ eventId, formData: mediaFormData }).unwrap()
+        } catch (mediaErr: any) {
+          const errDetail =
+            mediaErr?.data?.errors?.type?.[0] ||
+            mediaErr?.data?.error ||
+            mediaErr?.data?.message ||
+            ""
+          if (
+            errDetail.toLowerCase().includes("cover") ||
+            errDetail.toLowerCase().includes("already")
+          ) {
+            console.warn("Event already has a cover, continuing setup")
+          } else {
+            throw mediaErr
+          }
+        }
+        toast.dismiss()
+      }
+
+      // Step 1c: Upload gallery images (optional)
+      if (galleryFiles.length > 0) {
+        toast.loading(`Uploading ${galleryFiles.length} gallery image${galleryFiles.length > 1 ? "s" : ""}...`)
+        for (let idx = 0; idx < galleryFiles.length; idx++) {
+          const galleryFormData = new FormData()
+          galleryFormData.append("event_media[type]", "gallery")
+          galleryFormData.append("event_media[position]", String(idx + 1))
+          galleryFormData.append("event_media[alt_text]", `${title || "Gallery"} ${idx + 1}`)
+          galleryFormData.append("event_media[caption]", "")
+          galleryFormData.append("file", galleryFiles[idx].file)
+          await createEventMedia({ eventId, formData: galleryFormData }).unwrap()
+        }
+        toast.dismiss()
+      }
+
       toast.loading("Setting up event schedule...")
 
       // Step 2: Add event date(s)
       stepLabel = "create-event-date"
       const startDateTime = new Date(dateTime).toISOString()
-      const endDateTime = (showEndDateTime && endDate && endTime) 
-        ? new Date(`${endDate}T${endTime}:00`).toISOString() 
-        : undefined
+      const endDateTime = new Date(endDateTimeInput).toISOString()
 
       const dateResult = await createEventDate({
         eventId,
@@ -553,6 +637,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
           starts_at: startDateTime,
           ends_at: endDateTime,
           timezone: "Africa/Addis_Ababa",
+          venue_id: venueId,
         },
       }).unwrap()
 
@@ -859,7 +944,15 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
       
     } catch (err: any) {
       toast.dismiss()
-      const errorMessage = err?.data?.message || err?.message || "Failed to create event. Please try again."
+      // The event itself may already exist at this point (publish runs last).
+      // A 403 here almost always means the organization is not verified yet —
+      // say so plainly instead of surfacing the raw "not authorized" error.
+      const isPublishForbidden =
+        createdEventId !== null &&
+        (err?.status === 403 || err?.data?.code === "not_authorized" || err?.data?.code === "organization_not_verified")
+      const errorMessage = isPublishForbidden
+        ? "Event saved as a draft — you cannot publish until your organization is verified. Submit your organization for verification, then publish again after approval."
+        : err?.data?.error || err?.data?.message || err?.message || "Failed to create event. Please try again."
       toast.error(errorMessage)
       setError(errorMessage)
       console.error("Event creation error:", err)
@@ -938,9 +1031,20 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
             transition={{ duration: 0.25 }}
             className="space-y-6"
           >
-            <div>
-              <h2 className="font-bold text-lg mb-1">How do people get in?</h2>
-              <p className="text-muted-foreground text-sm">Choose the entry model for your event</p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-2 border-b border-border/40">
+              <div>
+                <h2 className="font-bold text-lg mb-1">How do people get in?</h2>
+                <p className="text-muted-foreground text-sm">Choose the entry model for your event</p>
+              </div>
+              {activeOrg && (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-lime-500/10 border border-lime-500/20 text-xs self-start sm:self-auto">
+                  <span className="text-muted-foreground">Hosting as:</span>
+                  <span className="font-semibold text-foreground">{activeOrg.name}</span>
+                  {activeOrg.verified && (
+                    <span className="text-[10px] text-lime-600 dark:text-lime-400 font-medium">✓ Verified</span>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -1022,6 +1126,37 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
               </Badge>
             </div>
 
+            {/* Organization Info / Active Workspace */}
+            {activeOrg ? (
+              <div className="flex items-center justify-between rounded-xl border border-lime-500/20 bg-lime-500/10 px-3.5 py-2.5 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-foreground">Hosting Organization:</span>
+                  <span className="font-medium text-foreground">{activeOrg.name}</span>
+                  {activeOrg.verified ? (
+                    <span className="text-[10px] text-lime-600 dark:text-lime-400 font-medium">✓ Verified</span>
+                  ) : (
+                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">• Unverified Draft</span>
+                  )}
+                </div>
+                <span className="text-[11px] text-muted-foreground hidden sm:inline">
+                  (Switch active workspace via sidebar)
+                </span>
+              </div>
+            ) : !isLoadingOrgs && organizations.length === 0 ? (
+              <div className="flex items-center justify-between rounded-xl border border-warning/30 bg-warning/10 p-3 text-xs text-warning">
+                <span>No organization found. Please complete organizer onboarding first.</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => router.push("/organizer/onboarding-org")}
+                >
+                  Set Up Organization
+                </Button>
+              </div>
+            ) : null}
+
             <div className="space-y-2">
               <Label htmlFor="title" className="text-sm font-semibold">
                 Event Name <span className="text-destructive">*</span>
@@ -1092,68 +1227,44 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
               </div>
             </div>
 
-            {/* Optional: End Date/Time */}
-            <div className={`rounded-2xl border transition-colors ${showEndDateTime ? `${selectedEntryType.borderClass} ${selectedEntryType.bgClass}/10` : "border-border/50 bg-card/50"}`}>
-              <div
-                role="button"
-                tabIndex={0}
-                className="w-full flex items-center gap-3 p-4 text-left cursor-pointer"
-                onClick={() => setShowEndDateTime((v) => !v)}
-                onKeyDown={(e) => e.key === "Enter" && setShowEndDateTime((v) => !v)}
-              >
-                <div className={`p-2 rounded-xl flex-shrink-0 transition-colors ${showEndDateTime ? `${selectedEntryType.bgClass}/15` : "bg-muted"}`}>
-                  <HugeiconsIcon icon={Clock03Icon} strokeWidth={2} className={`w-4 h-4 ${showEndDateTime ? selectedEntryType.textClass : "text-muted-foreground"}`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm">End Date & Time</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Optional — set when the event concludes</p>
-                </div>
-                <Switch 
-                  checked={showEndDateTime} 
-                  onCheckedChange={setShowEndDateTime} 
-                  className="flex-shrink-0 data-checked:[&]:bg-[var(--event-color)]" 
-                  style={{ "--event-color": `var(${selectedEntryType.color})` } as React.CSSProperties}
-                  onClick={(e) => e.stopPropagation()} 
-                />
+            {/* End Date/Time (required) */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">End Date <span className="text-destructive">*</span></Label>
+                <Input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); if (fieldErrors.endDate) setFieldErrors((p) => ({ ...p, endDate: undefined })) }} className={`h-11 ${fieldErrors.endDate ? "border-destructive focus-visible:border-destructive" : ""}`} />
+                {fieldErrors.endDate && <p className="text-destructive text-xs">{fieldErrors.endDate}</p>}
               </div>
-              <AnimatePresence initial={false}>
-                {showEndDateTime && (
-                  <motion.div
-                    key="end-datetime-body"
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2, ease: "easeInOut" }}
-                    className="overflow-hidden"
-                  >
-                    <div className="px-4 pb-4 space-y-3 border-t border-border/40 pt-3">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs font-medium">End Date</Label>
-                          <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-9 text-sm" />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs font-medium">End Time</Label>
-                          <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="h-9 text-sm" />
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">End Time <span className="text-destructive">*</span></Label>
+                <Input type="time" value={endTime} onChange={(e) => { setEndTime(e.target.value); if (fieldErrors.endDate) setFieldErrors((p) => ({ ...p, endDate: undefined })) }} className={`h-11 ${fieldErrors.endDate ? "border-destructive focus-visible:border-destructive" : ""}`} />
+              </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="location" className="text-sm font-semibold">
                 Venue / Location <span className="text-destructive">*</span>
               </Label>
-              <Input
-                id="location"
-                placeholder="e.g. Millennium Hall, Addis Ababa"
-                value={location}
-                onChange={(e) => { setLocation(e.target.value); if (fieldErrors.location) setFieldErrors((p) => ({ ...p, location: undefined })) }}
-                className={`h-11 ${fieldErrors.location ? "border-destructive focus-visible:border-destructive" : ""}`}
-              />
+              {isLoadingVenues ? (
+                <p className="text-xs text-muted-foreground">Loading venues...</p>
+              ) : venuesData?.data && venuesData.data.length > 0 ? (
+                <Select
+                  value={venueId}
+                  onValueChange={(v) => { setVenueId(v); if (fieldErrors.location) setFieldErrors((p) => ({ ...p, location: undefined })) }}
+                >
+                  <SelectTrigger id="location" className={`h-11 w-full ${fieldErrors.location ? "border-destructive" : ""}`}>
+                    <SelectValue placeholder="Select a venue..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {venuesData.data.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.name}{v.city ? ` — ${v.city}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="text-xs text-muted-foreground">No venues available. Please ask an admin to create one first.</p>
+              )}
               {fieldErrors.location && <p className="text-destructive text-xs">{fieldErrors.location}</p>}
             </div>
 
@@ -1215,34 +1326,91 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
               </AnimatePresence>
             </div>
 
-            {/* Optional: Banner Image */}
-            <div className={`rounded-2xl border transition-colors ${showBannerImage ? `${selectedEntryType.borderClass} ${selectedEntryType.bgClass}/10` : "border-border/50 bg-card/50"}`}>
+            {/* Required: Banner Image (uploaded file) */}
+            <div className="rounded-2xl border border-border/50 bg-card/50">
+              <div className="w-full flex items-center gap-3 p-4">
+                <div className={`p-2 rounded-xl flex-shrink-0 bg-muted`}>
+                  <HugeiconsIcon icon={ImageAddIcon} strokeWidth={2} className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm">
+                    Cover Image <span className="text-destructive">*</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Upload a cover image for the event</p>
+                </div>
+              </div>
+              <div className="px-4 pb-4 space-y-3 border-t border-border/40 pt-3">
+                <input
+                  id="banner"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] ?? null
+                    setBannerFile(file)
+                    if (bannerPreview) URL.revokeObjectURL(bannerPreview)
+                    setBannerPreview(file ? URL.createObjectURL(file) : "")
+                  }}
+                />
+                <Label
+                  htmlFor="banner"
+                  className="flex items-center justify-center gap-2 h-10 w-full rounded-xl border border-dashed border-border cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                >
+                  <HugeiconsIcon icon={Upload01Icon} strokeWidth={2} className="size-4" />
+                  {bannerFile ? bannerFile.name : "Choose image to upload"}
+                </Label>
+                {bannerPreview && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium">Preview</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div></div>
+                      <div className="bg-card border border-border/60 rounded-xl overflow-hidden">
+                        <img
+                          src={bannerPreview}
+                          alt="Banner preview"
+                          className="w-full h-full object-cover aspect-[4/5]"
+                        />
+                      </div>
+                      <div></div>
+                    </div>
+                  </div>
+                )}
+                {!bannerFile && (
+                  <p className="text-xs text-destructive">A banner image is required to create the event.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Optional: Gallery Images */}
+            <div className={`rounded-2xl border transition-colors ${showGallery ? `${selectedEntryType.borderClass} ${selectedEntryType.bgClass}/10` : "border-border/50 bg-card/50"}`}>
               <div
                 role="button"
                 tabIndex={0}
                 className="w-full flex items-center gap-3 p-4 text-left cursor-pointer"
-                onClick={() => setShowBannerImage((v) => !v)}
-                onKeyDown={(e) => e.key === "Enter" && setShowBannerImage((v) => !v)}
+                onClick={() => toggleGallery(!showGallery)}
+                onKeyDown={(e) => e.key === "Enter" && toggleGallery(!showGallery)}
               >
-                <div className={`p-2 rounded-xl flex-shrink-0 transition-colors ${showBannerImage ? `${selectedEntryType.bgClass}/15` : "bg-muted"}`}>
-                  <HugeiconsIcon icon={ImageAddIcon} strokeWidth={2} className={`w-4 h-4 ${showBannerImage ? selectedEntryType.textClass : "text-muted-foreground"}`} />
+                <div className={`p-2 rounded-xl flex-shrink-0 transition-colors ${showGallery ? `${selectedEntryType.bgClass}/15` : "bg-muted"}`}>
+                  <HugeiconsIcon icon={ImageAddIcon} strokeWidth={2} className={`w-4 h-4 ${showGallery ? selectedEntryType.textClass : "text-muted-foreground"}`} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm">Banner Image</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Optional — add a cover image for the event</p>
+                  <p className="font-semibold text-sm">Gallery Images</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Optional — add up to {MAX_GALLERY} images ({galleryFiles.length}/{MAX_GALLERY})
+                  </p>
                 </div>
-                <Switch 
-                  checked={showBannerImage} 
-                  onCheckedChange={setShowBannerImage} 
-                  className="flex-shrink-0 data-checked:[&]:bg-[var(--event-color)]" 
+                <Switch
+                  checked={showGallery}
+                  onCheckedChange={(v) => toggleGallery(v)}
+                  className="flex-shrink-0 data-checked:[&]:bg-[var(--event-color)]"
                   style={{ "--event-color": `var(${selectedEntryType.color})` } as React.CSSProperties}
-                  onClick={(e) => e.stopPropagation()} 
+                  onClick={(e) => e.stopPropagation()}
                 />
               </div>
               <AnimatePresence initial={false}>
-                {showBannerImage && (
+                {showGallery && (
                   <motion.div
-                    key="banner-image-body"
+                    key="gallery-body"
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
@@ -1250,33 +1418,76 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                     className="overflow-hidden"
                   >
                     <div className="px-4 pb-4 space-y-3 border-t border-border/40 pt-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-medium">Image URL</Label>
-                        <div className="relative">
-                          <HugeiconsIcon
-                            icon={ImageAddIcon}
-                            strokeWidth={2}
-                            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
+                      {galleryFiles.length > 0 && (
+                        <>
+                          <p className="text-xs text-muted-foreground">Drag images to reorder — position 1 uploads first.</p>
+                          <Reorder.Group
+                            axis="x"
+                            values={galleryFiles}
+                            onReorder={setGalleryFiles}
+                            className="grid grid-cols-3 gap-2 list-none p-0 m-0"
+                          >
+                            {galleryFiles.map((item, idx) => (
+                              <Reorder.Item
+                                key={item.preview}
+                                value={item}
+                                className="relative group cursor-grab active:cursor-grabbing"
+                                whileDrag={{ scale: 1.05, zIndex: 10 }}
+                              >
+                                <div className="bg-card border border-border/60 rounded-xl overflow-hidden">
+                                  <img
+                                    src={item.preview}
+                                    alt={`Gallery ${idx + 1}`}
+                                    className="w-full h-full object-cover aspect-[4/5] pointer-events-none"
+                                  />
+                                </div>
+                                <button
+                                  type="button"
+                                  onPointerDown={(e) => e.stopPropagation()}
+                                  onClick={() => {
+                                    URL.revokeObjectURL(item.preview)
+                                    setGalleryFiles((prev) => prev.filter((g) => g.preview !== item.preview))
+                                  }}
+                                  className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-3" />
+                                </button>
+                                <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                                  {idx + 1}
+                                </span>
+                              </Reorder.Item>
+                            ))}
+                          </Reorder.Group>
+                        </>
+                      )}
+                      {galleryFiles.length < MAX_GALLERY && (
+                        <>
+                          <input
+                            id="gallery"
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            onChange={(e) => {
+                              const files = Array.from(e.target.files ?? [])
+                              const remaining = MAX_GALLERY - galleryFiles.length
+                              const toAdd = files.slice(0, remaining)
+                              const newItems = toAdd.map((file) => ({
+                                file,
+                                preview: URL.createObjectURL(file),
+                              }))
+                              setGalleryFiles((prev) => [...prev, ...newItems])
+                              e.target.value = ""
+                            }}
                           />
-                          <Input
-                            id="banner"
-                            placeholder="https://..."
-                            value={bannerImage}
-                            onChange={(e) => setBannerImage(e.target.value)}
-                            className="h-9 text-sm pl-10"
-                          />
-                        </div>
-                      </div>
-                      {bannerImage && (
-                        <div className="space-y-1.5">
-                          <p className="text-xs font-medium">Preview</p>
-                          <img
-                            src={bannerImage}
-                            alt="Banner preview"
-                            className="h-32 w-full object-cover rounded-xl"
-                            onError={(e) => (e.currentTarget.style.display = "none")}
-                          />
-                        </div>
+                          <Label
+                            htmlFor="gallery"
+                            className="flex items-center justify-center gap-2 h-10 w-full rounded-xl border border-dashed border-border cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                          >
+                            <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-4" />
+                            Add gallery images
+                          </Label>
+                        </>
                       )}
                     </div>
                   </motion.div>
@@ -2579,12 +2790,11 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
             <div className="grid md:grid-cols-[300px_1fr] gap-5">
               {/* Left: Event Banner */}
               <div className="bg-card border border-border/60 rounded-2xl overflow-hidden">
-                {bannerImage ? (
+                {bannerPreview ? (
                   <img
-                    src={bannerImage}
+                    src={bannerPreview}
                     alt={title}
                     className="w-full h-full object-cover"
-                    onError={(e) => (e.currentTarget.style.display = "none")}
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center p-8">
@@ -2650,10 +2860,10 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                       <span>{time}</span>
                     </div>
                   )}
-                  {location && (
+                  {venueId && (
                     <div className="flex items-center gap-1.5">
                       <span>•</span>
-                      <span>{location}</span>
+                      <span>{venuesData?.data?.find((v) => v.id === venueId)?.name || "Selected venue"}</span>
                     </div>
                   )}
                 </div>
@@ -2865,10 +3075,12 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
             <Button
               className="flex-1 h-11 font-semibold"
               onClick={() => {
-                const errors: { title?: string; date?: string; location?: string } = {}
+                const errors: { title?: string; date?: string; endDate?: string; location?: string; banner?: string } = {}
                 if (!title) errors.title = "Event name is required"
                 if (!date) errors.date = "Date is required"
-                if (!location) errors.location = "Location is required"
+                if (!endDate || !endTime) errors.endDate = "End date and time are required"
+                if (!venueId) errors.location = "Please select a venue"
+                if (!bannerFile) errors.banner = "Banner image is required"
                 setFieldErrors(errors)
                 if (Object.keys(errors).length > 0) return
                 setError("")
@@ -2907,6 +3119,14 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
 
         {step === 4 && (
           <div className="space-y-2">
+            {activeOrg && !activeOrg.verified && (
+              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs leading-relaxed mb-3">
+                <HugeiconsIcon icon={AlertCircleIcon} strokeWidth={2} className="size-4 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-semibold">Verification Required to Publish:</span> Your organization (<span className="font-medium">{activeOrg.name}</span>) is not verified yet. You can save this event as a <strong>Draft</strong>, but you cannot publish it until your organization is verified.
+                </div>
+              </div>
+            )}
             <Button
               className={`w-full h-12 font-bold text-base ${selectedEntryType.bgClass} hover:opacity-90 text-white border-0`}
               onClick={() => handleCreate(true)}

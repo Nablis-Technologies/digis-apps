@@ -30,20 +30,15 @@ interface ExperienceStepProps {
 
 // Map event types to icons (mix of Hugeicons and Lucide)
 const EVENT_TYPE_ICONS: Record<string, { type: 'huge' | 'lucide', icon: any }> = {
-  concert: { type: 'lucide', icon: Music },
+  music: { type: 'lucide', icon: Music },
+  sports: { type: 'huge', icon: FootballIcon },
   conference: { type: 'huge', icon: PresentationPodiumIcon },
+  comedy: { type: 'huge', icon: SmileIcon },
+  theater: { type: 'huge', icon: TheaterIcon },
   festival: { type: 'lucide', icon: PartyPopper },
   workshop: { type: 'huge', icon: PencilEdit01Icon },
-  seminar: { type: 'huge', icon: BookOpenIcon },
   exhibition: { type: 'lucide', icon: Palette },
-  sports: { type: 'huge', icon: FootballIcon },
-  theater: { type: 'huge', icon: TheaterIcon },
-  comedy: { type: 'huge', icon: SmileIcon },
-  networking: { type: 'huge', icon: UserGroupIcon },
-  charity: { type: 'huge', icon: FavouriteIcon },
-  fashion: { type: 'lucide', icon: Shirt },
-  art: { type: 'lucide', icon: Palette },
-  food: { type: 'huge', icon: Restaurant01Icon },
+  other: { type: 'huge', icon: Store01Icon },
 }
 
 export function ExperienceStep({ onNext, initialData }: ExperienceStepProps) {

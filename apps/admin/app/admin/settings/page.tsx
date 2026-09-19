@@ -11,6 +11,7 @@ import {
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { PhoneInput, stripCountryCode } from "@workspace/ui/components/phone-input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 
@@ -167,7 +168,7 @@ function ProfileSection() {
   const [form, setForm] = useState({
     name: "Admin User",
     email: "admin@digis.events",
-    phone: "+251911123456",
+    phone: stripCountryCode("+251911123456"),
   })
 
   return (
@@ -218,9 +219,9 @@ function ProfileSection() {
         </div>
         <div className="space-y-2">
           <Label htmlFor="phone">Phone</Label>
-          <Input
+          <PhoneInput
             id="phone"
-            type="tel"
+            placeholder="91 123 4567"
             value={form.phone}
             onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
           />

@@ -3,10 +3,17 @@ import { baseQueryWithReauth } from "../api"
 
 // ─── Event Dates ─────────────────────────────────────────────────────────────
 
+export interface EventDateVenue {
+  id: string
+  name: string
+  city?: string | null
+}
+
 export interface EventDate {
   id: string
   event_id: string
   venue_id: string | null
+  venue?: EventDateVenue | null
   name: string | null
   doors_at: string | null
   starts_at: string
