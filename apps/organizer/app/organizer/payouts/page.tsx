@@ -50,6 +50,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import Image from "next/image"
 import { useListOwnerOrganizationsQuery } from "@workspace/store/reducers/organizationsApi"
+import { useActiveOrganization } from "../../../providers/organization-provider"
 import {
   useGetOrganizerBalanceQuery,
   useListOrganizerPayoutAccountsQuery,
@@ -237,13 +238,18 @@ export default function PayoutsPage() {
     (b) => b.value.toLowerCase() === String(accountBankSlug || "").toLowerCase()
   )
 
-  // Fetch Owner Organizations
-  const { data: organizationsData, isLoading: isLoadingOrgs } = useListOwnerOrganizationsQuery()
-  const organizations = organizationsData?.data ?? []
+  // Active organization from context
+  const {
+    activeOrg: contextActiveOrg,
+    activeOrgId: contextActiveOrgId,
+    organizations: contextOrgs,
+    isLoading: isLoadingOrgs,
+  } = useActiveOrganization()
+  const organizations = contextOrgs
 
   // Resolve active organization
-  const activeOrgId = selectedOrgId || organizations[0]?.id || ""
-  const activeOrg = organizations.find((o) => o.id === activeOrgId) || organizations[0]
+  const activeOrgId = selectedOrgId || contextActiveOrgId || organizations[0]?.id || ""
+  const activeOrg = organizations.find((o) => o.id === activeOrgId) || contextActiveOrg || organizations[0]
 
   // Finance Queries
   const {

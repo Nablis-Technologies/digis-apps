@@ -44,6 +44,8 @@ import { formatDate, formatCurrency, formatCurrencyShort, formatNumber, calculat
 import { ShareEventDialog } from "@/organizer-components/events/share-event-dialog"
 import { EditEventDialog } from "@/organizer-components/events/edit-event-dialog"
 import { useGetEventQuery } from "@workspace/store/reducers/organizerEventsApi"
+import { useListEventProductsQuery } from "@workspace/store/reducers/ticketingApi"
+import { IssueComplimentaryDialog } from "@/organizer-components/tickets/issue-complimentary-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 
 interface EventDetailPageProps {
@@ -130,10 +132,15 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const { id } = use(params)
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [complimentaryDialogOpen, setComplimentaryDialogOpen] = useState(false)
   
   // Fetch event from API
   const { data: eventResponse, isLoading, error } = useGetEventQuery(id)
   const event = eventResponse?.data
+
+  // Fetch ticket products
+  const { data: productsResponse } = useListEventProductsQuery({ eventId: id }, { skip: !id })
+  const products = productsResponse?.data ?? []
 
   if (isLoading) {
     return (
@@ -246,7 +253,28 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     sellThrough: number
   }
 
-  const tierRows: TierRow[] = []
+  const tierRows: TierRow[] = products.map((p) => {
+    const priceAmount = typeof p.metadata?.price === "number" ? p.metadata.price : 0
+    const sold = 0
+    const capacity =
+      typeof p.metadata?.capacity === "number"
+        ? p.metadata.capacity
+        : (p.ticket_type?.admissions_per_unit ? p.ticket_type.admissions_per_unit * 100 : 100)
+    const remaining = Math.max(0, capacity - sold)
+    const revenue = sold * priceAmount
+    const sellThrough = capacity > 0 ? calculatePercentage(sold, capacity) : 0
+
+    return {
+      id: p.id,
+      name: p.name,
+      price: priceAmount,
+      sold,
+      total: capacity,
+      remaining,
+      revenue,
+      sellThrough,
+    }
+  })
 
   const tierColumns: Column<TierRow>[] = [
     {
@@ -400,7 +428,12 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           )}
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => setComplimentaryDialogOpen(true)}
+          >
             <HugeiconsIcon icon={TicketIcon} strokeWidth={2} className="size-4" />
             Gift tickets
           </Button>
@@ -730,6 +763,13 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         event={event || null}
+      />
+
+      {/* Complimentary Ticket Dialog */}
+      <IssueComplimentaryDialog
+        open={complimentaryDialogOpen}
+        onOpenChange={setComplimentaryDialogOpen}
+        eventId={id}
       />
     </div>
   )

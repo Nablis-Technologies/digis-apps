@@ -71,6 +71,9 @@ const navSecondary: NavSecondaryItem[] = [
   },
 ]
 
+import { OrganizationProvider } from "../../providers/organization-provider"
+import { OrgSidebarSwitcher } from "../../components/layout/org-sidebar-switcher"
+
 export default function OrganizerLayout({
   children,
 }: {
@@ -78,19 +81,25 @@ export default function OrganizerLayout({
 }) {
   return (
     <AuthGuard>
-      <OrganizerGuard>
-        <div className="pt-(--header-height) [--header-height:calc(--spacing(14))]">
-          <SidebarProvider className="flex flex-col">
-            <SiteHeader />
-            <div className="flex flex-1">
-              <AppSidebar sections={navSections} secondaryItems={navSecondary} />
-              <SidebarInset className="flex min-w-0 flex-1 flex-col gap-4 p-4">
-                {children}
-              </SidebarInset>
-            </div>
-          </SidebarProvider>
-        </div>
-      </OrganizerGuard>
+      <OrganizationProvider>
+        <OrganizerGuard>
+          <div className="pt-(--header-height) [--header-height:calc(--spacing(14))]">
+            <SidebarProvider className="flex flex-col">
+              <SiteHeader />
+              <div className="flex flex-1">
+                <AppSidebar
+                  header={<OrgSidebarSwitcher />}
+                  sections={navSections}
+                  secondaryItems={navSecondary}
+                />
+                <SidebarInset className="flex min-w-0 flex-1 flex-col gap-4 p-4">
+                  {children}
+                </SidebarInset>
+              </div>
+            </SidebarProvider>
+          </div>
+        </OrganizerGuard>
+      </OrganizationProvider>
     </AuthGuard>
   )
 }

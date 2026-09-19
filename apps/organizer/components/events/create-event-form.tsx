@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select"
 import { useGetMeQuery } from "@workspace/store/reducers/authApi"
 import { useListOwnerOrganizationsQuery } from "@workspace/store/reducers/organizationsApi"
+import { useActiveOrganization } from "../../providers/organization-provider"
 import { useListPublicCategoriesQuery } from "@workspace/store/reducers/categoriesApi"
 import { useListPublicVenuesQuery } from "@workspace/store/reducers/venuesApi"
 import { 
@@ -283,9 +284,9 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   const [publishRegistrationFormVersion] = usePublishRegistrationFormVersionMutation()
   const [createEventMedia] = useCreateEventMediaMutation()
   
-  // Get current user data, organizations, and categories
+  // Get current user data, active organization, and categories
   const { data: userData } = useGetMeQuery()
-  const { data: organizationsData, isLoading: isLoadingOrgs } = useListOwnerOrganizationsQuery()
+  const { activeOrg, activeOrgId, organizations, isLoading: isLoadingOrgs } = useActiveOrganization()
   const { data: categoriesData } = useListPublicCategoriesQuery()
   const { data: venuesData, isLoading: isLoadingVenues } = useListPublicVenuesQuery({ page: 1, per_page: 100 })
   
@@ -513,14 +514,13 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
       return
     }
 
-    // Check if user has an organization
-    if (!organizationsData?.data || organizationsData.data.length === 0) {
-      toast.error("You need to create an organization first before creating events.")
-      setError("No organization found. Please complete the onboarding process.")
+    // Check if user has an active organization
+    const organizationId = selectedOrgId || activeOrgId || activeOrg?.id
+    if (!organizationId) {
+      toast.error("You need an active organization to create events.")
+      setError("No active organization found. Please select or create an organization first.")
       return
     }
-
-    const organizationId = selectedOrgId || organizationsData.data[0].id // Use selected or first organization
 
     let validTypes = ticketTypes.filter((t) => t.name && Number(t.quantity) > 0)
     if (entryType === "ticketed" && validTypes.length === 0) {
@@ -1022,9 +1022,20 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
             transition={{ duration: 0.25 }}
             className="space-y-6"
           >
-            <div>
-              <h2 className="font-bold text-lg mb-1">How do people get in?</h2>
-              <p className="text-muted-foreground text-sm">Choose the entry model for your event</p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-2 border-b border-border/40">
+              <div>
+                <h2 className="font-bold text-lg mb-1">How do people get in?</h2>
+                <p className="text-muted-foreground text-sm">Choose the entry model for your event</p>
+              </div>
+              {activeOrg && (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-lime-500/10 border border-lime-500/20 text-xs self-start sm:self-auto">
+                  <span className="text-muted-foreground">Hosting as:</span>
+                  <span className="font-semibold text-foreground">{activeOrg.name}</span>
+                  {activeOrg.verified && (
+                    <span className="text-[10px] text-lime-600 dark:text-lime-400 font-medium">✓ Verified</span>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -1106,34 +1117,23 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
               </Badge>
             </div>
 
-            {/* Organization Info / Selector */}
-            {organizationsData?.data && organizationsData.data.length > 1 ? (
-              <div className="space-y-2">
-                <Label htmlFor="org-select" className="text-sm font-semibold">
-                  Hosting Organization <span className="text-destructive">*</span>
-                </Label>
-                <Select
-                  value={selectedOrgId || organizationsData.data[0]?.id || ""}
-                  onValueChange={(v) => setSelectedOrgId(v)}
-                >
-                  <SelectTrigger id="org-select" className="h-11 w-full">
-                    <SelectValue placeholder="Select hosting organization..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {organizationsData.data.map((org) => (
-                      <SelectItem key={org.id} value={org.id}>
-                        {org.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {/* Organization Info / Active Workspace */}
+            {activeOrg ? (
+              <div className="flex items-center justify-between rounded-xl border border-lime-500/20 bg-lime-500/10 px-3.5 py-2.5 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-foreground">Hosting Organization:</span>
+                  <span className="font-medium text-foreground">{activeOrg.name}</span>
+                  {activeOrg.verified ? (
+                    <span className="text-[10px] text-lime-600 dark:text-lime-400 font-medium">✓ Verified</span>
+                  ) : (
+                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">• Unverified Draft</span>
+                  )}
+                </div>
+                <span className="text-[11px] text-muted-foreground hidden sm:inline">
+                  (Switch active workspace via sidebar)
+                </span>
               </div>
-            ) : organizationsData?.data && organizationsData.data.length === 1 ? (
-              <div className="flex items-center gap-2 rounded-xl border border-border/50 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-                <span className="font-semibold text-foreground">Hosting Organization:</span>
-                <span className="font-medium text-foreground">{organizationsData.data[0].name}</span>
-              </div>
-            ) : !isLoadingOrgs && (!organizationsData?.data || organizationsData.data.length === 0) ? (
+            ) : !isLoadingOrgs && organizations.length === 0 ? (
               <div className="flex items-center justify-between rounded-xl border border-warning/30 bg-warning/10 p-3 text-xs text-warning">
                 <span>No organization found. Please complete organizer onboarding first.</span>
                 <Button
@@ -1141,9 +1141,9 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                   variant="outline"
                   size="sm"
                   className="h-7 text-xs"
-                  onClick={() => router.push("/onboarding")}
+                  onClick={() => router.push("/organizer/onboarding-org")}
                 >
-                  Onboard Now
+                  Set Up Organization
                 </Button>
               </div>
             ) : null}

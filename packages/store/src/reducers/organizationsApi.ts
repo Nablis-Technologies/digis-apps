@@ -23,11 +23,13 @@ export interface Organization {
   updated_at?: string
 }
 
-interface ListOrgsParams {
+export interface ListOrgsParams {
   page?: number
   per_page?: number
   order_by?: string
   order_direction?: "asc" | "desc"
+  search?: string
+  q?: Record<string, string | number | boolean>
 }
 
 interface PaginatedResponse<T> {
@@ -77,6 +79,26 @@ interface UpdateOrgPayload {
   }
 }
 
+function formatOrgQueryParams(params?: ListOrgsParams | void) {
+  if (!params) return undefined
+  const queryParams: Record<string, string | number | boolean> = {}
+  if (params.page !== undefined) queryParams.page = params.page
+  if (params.per_page !== undefined) queryParams.per_page = params.per_page
+  if (params.order_by !== undefined) queryParams.order_by = params.order_by
+  if (params.order_direction !== undefined) queryParams.order_direction = params.order_direction
+  if (params.search) {
+    queryParams["q[name_cont]"] = params.search
+  }
+  if (params.q) {
+    Object.entries(params.q).forEach(([k, v]) => {
+      if (v !== undefined && v !== "") {
+        queryParams[`q[${k}]`] = v
+      }
+    })
+  }
+  return Object.keys(queryParams).length > 0 ? queryParams : undefined
+}
+
 export const organizationsApi = createApi({
   reducerPath: "organizationsApi",
   baseQuery: baseQueryWithReauth,
@@ -89,7 +111,7 @@ export const organizationsApi = createApi({
     >({
       query: (params) => ({
         url: "/admin/organizations",
-        params: params ?? undefined,
+        params: formatOrgQueryParams(params),
       }),
       providesTags: (result) =>
         result
@@ -178,7 +200,7 @@ export const organizationsApi = createApi({
     listOwnerOrganizations: builder.query<PaginatedResponse<Organization>, ListOrgsParams | void>({
       query: (params) => ({
         url: "/organizations/owner",
-        params: params ?? undefined,
+        params: formatOrgQueryParams(params),
       }),
       providesTags: (result) =>
         result

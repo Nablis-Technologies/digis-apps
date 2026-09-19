@@ -34,6 +34,7 @@ import { ApiEventCard } from "../../../components/events/api-event-card"
 import { useListEventsQuery, usePublishEventMutation } from "@workspace/store/reducers/organizerEventsApi"
 import type { Event } from "@workspace/store/reducers/organizerEventsApi"
 import { useListOwnerOrganizationsQuery } from "@workspace/store/reducers/organizationsApi"
+import { useActiveOrganization } from "../../../providers/organization-provider"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 
@@ -72,34 +73,25 @@ export default function EventsPage() {
   const [publishEvent] = usePublishEventMutation()
 
   // Fetch events from API
-  // NOTE: the backend policy scope now returns ONLY events the current user
-  // can manage (own orgs + co-organizer links + manager assignments).
-  // Public discovery lives on GET /public/events and must never appear here.
-  // As defense-in-depth (stale cache, admin token, pre-fix data), we also
-  // filter client-side to the user's own organization(s).
-  const { data: organizationsData } = useListOwnerOrganizationsQuery()
-  const myOrganizationIds = useMemo(
-    () => new Set((organizationsData?.data ?? []).map((org) => org.id)),
-    [organizationsData]
-  )
+  const { activeOrg, activeOrgId, isLoading: isLoadingOrg } = useActiveOrganization()
 
-  const { data: eventsResponse, isLoading, error } = useListEventsQuery({
+  const { data: eventsResponse, isLoading: isLoadingEvents, error } = useListEventsQuery({
     page: 1,
     per_page: 100,
     order_by: "created_at",
     order_direction: "desc",
   })
 
+  const isLoading = isLoadingOrg || isLoadingEvents
+
   const events = useMemo(() => {
     const all = eventsResponse?.data || []
-    // Only apply the client filter once we know the user's orgs; otherwise
-    // (e.g. orgs query still loading) fall back to the server-scoped result.
-    if (myOrganizationIds.size === 0) return all
+    if (!activeOrgId) return all
     return all.filter((event) => {
       const orgId = event.organization_id ?? event.organization?.id
-      return orgId !== undefined && myOrganizationIds.has(orgId)
+      return orgId === activeOrgId
     })
-  }, [eventsResponse, myOrganizationIds])
+  }, [eventsResponse, activeOrgId])
 
   // Prepare event data for table - using real API data
   const eventsForTable: EventRow[] = useMemo(

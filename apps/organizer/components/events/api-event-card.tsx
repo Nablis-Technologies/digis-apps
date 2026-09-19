@@ -8,13 +8,10 @@ import {
   Calendar03Icon,
   Location01Icon,
   Image01Icon,
-  Rocket01Icon,
-  Edit01Icon,
-  Share01Icon,
   TicketIcon,
   MoreVerticalIcon,
 } from "@hugeicons/core-free-icons"
-import { Eye, Copy, Trash2 } from "lucide-react"
+import { Eye, Pencil, Share2, Rocket, Copy, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge, CategoryBadge, StatusBadge } from "@/components/ui/badge"
 import {
@@ -167,10 +164,10 @@ export function ApiEventCard({
                     e.stopPropagation()
                     onShare(event)
                   }}
-                  className="flex size-8 items-center justify-center rounded-full bg-black/50 text-white/90 shadow-md backdrop-blur-md transition-all hover:bg-black/80 hover:text-white hover:scale-105"
+                  className="flex size-9 items-center justify-center rounded-full bg-white/95 text-zinc-900 dark:bg-zinc-900/95 dark:text-white shadow-lg border border-black/10 dark:border-white/20 backdrop-blur-md transition-all duration-200 hover:scale-110 hover:text-indigo-600 dark:hover:text-indigo-400 active:scale-95"
                   title="Share Event"
                 >
-                  <HugeiconsIcon icon={Share01Icon} strokeWidth={2} className="size-4" />
+                  <Share2 className="size-4 stroke-[2.2]" />
                 </button>
               )}
 
@@ -182,10 +179,10 @@ export function ApiEventCard({
                     e.stopPropagation()
                     onEdit(event)
                   }}
-                  className="flex size-8 items-center justify-center rounded-full bg-black/50 text-white/90 shadow-md backdrop-blur-md transition-all hover:bg-black/80 hover:text-white hover:scale-105"
+                  className="flex size-9 items-center justify-center rounded-full bg-white/95 text-zinc-900 dark:bg-zinc-900/95 dark:text-white shadow-lg border border-black/10 dark:border-white/20 backdrop-blur-md transition-all duration-200 hover:scale-110 hover:text-lime-600 dark:hover:text-lime-400 active:scale-95"
                   title="Edit Event"
                 >
-                  <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} className="size-4" />
+                  <Pencil className="size-4 stroke-[2.2]" />
                 </button>
               )}
             </div>
@@ -285,7 +282,7 @@ export function ApiEventCard({
               )}
 
               {/* Right: Actions */}
-              <div className="flex items-center gap-1 shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0">
                 {isDraft && (
                   <Button
                     size="sm"
@@ -293,12 +290,42 @@ export function ApiEventCard({
                     disabled={isPublishing || isLocalPublishing}
                     className="h-8 px-3.5 text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-md shadow-emerald-600/25 hover:shadow-lg hover:shadow-emerald-600/35 active:scale-95 transition-all duration-200 rounded-xl gap-1.5 border border-emerald-400/25"
                   >
-                    <HugeiconsIcon
-                      icon={Rocket01Icon}
-                      strokeWidth={2.5}
+                    <Rocket
                       className={cn("size-3.5 text-white", (isPublishing || isLocalPublishing) && "animate-bounce")}
                     />
                     <span>{isPublishing || isLocalPublishing ? "Publishing..." : "Publish"}</span>
+                  </Button>
+                )}
+
+                {onEdit && isDraft && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      onEdit(event)
+                    }}
+                    className="h-8 w-8 p-0 text-foreground/80 hover:text-foreground hover:border-lime-500/50 rounded-xl"
+                    title="Edit Event"
+                  >
+                    <Pencil className="size-3.5" />
+                  </Button>
+                )}
+
+                {onShare && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      onShare(event)
+                    }}
+                    className="h-8 w-8 p-0 text-foreground/80 hover:text-foreground hover:border-indigo-500/50 rounded-xl"
+                    title="Share Event"
+                  >
+                    <Share2 className="size-3.5" />
                   </Button>
                 )}
 
@@ -336,7 +363,7 @@ export function ApiEventCard({
                         }}
                         className="gap-2 cursor-pointer"
                       >
-                        <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} className="size-4" />
+                        <Pencil className="size-4" />
                         Edit event
                       </DropdownMenuItem>
                     )}
@@ -348,7 +375,7 @@ export function ApiEventCard({
                         }}
                         className="gap-2 cursor-pointer"
                       >
-                        <HugeiconsIcon icon={Share01Icon} strokeWidth={2} className="size-4" />
+                        <Share2 className="size-4" />
                         Share event
                       </DropdownMenuItem>
                     )}

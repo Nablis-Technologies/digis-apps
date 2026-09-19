@@ -35,6 +35,7 @@ import {
   type Event,
 } from "@workspace/store/reducers/organizerEventsApi"
 import { useListOwnerOrganizationsQuery } from "@workspace/store/reducers/organizationsApi"
+import { useActiveOrganization } from "../../providers/organization-provider"
 import {
   formatCurrency,
   formatCurrencyShort,
@@ -260,12 +261,8 @@ export default function OrganizerDashboard() {
   const [activeTab, setActiveTab] = useState<StatusFilter>("all")
   const [search, setSearch] = useState("")
 
-  // Fetch real organizations & events from store
-  const { data: organizationsData, isLoading: isLoadingOrgs } = useListOwnerOrganizationsQuery()
-  const myOrganizationIds = useMemo(
-    () => new Set((organizationsData?.data ?? []).map((org) => org.id)),
-    [organizationsData]
-  )
+  // Consume active organization & events from store
+  const { activeOrg, activeOrgId, isLoading: isLoadingOrgs } = useActiveOrganization()
 
   const { data: eventsResponse, isLoading: isLoadingEvents } = useListEventsQuery({
     page: 1,
@@ -276,15 +273,15 @@ export default function OrganizerDashboard() {
 
   const isLoading = isLoadingOrgs || isLoadingEvents
 
-  // Filter events belonging to current organizer's organization(s)
+  // Filter events scoped to the active organization
   const events: Event[] = useMemo(() => {
     const all = eventsResponse?.data || []
-    if (myOrganizationIds.size === 0) return all
+    if (!activeOrgId) return all
     return all.filter((event) => {
       const orgId = event.organization_id ?? event.organization?.id
-      return orgId !== undefined && myOrganizationIds.has(orgId)
+      return orgId === activeOrgId
     })
-  }, [eventsResponse, myOrganizationIds])
+  }, [eventsResponse, activeOrgId])
 
   // Transform events into table rows
   const tableRows: EventRow[] = useMemo(() => {
@@ -436,8 +433,8 @@ export default function OrganizerDashboard() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">
-            {organizationsData?.data?.[0]?.name
-              ? `Managing ${organizationsData.data[0].name} events & ticket sales`
+            {activeOrg?.name
+              ? `Managing ${activeOrg.name} events & ticket sales`
               : "Overview of your events, ticket sales, and performance"}
           </p>
         </div>
