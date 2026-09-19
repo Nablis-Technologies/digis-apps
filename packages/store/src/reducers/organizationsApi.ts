@@ -4,21 +4,30 @@ import { baseQueryWithReauth } from "../api"
 export interface Organization {
   id: string
   name: string
+  slug?: string
   description: string | null
-  owner_id: string
-  organizer_type: "individual" | "company"
+  owner_id?: string
+  organizer_type: "individual" | "company" | "ngo" | "government" | "collective"
   category: string | null
   contact_phone: string | null
   contact_email: string | null
   city: string | null
   region: string | null
-  country: string | null
+  country?: string | null
+  address_line1?: string | null
+  address_line2?: string | null
   website_url: string | null
   verified: boolean
   active: boolean
   tin_number?: string | null
   estimated_audience?: string | null
   event_frequency?: string | null
+  profile_url?: string | null
+  banner_url?: string | null
+  social_links?: Record<string, string> | null
+  follower_count?: number
+  memberships_count?: number
+  events_count?: number
   created_at?: string
   updated_at?: string
 }
@@ -72,10 +81,23 @@ interface CreateOrgPayload {
   }
 }
 
-interface UpdateOrgPayload {
+export interface UpdateOrgPayload {
   organization: {
     name?: string
     description?: string
+    organizer_type?: "individual" | "company" | "ngo" | "government" | "collective"
+    category?: string
+    contact_phone?: string
+    contact_email?: string
+    website_url?: string
+    tin_number?: string
+    address_line1?: string
+    address_line2?: string
+    city?: string
+    region?: string
+    estimated_audience?: string
+    event_frequency?: string
+    social_links?: Record<string, string>
   }
 }
 

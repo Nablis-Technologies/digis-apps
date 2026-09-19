@@ -9,7 +9,7 @@ export const ONBOARDING_STEPS = [
     id: 1,
     title: "Profile Information",
     description: "Tell us about yourself",
-    fields: ["fullName", "phone", "nationalId", "email", "password"],
+    fields: ["fullName", "phone", "email", "password"],
   },
   {
     id: 2,

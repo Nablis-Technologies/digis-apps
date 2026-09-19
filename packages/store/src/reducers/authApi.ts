@@ -17,12 +17,24 @@ import { ticketingApi } from "./ticketingApi"
 import { eventScheduleApi } from "./eventScheduleApi"
 import { registrationApi } from "./registrationApi"
 
+export interface AuthUserRole {
+  id?: string
+  name?: string
+  code?: string
+  active?: boolean
+}
+
 export interface AuthUser {
   id: string
   email?: string
   phone?: string
   name?: string
   role?: string
+  verified_at?: string | null
+  created_at?: string
+  updated_at?: string
+  permissions?: string[]
+  roles?: AuthUserRole[]
   [key: string]: unknown
 }
 

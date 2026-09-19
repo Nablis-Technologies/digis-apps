@@ -61,6 +61,7 @@ import {
   BookmarkIcon,
   Tick02Icon,
   ImageAddIcon,
+  AlertCircleIcon,
 } from "@hugeicons/core-free-icons"
 import { 
   HelpCircle, 
@@ -497,6 +498,14 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   const handleCreate = async (publish: boolean) => {
     setError("")
     setFieldErrors({})
+
+    // If trying to publish with an unverified organization
+    if (publish && activeOrg && !activeOrg.verified) {
+      const msg = "You cannot publish events until your organization is verified. Please save as draft instead."
+      toast.error(msg)
+      setError(msg)
+      return
+    }
     
     const dateTime = date && time ? `${date}T${time}:00` : ""
     const endDateTimeInput = endDate && endTime ? `${endDate}T${endTime}:00` : ""
@@ -940,10 +949,10 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
       // say so plainly instead of surfacing the raw "not authorized" error.
       const isPublishForbidden =
         createdEventId !== null &&
-        (err?.status === 403 || err?.data?.code === "not_authorized")
+        (err?.status === 403 || err?.data?.code === "not_authorized" || err?.data?.code === "organization_not_verified")
       const errorMessage = isPublishForbidden
-        ? "Event saved as a draft — publishing requires a verified organization. Submit your organization for verification, then publish again after approval."
-        : err?.data?.message || err?.message || "Failed to create event. Please try again."
+        ? "Event saved as a draft — you cannot publish until your organization is verified. Submit your organization for verification, then publish again after approval."
+        : err?.data?.error || err?.data?.message || err?.message || "Failed to create event. Please try again."
       toast.error(errorMessage)
       setError(errorMessage)
       console.error("Event creation error:", err)
@@ -3110,6 +3119,14 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
 
         {step === 4 && (
           <div className="space-y-2">
+            {activeOrg && !activeOrg.verified && (
+              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs leading-relaxed mb-3">
+                <HugeiconsIcon icon={AlertCircleIcon} strokeWidth={2} className="size-4 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-semibold">Verification Required to Publish:</span> Your organization (<span className="font-medium">{activeOrg.name}</span>) is not verified yet. You can save this event as a <strong>Draft</strong>, but you cannot publish it until your organization is verified.
+                </div>
+              </div>
+            )}
             <Button
               className={`w-full h-12 font-bold text-base ${selectedEntryType.bgClass} hover:opacity-90 text-white border-0`}
               onClick={() => handleCreate(true)}

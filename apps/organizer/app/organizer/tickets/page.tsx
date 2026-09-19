@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react"
 import { motion } from "framer-motion"
+import Link from "next/link"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   TicketIcon,
@@ -188,6 +189,21 @@ export default function TicketsPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* ── Informative Notice ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-lime-500/10 border border-lime-500/20 text-xs">
+        <div className="flex items-center gap-2.5">
+          <HugeiconsIcon icon={Calendar03Icon} className="size-4 text-lime-600 dark:text-lime-400 shrink-0" />
+          <span className="text-foreground">
+            <strong>Tip:</strong> Tickets, complimentary passes, and door scanners are now accessible directly within each event's details page under the <strong>Tickets</strong> tab.
+          </span>
+        </div>
+        <Link href="/organizer/events" className="shrink-0">
+          <Button size="sm" variant="outline" className="h-7 text-xs border-lime-500/30 hover:bg-lime-500/10">
+            View Events
+          </Button>
+        </Link>
+      </div>
+
       {/* ── Page Header & Controls ────────────────────────────────────────── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>

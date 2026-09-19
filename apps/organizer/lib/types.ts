@@ -27,7 +27,6 @@ export interface Organizer {
   fullName: string
   email: string
   phone: string
-  nationalId: string
   password: string
   // Business info
   licenseUrl?: string

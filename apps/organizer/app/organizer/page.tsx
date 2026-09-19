@@ -26,7 +26,6 @@ import {
   LayoutTopIcon,
   Search01Icon,
   ChevronRightIcon,
-  SparklesIcon,
 } from "@hugeicons/core-free-icons"
 import Link from "next/link"
 import { CreateEventDialog } from "../../components/events/create-event-dialog"
@@ -480,7 +479,7 @@ export default function OrganizerDashboard() {
               <motion.div {...containerVariants(0.3)}>
                 <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-12 text-center bg-card/40">
                   <div className="flex size-14 items-center justify-center rounded-2xl bg-chart-1/10 text-chart-1 mb-4 shadow-xs">
-                    <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} className="size-7" />
+                    <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className="size-7" />
                   </div>
                   <h3 className="text-lg font-bold">Start Organizing Your First Event</h3>
                   <p className="mt-1 max-w-md text-sm text-muted-foreground">
@@ -602,7 +601,7 @@ export default function OrganizerDashboard() {
               <motion.div {...containerVariants(0.3)}>
                 <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-12 text-center bg-card/40">
                   <div className="flex size-14 items-center justify-center rounded-2xl bg-chart-1/10 text-chart-1 mb-4 shadow-xs">
-                    <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} className="size-7" />
+                    <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className="size-7" />
                   </div>
                   <h3 className="text-lg font-bold">Start Organizing Your First Event</h3>
                   <p className="mt-1 max-w-md text-sm text-muted-foreground">

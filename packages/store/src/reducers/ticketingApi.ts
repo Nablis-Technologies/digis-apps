@@ -3,6 +3,27 @@ import { baseQueryWithReauth } from "../api"
 
 // ─── Event Products ─────────────────────────────────────────────────────────
 
+export interface ProductPriceOption {
+  id: string
+  type: string
+  currency: string
+  amount_minor: number
+  active_from?: string | null
+  active_to?: string | null
+  ticket_type_id?: string | null
+  event_product_id?: string | null
+}
+
+export interface ProductInventoryPool {
+  id: string
+  event_date_id: string | null
+  capacity: number
+  held_count: number
+  sold_count: number
+  available_count: number
+  lock_version: number
+}
+
 export interface EventProduct {
   id: string
   event_id: string
@@ -23,6 +44,13 @@ export interface EventProduct {
   created_at: string
   updated_at: string
   ticket_type?: TicketType | null
+  pricing?: {
+    options: ProductPriceOption[]
+  } | null
+  inventory?: {
+    mode: string | null
+    pools: ProductInventoryPool[]
+  } | null
 }
 
 export interface TicketType {

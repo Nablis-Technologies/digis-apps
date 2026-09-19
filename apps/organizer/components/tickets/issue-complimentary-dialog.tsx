@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { PhoneInput } from "@/components/ui/phone-input"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -265,9 +266,9 @@ export function IssueComplimentaryDialog({
           {/* Recipient Phone */}
           <div className="space-y-1.5">
             <Label htmlFor="phone">Recipient Phone Number</Label>
-            <Input
+            <PhoneInput
               id="phone"
-              placeholder="0911223344 or +251911223344"
+              placeholder="91 123 4567"
               {...form.register("phone")}
             />
             {form.formState.errors.phone ? (

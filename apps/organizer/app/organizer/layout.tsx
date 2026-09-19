@@ -7,11 +7,13 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import {
   DashboardSquare01Icon,
   Calendar03Icon,
-  TicketIcon,
   Wallet01Icon,
   Settings05Icon,
   HelpCircleIcon,
   Mail01Icon,
+  Building02Icon,
+  UserGroupIcon,
+  UserCircleIcon,
 } from "@hugeicons/core-free-icons"
 import type { NavSection, NavSecondaryItem } from "@workspace/ui/components/admin/app-sidebar"
 
@@ -35,9 +37,14 @@ const navSections: NavSection[] = [
         icon: <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} />,
       },
       {
-        title: "Tickets",
-        url: "/organizer/tickets",
-        icon: <HugeiconsIcon icon={TicketIcon} strokeWidth={2} />,
+        title: "Organization",
+        url: "/organizer/organization",
+        icon: <HugeiconsIcon icon={Building02Icon} strokeWidth={2} />,
+      },
+      {
+        title: "Team",
+        url: "/organizer/team",
+        icon: <HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} />,
       },
       {
         title: "Payouts",
@@ -49,6 +56,11 @@ const navSections: NavSection[] = [
   {
     title: "Account",
     items: [
+      {
+        title: "Profile",
+        url: "/organizer/profile",
+        icon: <HugeiconsIcon icon={UserCircleIcon} strokeWidth={2} />,
+      },
       {
         title: "Settings",
         url: "/organizer/settings",

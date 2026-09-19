@@ -5,6 +5,7 @@ import { motion } from "framer-motion"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { PhoneInput, normalizeEthiopianPhone } from "@/components/ui/phone-input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -43,7 +44,6 @@ import {
   Building01Icon,
   ArrowUpRight01Icon,
   Search01Icon,
-  SparklesIcon,
   StarIcon,
   Delete02Icon,
   SmartPhone01Icon,
@@ -361,6 +361,10 @@ export default function PayoutsPage() {
       ? `${bankItem?.label || "Bank"} - ${accountNumber.slice(-4)}`
       : `${walletItem?.label || "Wallet"} - ${accountNumber.slice(-4)}`
 
+    const finalAccountNumber = isBank
+      ? accountNumber.trim()
+      : normalizeEthiopianPhone(accountNumber.trim())
+
     try {
       await addAccount({
         organizationId: activeOrgId,
@@ -368,7 +372,7 @@ export default function PayoutsPage() {
           type: isBank ? "bank" : "mobile_money",
           provider: "chapa",
           bank_slug: slug,
-          account_number: accountNumber.trim(),
+          account_number: finalAccountNumber,
           account_name: accountName.trim(),
           account_label: accountLabel.trim() || fallbackLabel,
         },
@@ -750,7 +754,7 @@ export default function PayoutsPage() {
                 <motion.div {...containerVariants(0.1)}>
                   <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border p-12 text-center bg-card/40">
                     <div className="flex size-14 items-center justify-center rounded-2xl bg-chart-1/10 text-chart-1 mb-4 shadow-xs">
-                      <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} className="size-7" />
+                      <HugeiconsIcon icon={Wallet01Icon} strokeWidth={2} className="size-7" />
                     </div>
                     <h3 className="text-lg font-bold">No Payout Requests Yet</h3>
                     <p className="mt-1 max-w-md text-sm text-muted-foreground">
@@ -1336,19 +1340,14 @@ export default function PayoutsPage() {
                   <Label htmlFor="wallet-number" className="text-sm font-semibold">
                     Registered Mobile / Phone Number <span className="text-destructive">*</span>
                   </Label>
-                  <div className="relative">
-                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground">
-                      <HugeiconsIcon icon={SmartPhone01Icon} strokeWidth={2} className="size-4" />
-                    </div>
-                    <Input
-                      id="wallet-number"
-                      placeholder="e.g. 0911234567 or 0711234567"
-                      value={accountNumber}
-                      onChange={(e) => setAccountNumber(e.target.value)}
-                      className="pl-10 h-11 bg-background/50 border-border/60 focus:border-primary transition-colors font-mono"
-                      required
-                    />
-                  </div>
+                  <PhoneInput
+                    id="wallet-number"
+                    placeholder="91 123 4567"
+                    value={accountNumber}
+                    onChange={(e) => setAccountNumber(e.target.value)}
+                    containerClassName="h-11 bg-background/50 border-border/60 focus-within:border-primary"
+                    required
+                  />
                   <p className="text-[11px] text-muted-foreground">
                     Enter the phone number registered with your mobile wallet
                   </p>

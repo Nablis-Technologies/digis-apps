@@ -320,6 +320,10 @@ export default function EventsPage() {
       iconOnly: true,
       variant: "success",
       onClick: async (row) => {
+        if (activeOrg && !activeOrg.verified) {
+          toast.error("You cannot publish events until your organization is verified. Please submit your organization for verification first.")
+          return
+        }
         try {
           await publishEvent({
             id: row.id,
@@ -327,7 +331,13 @@ export default function EventsPage() {
           }).unwrap()
           toast.success("Event published successfully!")
         } catch (err: any) {
-          const errorMessage = err?.data?.message || err?.message || "Failed to publish event"
+          const isUnverified =
+            err?.status === 403 ||
+            err?.data?.code === "not_authorized" ||
+            err?.data?.code === "organization_not_verified"
+          const errorMessage = isUnverified
+            ? "You cannot publish events until your organization is verified. Please submit your organization for verification first."
+            : err?.data?.error || err?.data?.message || err?.message || "Failed to publish event"
           toast.error(errorMessage)
           console.error("Publish error:", err)
         }

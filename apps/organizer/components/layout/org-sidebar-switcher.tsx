@@ -24,6 +24,7 @@ import {
   UnfoldMoreIcon,
   CheckmarkCircle01Icon,
   Loading01Icon,
+  AlertCircleIcon,
 } from "@hugeicons/core-free-icons"
 
 export function OrgSidebarSwitcher() {
@@ -102,20 +103,29 @@ export function OrgSidebarSwitcher() {
               </span>
               <div className="flex items-center gap-1.5 mt-0.5">
                 {activeOrg?.verified ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-lime-600 dark:text-lime-400">
+                  <Badge
+                    variant="outline"
+                    className="h-4 px-1.5 text-[10px] font-semibold border-lime-500/40 bg-lime-500/10 text-lime-700 dark:text-lime-300 gap-1 w-fit"
+                  >
                     <HugeiconsIcon
                       icon={CheckmarkCircle01Icon}
-                      strokeWidth={2}
-                      className="size-3"
+                      strokeWidth={2.5}
+                      className="size-2.5 text-lime-600 dark:text-lime-400"
                     />
                     Verified
-                  </span>
+                  </Badge>
                 ) : (
-                  <span className="text-[11px] text-muted-foreground truncate">
-                    {activeOrg?.organizer_type
-                      ? `${activeOrg.organizer_type.charAt(0).toUpperCase() + activeOrg.organizer_type.slice(1)} • Draft`
-                      : "Workspace"}
-                  </span>
+                  <Badge
+                    variant="outline"
+                    className="h-4 px-1.5 text-[10px] font-semibold border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 gap-1 w-fit"
+                  >
+                    <HugeiconsIcon
+                      icon={AlertCircleIcon}
+                      strokeWidth={2.5}
+                      className="size-2.5 text-amber-600 dark:text-amber-400"
+                    />
+                    Not Verified
+                  </Badge>
                 )}
               </div>
             </div>
@@ -227,14 +237,19 @@ export function OrgSidebarSwitcher() {
                         <span className="truncate font-medium">{org.name}</span>
                         <span className="text-[10px] text-muted-foreground truncate">
                           {org.city ? `${org.city} • ` : ""}
-                          {org.verified ? "Verified" : "Pending review"}
+                          {org.verified ? "Verified" : "Not verified"}
                         </span>
                       </div>
-                      {org.verified && (
-                        <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-lime-500/30 text-lime-600 dark:text-lime-400 shrink-0">
-                          PRO
-                        </Badge>
-                      )}
+                      <Badge
+                        variant="outline"
+                        className={`text-[9px] px-1.5 py-0 h-4 shrink-0 font-medium ${
+                          org.verified
+                            ? "border-lime-500/30 bg-lime-500/10 text-lime-600 dark:text-lime-400"
+                            : "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                        }`}
+                      >
+                        {org.verified ? "Verified" : "Not Verified"}
+                      </Badge>
                       {isActive && (
                         <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} className="size-4 text-primary shrink-0 ml-1" />
                       )}

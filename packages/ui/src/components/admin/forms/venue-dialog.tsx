@@ -11,6 +11,7 @@ import {
 } from "@workspace/ui/components/dialog"
 import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
+import { PhoneInput, normalizeEthiopianPhone, stripCountryCode } from "@workspace/ui/components/phone-input"
 import { Label } from "@workspace/ui/components/label"
 import {
   useCreateVenueMutation,
@@ -84,7 +85,7 @@ export function VenueDialog({
               city: venue.city,
               country: venue.country,
               capacity: venue.capacity?.toString() ?? "",
-              contact_phone: venue.contact_phone ?? "",
+              contact_phone: stripCountryCode(venue.contact_phone) ?? "",
               contact_email: venue.contact_email ?? "",
               verified: venue.verified,
               active: venue.active,
@@ -115,7 +116,7 @@ export function VenueDialog({
         city: form.city,
         country: form.country,
         capacity: form.capacity ? parseInt(form.capacity) : null,
-        contact_phone: form.contact_phone || undefined,
+        contact_phone: normalizeEthiopianPhone(form.contact_phone) || undefined,
         contact_email: form.contact_email || undefined,
         verified: form.verified,
         active: form.active,
@@ -228,9 +229,9 @@ export function VenueDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="phone">Phone</Label>
-              <Input
+              <PhoneInput
                 id="phone"
-                placeholder="+251911123456"
+                placeholder="91 123 4567"
                 value={form.contact_phone}
                 onChange={(e) => update("contact_phone", e.target.value)}
               />

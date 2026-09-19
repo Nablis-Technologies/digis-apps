@@ -12,6 +12,7 @@ import {
 } from "@workspace/ui/components/dialog"
 import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
+import { PhoneInput, normalizeEthiopianPhone, stripCountryCode } from "@workspace/ui/components/phone-input"
 import { Label } from "@workspace/ui/components/label"
 import {
   useCreateUserMutation,
@@ -63,7 +64,7 @@ export function UserDialog({
         user
           ? {
               email: user.email,
-              phone: user.phone ?? "",
+              phone: stripCountryCode(user.phone) ?? "",
               password: "",
               passwordConfirmation: "",
               verified: user.verified_at ? "verified" : "unverified",
@@ -95,6 +96,8 @@ export function UserDialog({
     if (!isValid()) return
     setErrorMsg(null)
 
+    const normalizedPhone = normalizeEthiopianPhone(form.phone) || undefined
+
     try {
       if (isEdit && user?.id) {
         await updateUser({
@@ -102,7 +105,7 @@ export function UserDialog({
           body: {
             user: {
               email: form.email,
-              phone: form.phone || undefined,
+              phone: normalizedPhone,
               verified_at:
                 form.verified === "verified" ? new Date().toISOString() : null,
             },
@@ -112,7 +115,7 @@ export function UserDialog({
         await createUser({
           user: {
             email: form.email,
-            phone: form.phone || undefined,
+            phone: normalizedPhone,
             password: form.password,
             verified_at:
               form.verified === "verified" ? new Date().toISOString() : null,
@@ -167,10 +170,9 @@ export function UserDialog({
           </div>
           <div className="space-y-2">
             <Label htmlFor="phone">Phone</Label>
-            <Input
+            <PhoneInput
               id="phone"
-              type="tel"
-              placeholder="+251911123456"
+              placeholder="91 123 4567"
               value={form.phone}
               onChange={(e) => update("phone", e.target.value)}
             />

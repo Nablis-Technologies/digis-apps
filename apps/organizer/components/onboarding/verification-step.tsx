@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
@@ -14,6 +14,7 @@ import {
   Building02Icon,
   CheckmarkCircle01Icon,
   Rocket01Icon,
+  Pdf02Icon,
 } from "@hugeicons/core-free-icons"
 
 interface VerificationStepProps {
@@ -63,6 +64,7 @@ function formatSize(bytes: number) {
 
 export function VerificationStep({ onNext, initialData }: VerificationStepProps) {
   const [files, setFiles] = useState<Partial<Record<DocKey, File>>>({})
+  const [previews, setPreviews] = useState<Partial<Record<DocKey, string>>>({})
 
   const {
     handleSubmit,
@@ -74,6 +76,35 @@ export function VerificationStep({ onNext, initialData }: VerificationStepProps)
     defaultValues: initialData as VerificationFormData,
   })
 
+  // Initialize previews if initialData has images
+  useEffect(() => {
+    if (initialData) {
+      const initialPreviews: Partial<Record<DocKey, string>> = {}
+      DOCS.forEach((doc) => {
+        const val: unknown = initialData[doc.key]
+        if (val instanceof File && (val.type.startsWith("image/") || /\.(jpe?g|png|webp|gif|svg)$/i.test(val.name))) {
+          initialPreviews[doc.key] = URL.createObjectURL(val)
+        } else if (typeof val === "string" && (val.startsWith("http") || val.startsWith("blob:") || val.startsWith("data:image/"))) {
+          initialPreviews[doc.key] = val
+        }
+      })
+      if (Object.keys(initialPreviews).length > 0) {
+        setPreviews((prev) => ({ ...initialPreviews, ...prev }))
+      }
+    }
+  }, [initialData])
+
+  // Revoke object URLs on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(previews).forEach((url) => {
+        if (url && url.startsWith("blob:")) {
+          URL.revokeObjectURL(url)
+        }
+      })
+    }
+  }, [previews])
+
   const onSubmit = (data: VerificationFormData) => {
     onNext(data)
   }
@@ -83,6 +114,26 @@ export function VerificationStep({ onNext, initialData }: VerificationStepProps)
     if (!file) return
     setFiles((prev) => ({ ...prev, [key]: file }))
     setValue(key, file as VerificationFormData[DocKey], { shouldValidate: true })
+
+    const isImage = file.type.startsWith("image/") || /\.(jpe?g|png|webp|gif|svg)$/i.test(file.name)
+    if (isImage) {
+      const url = URL.createObjectURL(file)
+      setPreviews((prev) => {
+        if (prev[key] && prev[key]?.startsWith("blob:")) {
+          URL.revokeObjectURL(prev[key]!)
+        }
+        return { ...prev, [key]: url }
+      })
+    } else {
+      setPreviews((prev) => {
+        if (prev[key] && prev[key]?.startsWith("blob:")) {
+          URL.revokeObjectURL(prev[key]!)
+        }
+        const next = { ...prev }
+        delete next[key]
+        return next
+      })
+    }
   }
 
   return (
@@ -100,6 +151,8 @@ export function VerificationStep({ onNext, initialData }: VerificationStepProps)
         <div className="grid gap-4 sm:grid-cols-2">
           {DOCS.map((doc) => {
             const file = files[doc.key] ?? initialData?.[doc.key]
+            const previewUrl = previews[doc.key]
+            const isPdf = !!file && (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf"))
             const error = errors[doc.key]
             return (
               <Field key={doc.key}>
@@ -118,17 +171,36 @@ export function VerificationStep({ onNext, initialData }: VerificationStepProps)
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div
-                      className={`p-2.5 rounded-xl flex-shrink-0 ${
-                        file ? "bg-primary/10" : "bg-muted"
-                      }`}
-                    >
-                      <HugeiconsIcon
-                        icon={file ? CheckmarkCircle01Icon : doc.icon}
-                        strokeWidth={2}
-                        className={`size-5 ${file ? "text-primary" : "text-muted-foreground"}`}
-                      />
-                    </div>
+                    {previewUrl ? (
+                      <div className="size-11 rounded-xl overflow-hidden shrink-0 border border-border/60 shadow-2xs relative bg-muted">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={previewUrl}
+                          alt={file?.name ?? doc.label}
+                          className="size-full object-cover"
+                        />
+                      </div>
+                    ) : isPdf ? (
+                      <div className="size-11 rounded-xl flex items-center justify-center shrink-0 border border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400 shadow-2xs">
+                        <HugeiconsIcon
+                          icon={Pdf02Icon}
+                          strokeWidth={2}
+                          className="size-6"
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        className={`p-2.5 rounded-xl flex-shrink-0 ${
+                          file ? "bg-primary/10" : "bg-muted"
+                        }`}
+                      >
+                        <HugeiconsIcon
+                          icon={file ? CheckmarkCircle01Icon : doc.icon}
+                          strokeWidth={2}
+                          className={`size-5 ${file ? "text-primary" : "text-muted-foreground"}`}
+                        />
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       {file ? (
                         <>

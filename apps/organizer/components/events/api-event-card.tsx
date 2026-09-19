@@ -26,6 +26,7 @@ import { cn } from "@workspace/ui/lib/utils"
 import type { Event } from "@workspace/store/reducers/organizerEventsApi"
 import { usePublishEventMutation } from "@workspace/store/reducers/organizerEventsApi"
 import { toast } from "sonner"
+import { useActiveOrganization } from "../../providers/organization-provider"
 
 interface ApiEventCardProps {
   event: Event
@@ -52,6 +53,7 @@ export function ApiEventCard({
   onDuplicate,
   onDelete,
 }: ApiEventCardProps) {
+  const { activeOrg } = useActiveOrganization()
   const [publishEvent, { isLoading: isPublishing }] = usePublishEventMutation()
   const [isLocalPublishing, setIsLocalPublishing] = useState(false)
 
@@ -89,6 +91,11 @@ export function ApiEventCard({
     e.preventDefault()
     e.stopPropagation()
 
+    if (activeOrg && !activeOrg.verified) {
+      toast.error("You cannot publish events until your organization is verified. Please submit your organization for verification first.")
+      return
+    }
+
     setIsLocalPublishing(true)
     try {
       await publishEvent({
@@ -98,7 +105,13 @@ export function ApiEventCard({
 
       toast.success("Event published successfully!")
     } catch (err: any) {
-      const errorMessage = err?.data?.message || err?.message || "Failed to publish event"
+      const isUnverified =
+        err?.status === 403 ||
+        err?.data?.code === "not_authorized" ||
+        err?.data?.code === "organization_not_verified"
+      const errorMessage = isUnverified
+        ? "You cannot publish events until your organization is verified. Please submit your organization for verification first."
+        : err?.data?.error || err?.data?.message || err?.message || "Failed to publish event"
       toast.error(errorMessage)
       console.error("Publish error:", err)
     } finally {
