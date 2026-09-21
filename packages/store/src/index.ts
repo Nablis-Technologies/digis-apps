@@ -17,6 +17,7 @@ import { eventScheduleApi } from "./reducers/eventScheduleApi"
 import { registrationApi } from "./reducers/registrationApi"
 import { financeApi } from "./reducers/financeApi"
 import { attendeesApi } from "./reducers/attendeesApi"
+import { messagingApi } from "./reducers/messagingApi"
 
 export const store = configureStore({
   reducer: {
@@ -38,6 +39,7 @@ export const store = configureStore({
     [registrationApi.reducerPath]: registrationApi.reducer,
     [financeApi.reducerPath]: financeApi.reducer,
     [attendeesApi.reducerPath]: attendeesApi.reducer,
+    [messagingApi.reducerPath]: messagingApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
@@ -58,9 +60,12 @@ export const store = configureStore({
       eventScheduleApi.middleware,
       registrationApi.middleware,
       financeApi.middleware,
-      attendeesApi.middleware
+      attendeesApi.middleware,
+      messagingApi.middleware
     ),
 })
 
 export type RootState = ReturnType<typeof store.getState>
 export type AppDispatch = typeof store.dispatch
+
+export * from "./reducers/messagingApi"

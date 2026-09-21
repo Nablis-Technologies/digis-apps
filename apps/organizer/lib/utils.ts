@@ -35,8 +35,10 @@ export const formatNumber = (value: number): string => {
 /**
  * Date formatter
  */
-export const formatDate = (date: Date | string): string => {
+export const formatDate = (date?: Date | string | null): string => {
+  if (!date) return "—"
   const dateObj = typeof date === "string" ? new Date(date) : date
+  if (isNaN(dateObj.getTime())) return "—"
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
@@ -47,8 +49,10 @@ export const formatDate = (date: Date | string): string => {
 /**
  * Full date and time formatter
  */
-export const formatDateTime = (date: Date | string): string => {
+export const formatDateTime = (date?: Date | string | null): string => {
+  if (!date) return "—"
   const dateObj = typeof date === "string" ? new Date(date) : date
+  if (isNaN(dateObj.getTime())) return "—"
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
@@ -62,8 +66,10 @@ export const formatDateTime = (date: Date | string): string => {
 /**
  * Relative time formatter (e.g., "in 5 days", "2 hours ago")
  */
-export const formatRelativeTime = (date: Date | string): string => {
+export const formatRelativeTime = (date?: Date | string | null): string => {
+  if (!date) return "—"
   const dateObj = typeof date === "string" ? new Date(date) : date
+  if (isNaN(dateObj.getTime())) return "—"
   const now = new Date()
   const diffMs = dateObj.getTime() - now.getTime()
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
