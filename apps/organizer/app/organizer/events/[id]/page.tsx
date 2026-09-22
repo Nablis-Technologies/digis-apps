@@ -45,8 +45,18 @@ import {
   ArrowDown01Icon,
   Calendar03Icon,
   CheckmarkCircle01Icon,
+  Cancel01Icon,
+  Key01Icon,
+  RadioIcon,
+  ViewIcon,
 } from "@hugeicons/core-free-icons"
-import { Eye, Copy, Check, RefreshCw, ShieldAlert } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   Area,
   AreaChart,
@@ -62,21 +72,24 @@ import { cn } from "@workspace/ui/lib/utils"
 import { toast } from "sonner"
 import { ShareEventDialog } from "@/organizer-components/events/share-event-dialog"
 import { EditEventDialog } from "@/organizer-components/events/edit-event-dialog"
+import { CompleteEventDialog } from "@/organizer-components/events/complete-event-dialog"
+import { RescheduleEventDialog } from "@/organizer-components/events/reschedule-event-dialog"
+import { CancelEventDialog } from "@/organizer-components/events/cancel-event-dialog"
 import { IssueComplimentaryDialog } from "@/organizer-components/tickets/issue-complimentary-dialog"
 import { RequestExportDialog } from "@/organizer-components/tickets/request-export-dialog"
-import { useGetEventQuery } from "@workspace/store/reducers/organizerEventsApi"
+import { AccessCodesTab } from "@/organizer-components/events/access-codes-tab"
+import { AttendeesTab } from "@/organizer-components/events/attendees-tab"
+import { ScannersTab } from "@/organizer-components/events/scanners-tab"
+import {
+  useGetEventQuery,
+  usePublishEventMutation,
+} from "@workspace/store/reducers/organizerEventsApi"
 import {
   useListEventProductsQuery,
   useActivateEventProductMutation,
   useDeactivateEventProductMutation,
   type EventProduct,
 } from "@workspace/store/reducers/ticketingApi"
-import {
-  useListScannerDevicesQuery,
-  useRotateScannerTokenMutation,
-  useRevokeScannerDeviceMutation,
-  type ScannerDevice,
-} from "@workspace/store/reducers/attendeesApi"
 
 interface EventDetailPageProps {
   params: Promise<{
@@ -164,29 +177,20 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [complimentaryDialogOpen, setComplimentaryDialogOpen] = useState(false)
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
+  const [completeDialogOpen, setCompleteDialogOpen] = useState(false)
+  const [rescheduleDialogOpen, setRescheduleDialogOpen] = useState(false)
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
 
   // Gallery preview modal state
   const [galleryPreviewOpen, setGalleryPreviewOpen] = useState(false)
   const [selectedGalleryIndex, setSelectedGalleryIndex] = useState(0)
 
-  // Scanner actions state
-  const [tokenResult, setTokenResult] = useState<{ open: boolean; deviceName: string; token: string }>({
-    open: false,
-    deviceName: "",
-    token: "",
-  })
-  const [revokeModal, setRevokeModal] = useState<{ open: boolean; deviceId: string; deviceName: string; reason: string }>({
-    open: false,
-    deviceId: "",
-    deviceName: "",
-    reason: "",
-  })
-  const [copiedToken, setCopiedToken] = useState(false)
-
   // Fetch event from API
   const { data: eventResponse, isLoading, error } = useGetEventQuery(id)
   const event = eventResponse?.data
   const organizationId = event?.organization_id ?? event?.organization?.id
+  const dates = (event?.event_dates as any[]) || []
+  const venue = (event as any)?.venue || dates[0]?.venue
 
   // Fetch ticket products
   const { data: productsResponse, isLoading: isLoadingProducts } = useListEventProductsQuery(
@@ -195,18 +199,23 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   )
   const products: EventProduct[] = productsResponse?.data ?? []
 
-  // Fetch Scanner Devices for the organization
-  const { data: scannersData, isLoading: isLoadingScanners } = useListScannerDevicesQuery(
-    organizationId ?? "",
-    { skip: !organizationId }
-  )
-  const scannerDevices: ScannerDevice[] = Array.isArray(scannersData?.data) ? scannersData.data : []
-
   // Mutations
+  const [publishEvent, { isLoading: isPublishing }] = usePublishEventMutation()
   const [activateProduct] = useActivateEventProductMutation()
   const [deactivateProduct] = useDeactivateEventProductMutation()
-  const [rotateScannerToken, { isLoading: isRotatingToken }] = useRotateScannerTokenMutation()
-  const [revokeDevice, { isLoading: isRevokingDevice }] = useRevokeScannerDeviceMutation()
+
+  const handlePublish = async () => {
+    try {
+      await publishEvent({ id }).unwrap()
+      toast.success("Event published successfully!", {
+        description: "Your event is now live and accepting registrations and ticket orders.",
+      })
+    } catch (err: any) {
+      toast.error("Failed to publish event", {
+        description: err?.data?.message || err?.data?.error || err?.message || "An unexpected error occurred",
+      })
+    }
+  }
 
   const handleToggleProductStatus = async (product: EventProduct) => {
     try {
@@ -219,37 +228,6 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       }
     } catch {
       toast.error("Failed to update product status")
-    }
-  }
-
-  const handleRotateToken = async (device: ScannerDevice) => {
-    try {
-      const res = await rotateScannerToken({
-        deviceId: device.id,
-        organizationId,
-      }).unwrap()
-      setTokenResult({
-        open: true,
-        deviceName: device.name || "Door Scanner",
-        token: res.data.token,
-      })
-      toast.success("Scanner token rotated successfully")
-    } catch {
-      toast.error("Failed to rotate scanner token")
-    }
-  }
-
-  const handleConfirmRevoke = async () => {
-    if (!revokeModal.deviceId) return
-    try {
-      await revokeDevice({
-        deviceId: revokeModal.deviceId,
-        reason: revokeModal.reason || "Revoked by event organizer",
-      }).unwrap()
-      toast.success(`Device "${revokeModal.deviceName}" revoked`)
-      setRevokeModal({ open: false, deviceId: "", deviceName: "", reason: "" })
-    } catch {
-      toast.error("Failed to revoke scanner device")
     }
   }
 
@@ -526,6 +504,10 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         return "bg-chart-2/10 text-chart-2 dark:bg-chart-2/20 dark:text-chart-2"
       case "draft":
         return "bg-muted text-muted-foreground"
+      case "completed":
+        return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+      case "cancelled":
+        return "bg-destructive/10 text-destructive border border-destructive/20"
       default:
         return "bg-muted text-muted-foreground"
     }
@@ -572,7 +554,19 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             <p className="mt-2 text-sm text-muted-foreground">{event.description}</p>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          {event.status?.toLowerCase() === "draft" && (
+            <Button
+              size="sm"
+              className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-xs"
+              onClick={handlePublish}
+              disabled={isPublishing}
+            >
+              <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-4" />
+              {isPublishing ? "Publishing..." : "Publish event"}
+            </Button>
+          )}
+
           <Button
             variant="outline"
             size="sm"
@@ -586,37 +580,85 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             <HugeiconsIcon icon={Share01Icon} strokeWidth={2} className="size-4" />
             Share
           </Button>
-          {event.status?.toLowerCase() === "draft" && (
-            <Button size="sm" className="gap-2" onClick={() => setEditDialogOpen(true)}>
-              <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} className="size-4" />
-              Edit event
-            </Button>
-          )}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5">
+                Manage
+                <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2} className="size-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={() => setEditDialogOpen(true)} className="gap-2 text-xs">
+                <HugeiconsIcon icon={Edit01Icon} size={15} />
+                Edit Event Details
+              </DropdownMenuItem>
+              {event.status?.toLowerCase() === "draft" && (
+                <DropdownMenuItem
+                  onClick={handlePublish}
+                  disabled={isPublishing}
+                  className="gap-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium"
+                >
+                  <HugeiconsIcon icon={CheckmarkCircle01Icon} size={15} />
+                  Publish Event Now
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem
+                onClick={() => setRescheduleDialogOpen(true)}
+                disabled={event.status === "cancelled" || event.status === "completed"}
+                className="gap-2 text-xs"
+              >
+                <HugeiconsIcon icon={Calendar03Icon} size={15} />
+                Reschedule Session
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setCompleteDialogOpen(true)}
+                disabled={event.status !== "published"}
+                className="gap-2 text-xs text-emerald-600 dark:text-emerald-400 focus:text-emerald-700"
+              >
+                <HugeiconsIcon icon={CheckmarkCircle01Icon} size={15} />
+                Complete Event {event.status !== "published" && "(Requires Published)"}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setCancelDialogOpen(true)}
+                disabled={event.status === "cancelled" || event.status === "completed"}
+                className="gap-2 text-xs text-destructive focus:text-destructive"
+              >
+                <HugeiconsIcon icon={Cancel01Icon} size={15} />
+                Cancel Event
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </motion.div>
 
       <Tabs defaultValue="overview">
-        <TabsList>
-          <TabsTrigger value="overview">
+        <TabsList className="h-10 p-1 bg-muted/60 rounded-xl gap-1 overflow-x-auto max-w-full">
+          <TabsTrigger value="overview" className="gap-1.5 text-xs font-medium rounded-lg">
             <HugeiconsIcon icon={LayoutTopIcon} strokeWidth={2} className="size-4" />
-            Overview
+            Overview & Analytics
           </TabsTrigger>
-          <TabsTrigger value="analytics">
-            <HugeiconsIcon icon={ChartBarLineIcon} strokeWidth={2} className="size-4" />
-            Analytics
-          </TabsTrigger>
-          <TabsTrigger value="tickets">
+          <TabsTrigger value="tickets" className="gap-1.5 text-xs font-medium rounded-lg">
             <HugeiconsIcon icon={Ticket01Icon} strokeWidth={2} className="size-4" />
-            Tickets
+            Tickets & Pricing
           </TabsTrigger>
-          <TabsTrigger value="sales">
-            <HugeiconsIcon icon={BarChartIcon} strokeWidth={2} className="size-4" />
-            Sales
+          <TabsTrigger value="access" className="gap-1.5 text-xs font-medium rounded-lg">
+            <HugeiconsIcon icon={Key01Icon} strokeWidth={2} className="size-4" />
+            Access & Invites
+          </TabsTrigger>
+          <TabsTrigger value="attendees" className="gap-1.5 text-xs font-medium rounded-lg">
+            <HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} className="size-4" />
+            Attendees & RSVPs
+          </TabsTrigger>
+          <TabsTrigger value="scanners" className="gap-1.5 text-xs font-medium rounded-lg">
+            <HugeiconsIcon icon={RadioIcon} strokeWidth={2} className="size-4" />
+            Gates & Scanners
           </TabsTrigger>
         </TabsList>
 
-        {/* ─── OVERVIEW TAB ──────────────────────────────────────────────────── */}
-        <TabsContent value="overview" className="flex flex-col gap-4">
+        {/* ─── 1. OVERVIEW & ANALYTICS TAB ───────────────────────────────────── */}
+        <TabsContent value="overview" className="flex flex-col gap-5">
           {/* Top Analytics */}
           <StatsGrid cards={statsCards} />
 
@@ -640,7 +682,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                     setGalleryPreviewOpen(true)
                   }}
                 >
-                  <Eye className="size-3.5" />
+                  <HugeiconsIcon icon={ViewIcon} strokeWidth={2} className="size-3.5" />
                   Preview Gallery
                 </Button>
               </CardHeader>
@@ -657,22 +699,22 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                           setSelectedGalleryIndex(idx)
                           setGalleryPreviewOpen(true)
                         }}
-                        className="group relative h-16 w-24 shrink-0 overflow-hidden rounded-lg border border-border/60 bg-muted hover:border-lime-500/50 transition-all focus:outline-none focus:ring-2 focus:ring-lime-500/40"
+                        className="relative size-14 shrink-0 rounded-md overflow-hidden border bg-muted group cursor-pointer"
                       >
-                        {media.file ? (
+                        {media.file?.thumbnail || media.file?.url ? (
                           <img
-                            src={media.file.thumbnail || media.file.medium || media.file.url}
-                            alt={media.alt_text || `Gallery image ${idx + 1}`}
-                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            src={media.file?.thumbnail || media.file?.url}
+                            alt={media.alt_text || `Photo ${idx + 1}`}
+                            className="size-full object-cover transition-transform group-hover:scale-110"
                           />
                         ) : (
-                          <div className="flex h-full w-full items-center justify-center">
-                            <HugeiconsIcon icon={Image01Icon} className="size-5 text-muted-foreground" />
+                          <div className="flex size-full items-center justify-center bg-muted">
+                            <HugeiconsIcon icon={Image01Icon} className="size-4 text-muted-foreground" />
                           </div>
                         )}
                         {isLast && (
-                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white font-bold text-xs">
-                            +{remainingCount} more
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white text-xs font-bold">
+                            +{remainingCount}
                           </div>
                         )}
                       </button>
@@ -683,179 +725,206 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             </Card>
           )}
 
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Ticket Tiers */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.4 }}
-              className="flex flex-col gap-2"
-            >
+          {/* Sales & Revenue Overview Curve */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div>
-                <h3 className="font-semibold">Ticket tiers</h3>
-                <p className="text-sm text-muted-foreground">Inventory and pricing overview.</p>
+                <CardTitle className="text-base">Sales & Revenue Trajectory</CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Performance in the 7 days leading up to the event.
+                </p>
               </div>
-              <DataTable
-                columns={tierColumns}
-                data={tierRows}
-                keyExtractor={(row) => row.id}
-                emptyMessage="No ticket tiers found."
-              />
-            </motion.div>
+            </CardHeader>
+            <CardContent className="pt-2">
+              <ResponsiveContainer width="100%" height={260}>
+                <AreaChart
+                  data={salesOverviewData}
+                  margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    className="stroke-border/40"
+                  />
+                  <XAxis
+                    dataKey="day"
+                    tickLine={false}
+                    axisLine={false}
+                    className="text-xs text-muted-foreground"
+                    tickMargin={8}
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    className="text-xs text-muted-foreground"
+                    tickMargin={8}
+                    tickFormatter={(v) => formatNumber(Number(v))}
+                  />
+                  <Tooltip content={<SalesTooltip />} />
+                  <Area
+                    type="monotone"
+                    dataKey="sales"
+                    name="Tickets sold"
+                    stroke="hsl(var(--chart-1))"
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill="url(#salesGradient)"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="revenue"
+                    name="Revenue"
+                    stroke="hsl(var(--chart-2))"
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill="url(#revenueGradient)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
 
-            {/* Quick Stats Summary */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.4 }}
-            >
+              <div className="flex items-center justify-center gap-4 pt-3">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 shrink-0 rounded-[2px] bg-chart-1" />
+                  <span className="text-xs">Tickets sold</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 shrink-0 rounded-[2px] bg-chart-2" />
+                  <span className="text-xs">Revenue</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Details & Sales Breakdown Grid */}
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Left Column */}
+            <div className="flex flex-col gap-6">
+              {/* Event Description */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Quick Stats</CardTitle>
-                  <p className="text-sm text-muted-foreground">Event performance at a glance.</p>
+                  <CardTitle className="text-base">About this event</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Total Revenue</span>
-                      <span className="text-lg font-bold">{formatCurrency(totalRevenue)}</span>
+                <CardContent className="space-y-3">
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    {event.description || "No description provided for this event."}
+                  </p>
+                  {event.categories && event.categories.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-2">
+                      {event.categories.map((cat: any) => (
+                        <Badge key={cat.id || cat.name} variant="secondary" className="text-xs">
+                          {cat.name}
+                        </Badge>
+                      ))}
                     </div>
-                    <Separator />
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Sell-through Rate</span>
-                      <span className="text-lg font-bold">{sellThrough}%</span>
-                    </div>
-                    <Separator />
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Average Ticket Price</span>
-                      <span className="text-lg font-bold">
-                        {soldTickets > 0 ? formatCurrency(totalRevenue / soldTickets) : "N/A"}
-                      </span>
-                    </div>
-                    <Separator />
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Event Capacity</span>
-                      <span className="text-lg font-bold">{formatNumber(totalTickets)}</span>
-                    </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
-            </motion.div>
+
+              {/* Sales Channels */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Sales Channels</CardTitle>
+                  <CardDescription className="text-xs">
+                    Where your ticket sales originate.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <DataTable
+                    columns={channelColumns}
+                    data={saleChannelRows}
+                    keyExtractor={(row) => row.name}
+                    emptyMessage="No sales channels found."
+                  />
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right Column */}
+            <div className="flex flex-col gap-6">
+              {/* Venue details */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Venue & Location</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {venue ? (
+                    <>
+                      <div>
+                        <p className="font-semibold text-sm">{venue.name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {venue.address || venue.city || "Venue location registered"}
+                        </p>
+                      </div>
+                      {venue.capacity && (
+                        <div className="flex items-center justify-between text-xs pt-1 border-t border-border/40">
+                          <span className="text-muted-foreground">Venue Capacity</span>
+                          <span className="font-semibold">{formatNumber(venue.capacity)}</span>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Online or venue not specified</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Sessions & Schedule */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Scheduled Sessions</CardTitle>
+                  <CardDescription className="text-xs">
+                    {dates.length} {dates.length === 1 ? "session" : "sessions"} configured
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2 pt-0">
+                  {dates.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-2">No dates configured.</p>
+                  ) : (
+                    dates.map((d: any) => (
+                      <div
+                        key={d.id}
+                        className="flex items-center justify-between p-2.5 rounded-lg border bg-muted/20 text-xs"
+                      >
+                        <div className="space-y-0.5">
+                          <p className="font-medium text-foreground">
+                            {formatDate(d.starts_at || d.start_time)}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {d.ends_at ? `Until ${formatDate(d.ends_at)}` : "Open-ended"}
+                          </p>
+                        </div>
+                        <Badge
+                          variant={d.status === "completed" ? "secondary" : "outline"}
+                          className="capitalize text-[10px]"
+                        >
+                          {d.status || "Scheduled"}
+                        </Badge>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </TabsContent>
 
-        {/* ─── ANALYTICS TAB ─────────────────────────────────────────────────── */}
-        <TabsContent value="analytics" className="flex flex-col gap-4">
-          <StatsGrid cards={statsCards} />
-
-          {/* Sales & Revenue Overview - full row */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1, duration: 0.4 }}
-          >
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <div>
-                  <CardTitle className="text-base">Sales & Revenue</CardTitle>
-                  <p className="text-xs text-muted-foreground">
-                    Performance in the 7 days leading up to the event.
-                  </p>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-2">
-                <ResponsiveContainer width="100%" height={260}>
-                  <AreaChart
-                    data={salesOverviewData}
-                    margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
-                  >
-                    <defs>
-                      <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0.0} />
-                      </linearGradient>
-                      <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0.0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      vertical={false}
-                      stroke="hsl(var(--border))"
-                    />
-                    <XAxis
-                      dataKey="date"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={8}
-                      tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-                    />
-                    <YAxis
-                      yAxisId="sales"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={8}
-                      tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-                      tickFormatter={(value) => formatNumber(value)}
-                    />
-                    <YAxis
-                      yAxisId="revenue"
-                      orientation="right"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={8}
-                      tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-                      tickFormatter={(value) => formatCurrencyShort(value)}
-                    />
-                    <Tooltip cursor={false} content={<SalesTooltip />} />
-                    <Area
-                      yAxisId="sales"
-                      type="monotone"
-                      dataKey="sales"
-                      name="Tickets sold"
-                      stroke="hsl(var(--chart-1))"
-                      strokeWidth={2}
-                      fillOpacity={1}
-                      fill="url(#salesGradient)"
-                    />
-                    <Area
-                      yAxisId="revenue"
-                      type="monotone"
-                      dataKey="revenue"
-                      name="Revenue"
-                      stroke="hsl(var(--chart-2))"
-                      strokeWidth={2}
-                      fillOpacity={1}
-                      fill="url(#revenueGradient)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-
-                {/* Legend */}
-                <div className="flex items-center justify-center gap-4 pt-3">
-                  <div className="flex items-center gap-1.5">
-                    <span className="h-2 w-2 shrink-0 rounded-[2px] bg-chart-1" />
-                    <span className="text-xs">Tickets sold</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="h-2 w-2 shrink-0 rounded-[2px] bg-chart-2" />
-                    <span className="text-xs">Revenue</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </TabsContent>
-
-        {/* ─── TICKETS TAB ───────────────────────────────────────────────────── */}
+        {/* ─── 2. TICKETS & PRICING TAB ──────────────────────────────────────── */}
         <TabsContent value="tickets" className="flex flex-col gap-5">
-          {/* Header Action Bar */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-lg font-bold tracking-tight">Event Ticketing & Access</h2>
+              <h2 className="text-lg font-bold tracking-tight">Ticket Tiers & Pricing</h2>
               <p className="text-xs text-muted-foreground">
-                Manage ticket tiers, complimentary passes, and door scanners for this event.
+                Set tier capacities, pricing, and toggle sales activation.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -870,7 +939,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               </Button>
               <Button
                 size="sm"
-                className="gap-1.5 text-xs h-9"
+                className="gap-1.5 text-xs h-9 bg-lime-500 hover:bg-lime-600 text-zinc-950 font-bold dark:bg-lime-500 dark:text-zinc-950 dark:hover:bg-lime-400 border-0 shadow-xs"
                 onClick={() => setComplimentaryDialogOpen(true)}
               >
                 <HugeiconsIcon icon={Ticket01Icon} strokeWidth={2} className="size-3.5" />
@@ -880,7 +949,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           </div>
 
           {/* Top Ticket Metrics */}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-3">
             <Card className="p-3.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-muted-foreground">Active Tiers</span>
@@ -900,23 +969,6 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
             <Card className="p-3.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground">Gate Scanners</span>
-                <div className="flex size-7 items-center justify-center rounded-md bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400">
-                  <HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} className="size-3.5" />
-                </div>
-              </div>
-              <div className="mt-1.5 text-xl font-bold">
-                {isLoadingScanners ? (
-                  <Skeleton className="h-6 w-10" />
-                ) : (
-                  scannerDevices.filter((d) => d.status === "active").length
-                )}
-              </div>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">Active door devices paired</p>
-            </Card>
-
-            <Card className="p-3.5">
-              <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-muted-foreground">Total Capacity</span>
                 <div className="flex size-7 items-center justify-center rounded-md bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
                   <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className="size-3.5" />
@@ -930,7 +982,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-muted-foreground">Complimentary</span>
                 <div className="flex size-7 items-center justify-center rounded-md bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
-                  <HugeiconsIcon icon={TicketIcon} strokeWidth={2} className="size-3.5" />
+                  <HugeiconsIcon icon={Ticket01Icon} strokeWidth={2} className="size-3.5" />
                 </div>
               </div>
               <div className="mt-1.5 text-xl font-bold">Zero-Charge</div>
@@ -1054,138 +1106,29 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             </CardContent>
           </Card>
 
-          {/* Gate Scanners Section */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <CardTitle className="text-base">Gate Check-in Scanners</CardTitle>
-                  <CardDescription>
-                    Manage authorized volunteer and door staff smartphone scanners paired with your organization.
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {isLoadingScanners ? (
-                <div className="space-y-3 py-4">
-                  {[...Array(2)].map((_, i) => (
-                    <Skeleton key={i} className="h-16 w-full" />
-                  ))}
-                </div>
-              ) : scannerDevices.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <div className="flex size-12 items-center justify-center rounded-full bg-muted">
-                    <HugeiconsIcon icon={UserGroupIcon} className="size-6 text-muted-foreground" />
-                  </div>
-                  <h3 className="mt-4 text-base font-semibold">No Scanner Devices Paired Yet</h3>
-                  <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-                    Door volunteers pair via the Digis Scanner Mobile App. Paired devices appear here with real-time audit control.
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead>
-                      <tr className="border-b text-xs uppercase text-muted-foreground">
-                        <th className="pb-3 font-medium">Device Identifier</th>
-                        <th className="pb-3 font-medium">Name</th>
-                        <th className="pb-3 font-medium">Status</th>
-                        <th className="pb-3 font-medium">Last Synced</th>
-                        <th className="pb-3 font-medium text-right">Security Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {scannerDevices.map((device) => {
-                        const isRevoked = device.status === "revoked"
-                        return (
-                          <tr key={device.id} className="hover:bg-muted/40 transition-colors">
-                            <td className="py-3.5 pr-4 font-mono text-xs">
-                              {device.device_identifier}
-                            </td>
-                            <td className="py-3.5 pr-4 font-medium">
-                              {device.name || "Door Scanner"}
-                            </td>
-                            <td className="py-3.5 pr-4">
-                              <Badge
-                                variant={isRevoked ? "destructive" : "default"}
-                                className={!isRevoked ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : ""}
-                              >
-                                {device.status.toUpperCase()}
-                              </Badge>
-                            </td>
-                            <td className="py-3.5 pr-4 text-xs text-muted-foreground">
-                              {device.last_seen_at ? formatDate(device.last_seen_at) : "Never"}
-                            </td>
-                            <td className="py-3.5 text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                {!isRevoked && (
-                                  <>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-8 text-xs gap-1.5"
-                                      disabled={isRotatingToken}
-                                      onClick={() => handleRotateToken(device)}
-                                    >
-                                      <RefreshCw className={cn("size-3.5", isRotatingToken && "animate-spin")} />
-                                      Rotate Token
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-8 text-xs text-destructive hover:bg-destructive/10"
-                                      onClick={() =>
-                                        setRevokeModal({
-                                          open: true,
-                                          deviceId: device.id,
-                                          deviceName: device.name || "Door Scanner",
-                                          reason: "",
-                                        })
-                                      }
-                                    >
-                                      Revoke
-                                    </Button>
-                                  </>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
         </TabsContent>
 
-        {/* ─── SALES TAB ─────────────────────────────────────────────────────── */}
-        <TabsContent value="sales" className="flex flex-col gap-4">
-          <StatsGrid cards={statsCards} />
+        {/* ─── 3. ACCESS & INVITES TAB ───────────────────────────────────────── */}
+        <TabsContent value="access" className="flex flex-col gap-5">
+          <AccessCodesTab eventId={id} eventProducts={products} />
+        </TabsContent>
 
-          {/* Sale Channel */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1, duration: 0.4 }}
-            className="flex flex-col gap-2"
-          >
-            <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={BarChartIcon} strokeWidth={2} className="size-5" />
-              <h3 className="font-semibold">Sale channel</h3>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Where your tickets are being sold.
-            </p>
-            <DataTable
-              columns={channelColumns}
-              data={saleChannelRows}
-              keyExtractor={(row) => row.name}
-              emptyMessage="No sales channels found."
-            />
-          </motion.div>
+        {/* ─── 4. ATTENDEES & RSVPS TAB ──────────────────────────────────────── */}
+        <TabsContent value="attendees" className="flex flex-col gap-5">
+          <AttendeesTab
+            eventId={id}
+            eventTitle={event?.title || "Event"}
+            eventProducts={products}
+            totalSold={soldTickets}
+            totalCapacity={totalTickets}
+            onOpenComplimentary={() => setComplimentaryDialogOpen(true)}
+            onOpenExport={() => setExportDialogOpen(true)}
+          />
+        </TabsContent>
+
+        {/* ─── 5. GATES & SCANNERS TAB ───────────────────────────────────────── */}
+        <TabsContent value="scanners" className="flex flex-col gap-5">
+          <ScannersTab organizationId={organizationId} />
         </TabsContent>
       </Tabs>
 
@@ -1298,97 +1241,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Scanner Token Result Dialog */}
-      <Dialog
-        open={tokenResult.open}
-        onOpenChange={(open) => setTokenResult((prev) => ({ ...prev, open }))}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <HugeiconsIcon icon={CheckmarkCircle01Icon} className="size-5 text-emerald-600" />
-              Scanner Token Rotated
-            </DialogTitle>
-            <DialogDescription>
-              New access token for <strong>{tokenResult.deviceName}</strong>. Share this code with door staff immediately.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <Label className="text-xs text-muted-foreground">New Scanner Token</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                readOnly
-                value={tokenResult.token}
-                className="font-mono text-xs bg-muted"
-              />
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  navigator.clipboard.writeText(tokenResult.token)
-                  setCopiedToken(true)
-                  setTimeout(() => setCopiedToken(false), 2000)
-                  toast.success("Token copied to clipboard")
-                }}
-              >
-                {copiedToken ? <Check className="size-4 text-emerald-600" /> : <Copy className="size-4" />}
-              </Button>
-            </div>
-            <p className="text-[11px] text-amber-600 dark:text-amber-400">
-              This token will not be shown again. The old token has been invalidated.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button
-              onClick={() => setTokenResult({ open: false, deviceName: "", token: "" })}
-            >
-              Done
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
-      {/* Revoke Scanner Device Confirmation Dialog */}
-      <Dialog
-        open={revokeModal.open}
-        onOpenChange={(open) => setRevokeModal((prev) => ({ ...prev, open }))}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <ShieldAlert className="size-5" />
-              Revoke Scanner Device
-            </DialogTitle>
-            <DialogDescription>
-              Are you sure you want to revoke <strong>{revokeModal.deviceName}</strong>? This device will immediately lose access to scan tickets.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <Label htmlFor="revoke-reason" className="text-xs">Reason for Revocation</Label>
-            <Input
-              id="revoke-reason"
-              placeholder="e.g. Device lost, staff reassigned"
-              value={revokeModal.reason}
-              onChange={(e) => setRevokeModal((prev) => ({ ...prev, reason: e.target.value }))}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setRevokeModal({ open: false, deviceId: "", deviceName: "", reason: "" })}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={isRevokingDevice}
-              onClick={handleConfirmRevoke}
-            >
-              {isRevokingDevice ? "Revoking..." : "Revoke Device"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Social Share Card Dialog */}
       <ShareEventDialog
@@ -1416,6 +1269,33 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         open={exportDialogOpen}
         onOpenChange={setExportDialogOpen}
         eventId={id}
+      />
+
+      {/* Complete Event Dialog */}
+      <CompleteEventDialog
+        open={completeDialogOpen}
+        onOpenChange={setCompleteDialogOpen}
+        eventId={id}
+        eventTitle={event.title}
+        eventStatus={event.status}
+        eventDates={(event.event_dates as any[]) || []}
+      />
+
+      {/* Reschedule Event Dialog */}
+      <RescheduleEventDialog
+        open={rescheduleDialogOpen}
+        onOpenChange={setRescheduleDialogOpen}
+        eventId={id}
+        eventTitle={event.title}
+        eventDates={(event.event_dates as any[]) || []}
+      />
+
+      {/* Cancel Event Dialog */}
+      <CancelEventDialog
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
+        eventId={id}
+        eventTitle={event.title}
       />
     </div>
   )

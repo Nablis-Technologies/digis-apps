@@ -752,6 +752,73 @@ export const organizerEventsApi = createApi({
       }),
       invalidatesTags: (_result, _error, { eventId }) => [{ type: "EventMedia", id: eventId }],
     }),
+
+    // ─── Lifecycle & Operations ──────────────────────────────────────────────
+    completeEvent: builder.mutation<SingleResponse<Event>, string>({
+      query: (eventId) => ({
+        url: `/events/${eventId}/complete`,
+        method: "POST",
+        headers: {
+          "Idempotency-Key": crypto.randomUUID(),
+        },
+      }),
+      invalidatesTags: (_result, _error, eventId) => [
+        { type: "Events", id: eventId },
+        { type: "Events", id: "LIST" },
+      ],
+    }),
+
+    createEventScheduleChange: builder.mutation<
+      SingleResponse<unknown>,
+      {
+        eventId: string
+        payload: {
+          changes: Array<{
+            event_date_id: string
+            new_start_at: string
+            new_end_at?: string
+            change_type: "rescheduled" | "time_adjusted" | string
+          }>
+        }
+      }
+    >({
+      query: ({ eventId, payload }) => ({
+        url: `/events/${eventId}/event_schedule_changes`,
+        method: "POST",
+        headers: {
+          "Idempotency-Key": crypto.randomUUID(),
+        },
+        body: { schedule_change: payload },
+      }),
+      invalidatesTags: (_result, _error, { eventId }) => [
+        { type: "Events", id: eventId },
+        { type: "EventDates", id: eventId },
+      ],
+    }),
+
+    createEventCancellation: builder.mutation<
+      SingleResponse<unknown>,
+      {
+        eventId: string
+        payload: {
+          internal_note?: string
+          attendee_reason: string
+        }
+      }
+    >({
+      query: ({ eventId, payload }) => ({
+        url: `/events/${eventId}/event_cancellations`,
+        method: "POST",
+        headers: {
+          "Idempotency-Key": crypto.randomUUID(),
+        },
+        body: { cancellation: payload },
+      }),
+      invalidatesTags: (_result, _error, { eventId }) => [
+        { type: "Events", id: eventId },
+        { type: "Events", id: "LIST" },
+      ],
+    }),
   }),
 })
 
@@ -766,6 +833,9 @@ export const {
   useCreateEventMutation,
   useUpdateEventMutation,
   usePublishEventMutation,
+  useCompleteEventMutation,
+  useCreateEventScheduleChangeMutation,
+  useCreateEventCancellationMutation,
 
   // Event Dates
   useListEventDatesQuery,

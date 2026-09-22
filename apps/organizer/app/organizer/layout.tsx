@@ -26,16 +26,16 @@ const navSections: NavSection[] = [
         url: "/organizer",
         icon: <HugeiconsIcon icon={DashboardSquare01Icon} strokeWidth={2} />,
       },
-    ],
-  },
-  {
-    title: "Management",
-    items: [
       {
         title: "Events",
         url: "/organizer/events",
         icon: <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} />,
       },
+    ],
+  },
+  {
+    title: "Management",
+    items: [
       {
         title: "Organization",
         url: "/organizer/organization",
@@ -50,6 +50,16 @@ const navSections: NavSection[] = [
         title: "Payouts",
         url: "/organizer/payouts",
         icon: <HugeiconsIcon icon={Wallet01Icon} strokeWidth={2} />,
+      },
+    ],
+  },
+  {
+    title: "Marketing",
+    items: [
+      {
+        title: "Campaigns",
+        url: "/organizer/campaigns",
+        icon: <HugeiconsIcon icon={Mail01Icon} strokeWidth={2} />,
       },
     ],
   },
