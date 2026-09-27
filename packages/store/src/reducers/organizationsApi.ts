@@ -28,6 +28,10 @@ export interface Organization {
   follower_count?: number
   memberships_count?: number
   events_count?: number
+  membership_status?: "active" | "suspended" | "removed" | string
+  membership_role?: "owner" | "admin" | "staff" | string
+  archived?: boolean
+  status?: string
   created_at?: string
   updated_at?: string
 }

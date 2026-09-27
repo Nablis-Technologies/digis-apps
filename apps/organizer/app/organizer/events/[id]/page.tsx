@@ -8,12 +8,8 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { DataTable, type Column } from "@/components/ui/data-table"
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs"
+import { TabsContent } from "@/components/ui/tabs"
+import { PageTabs } from "@/components/page-tabs"
 import {
   Dialog,
   DialogContent,
@@ -633,29 +629,16 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         </div>
       </motion.div>
 
-      <Tabs defaultValue="overview">
-        <TabsList className="h-10 p-1 bg-muted/60 rounded-xl gap-1 overflow-x-auto max-w-full">
-          <TabsTrigger value="overview" className="gap-1.5 text-xs font-medium rounded-lg">
-            <HugeiconsIcon icon={LayoutTopIcon} strokeWidth={2} className="size-4" />
-            Overview & Analytics
-          </TabsTrigger>
-          <TabsTrigger value="tickets" className="gap-1.5 text-xs font-medium rounded-lg">
-            <HugeiconsIcon icon={Ticket01Icon} strokeWidth={2} className="size-4" />
-            Tickets & Pricing
-          </TabsTrigger>
-          <TabsTrigger value="access" className="gap-1.5 text-xs font-medium rounded-lg">
-            <HugeiconsIcon icon={Key01Icon} strokeWidth={2} className="size-4" />
-            Access & Invites
-          </TabsTrigger>
-          <TabsTrigger value="attendees" className="gap-1.5 text-xs font-medium rounded-lg">
-            <HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} className="size-4" />
-            Attendees & RSVPs
-          </TabsTrigger>
-          <TabsTrigger value="scanners" className="gap-1.5 text-xs font-medium rounded-lg">
-            <HugeiconsIcon icon={RadioIcon} strokeWidth={2} className="size-4" />
-            Gates & Scanners
-          </TabsTrigger>
-        </TabsList>
+      <PageTabs
+        defaultValue="overview"
+        tabs={[
+          { value: "overview", label: "Overview & Analytics", icon: LayoutTopIcon },
+          { value: "tickets", label: "Tickets & Pricing", icon: Ticket01Icon },
+          { value: "access", label: "Access & Invites", icon: Key01Icon },
+          { value: "attendees", label: "Attendees & RSVPs", icon: UserGroupIcon },
+          { value: "scanners", label: "Gates & Scanners", icon: RadioIcon },
+        ]}
+      >
 
         {/* ─── 1. OVERVIEW & ANALYTICS TAB ───────────────────────────────────── */}
         <TabsContent value="overview" className="flex flex-col gap-5">
@@ -939,7 +922,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               </Button>
               <Button
                 size="sm"
-                className="gap-1.5 text-xs h-9 bg-lime-500 hover:bg-lime-600 text-zinc-950 font-bold dark:bg-lime-500 dark:text-zinc-950 dark:hover:bg-lime-400 border-0 shadow-xs"
+                className="gap-1.5 text-xs h-9 shadow-xs"
                 onClick={() => setComplimentaryDialogOpen(true)}
               >
                 <HugeiconsIcon icon={Ticket01Icon} strokeWidth={2} className="size-3.5" />
@@ -1130,7 +1113,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         <TabsContent value="scanners" className="flex flex-col gap-5">
           <ScannersTab organizationId={organizationId} />
         </TabsContent>
-      </Tabs>
+      </PageTabs>
 
       {/* Gallery Lightbox Dialog */}
       <Dialog open={galleryPreviewOpen} onOpenChange={setGalleryPreviewOpen}>

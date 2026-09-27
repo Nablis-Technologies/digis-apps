@@ -105,7 +105,7 @@ export function TopUpCreditsDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-lime-500/10 text-lime-600 dark:bg-lime-500/20 dark:text-lime-400">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <HugeiconsIcon icon={Wallet01Icon} size={20} strokeWidth={2} />
             </div>
             <div>
@@ -133,7 +133,7 @@ export function TopUpCreditsDialog({
                 <span className="text-muted-foreground">({formatNumber(quantity)} credits)</span>
               </div>
               <Button
-                className="mt-5 w-full gap-2 bg-lime-500 hover:bg-lime-600 text-zinc-950 font-bold dark:bg-lime-500 dark:text-zinc-950 dark:hover:bg-lime-400 border-0 shadow-xs"
+                className="mt-5 w-full gap-2 shadow-xs"
                 onClick={() => window.open(checkoutUrl, "_blank")}
               >
                 Proceed to Payment
@@ -158,7 +158,7 @@ export function TopUpCreditsDialog({
                   className={cn(
                     "flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition-all",
                     channel === "sms"
-                      ? "border-lime-500/60 bg-lime-500/5 dark:bg-lime-500/10"
+                      ? "border-emerald-500/60 bg-emerald-500/5 dark:bg-emerald-500/10 shadow-2xs"
                       : "border-border/60 hover:bg-muted/50"
                   )}
                 >
@@ -166,7 +166,7 @@ export function TopUpCreditsDialog({
                     <HugeiconsIcon
                       icon={SmartPhone01Icon}
                       size={16}
-                      className={channel === "sms" ? "text-lime-600 dark:text-lime-400" : "text-muted-foreground"}
+                      className={channel === "sms" ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}
                     />
                     <span className="text-xs font-semibold">SMS Credits</span>
                   </div>
@@ -179,7 +179,7 @@ export function TopUpCreditsDialog({
                   className={cn(
                     "flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition-all",
                     channel === "email"
-                      ? "border-lime-500/60 bg-lime-500/5 dark:bg-lime-500/10"
+                      ? "border-sky-500/60 bg-sky-500/5 dark:bg-sky-500/10 shadow-2xs"
                       : "border-border/60 hover:bg-muted/50"
                   )}
                 >
@@ -187,7 +187,7 @@ export function TopUpCreditsDialog({
                     <HugeiconsIcon
                       icon={Mail01Icon}
                       size={16}
-                      className={channel === "email" ? "text-lime-600 dark:text-lime-400" : "text-muted-foreground"}
+                      className={channel === "email" ? "text-sky-600 dark:text-sky-400" : "text-muted-foreground"}
                     />
                     <span className="text-xs font-semibold">Email Credits</span>
                   </div>
@@ -213,7 +213,7 @@ export function TopUpCreditsDialog({
                     className={cn(
                       "rounded-lg border py-2 text-xs font-semibold transition-all",
                       quantity === pack
-                        ? "border-lime-500/60 bg-lime-500/10 text-lime-700 dark:text-lime-400 font-bold"
+                        ? "border-primary bg-primary/10 text-primary font-bold shadow-2xs"
                         : "border-border/60 hover:bg-muted/50 text-foreground"
                     )}
                   >
@@ -278,7 +278,7 @@ export function TopUpCreditsDialog({
               </Button>
               <Button
                 size="sm"
-                className="gap-1.5 bg-lime-500 hover:bg-lime-600 text-zinc-950 font-bold dark:bg-lime-500 dark:text-zinc-950 dark:hover:bg-lime-400 border-0 shadow-xs"
+                className="gap-1.5 shadow-xs"
                 disabled={isSubmitting || quantity <= 0}
                 onClick={handleCreateTopUp}
               >

@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select"
 import { useGetMeQuery } from "@workspace/store/reducers/authApi"
 import { useListOwnerOrganizationsQuery } from "@workspace/store/reducers/organizationsApi"
-import { useActiveOrganization } from "../../providers/organization-provider"
+import { useActiveOrganization, isOrgSuspendedOrRemoved } from "../../providers/organization-provider"
 import { useListPublicCategoriesQuery } from "@workspace/store/reducers/categoriesApi"
 import { useListPublicVenuesQuery } from "@workspace/store/reducers/venuesApi"
 import { 
@@ -498,6 +498,14 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   const handleCreate = async (publish: boolean) => {
     setError("")
     setFieldErrors({})
+
+    // If trying to create an event with a suspended organization
+    if (isOrgSuspendedOrRemoved(activeOrg)) {
+      const msg = `You cannot create events because your membership in "${activeOrg?.name}" is suspended. Please switch to an active organization.`
+      toast.error(msg)
+      setError(msg)
+      return
+    }
 
     // If trying to publish with an unverified organization
     if (publish && activeOrg && !activeOrg.verified) {

@@ -199,7 +199,6 @@ export function GiftTicketModal({
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="bg-gradient-to-r from-orange-500 to-pink-500"
             >
               {isSubmitting ? "Sending..." : "Send gift tickets"}
             </Button>

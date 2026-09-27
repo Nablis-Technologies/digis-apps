@@ -227,7 +227,7 @@ export function AttendeesTab({
           <Button
             size="sm"
             onClick={onOpenComplimentary}
-            className="h-9 gap-1.5 text-xs bg-lime-500 hover:bg-lime-600 text-zinc-950 font-bold dark:bg-lime-500 dark:text-zinc-950 dark:hover:bg-lime-400 border-0 shadow-xs"
+            className="h-9 gap-1.5 text-xs shadow-xs"
           >
             <HugeiconsIcon icon={GiftIcon} size={15} strokeWidth={2} />
             Gift Tickets
@@ -314,14 +314,13 @@ export function AttendeesTab({
             ].map((tab) => (
               <Button
                 key={tab.value}
-                variant={statusFilter === tab.value ? "default" : "ghost"}
+                variant={statusFilter === tab.value ? "default" : "outline"}
                 size="sm"
                 onClick={() => setStatusFilter(tab.value)}
                 className={cn(
-                  "h-8 text-xs font-medium px-3 rounded-lg",
-                  statusFilter === tab.value
-                    ? "bg-lime-500 hover:bg-lime-600 text-zinc-950 font-bold dark:bg-lime-500 dark:text-zinc-950 dark:hover:bg-lime-400 shadow-xs"
-                    : "text-muted-foreground"
+                  "h-8 text-xs font-medium px-3 rounded-lg shadow-xs",
+                  statusFilter !== tab.value &&
+                    "text-muted-foreground hover:text-foreground bg-background/60"
                 )}
               >
                 {tab.label}
@@ -404,7 +403,7 @@ export function AttendeesTab({
                                   size="sm"
                                   onClick={() => handleApprove(reg.id)}
                                   disabled={isApproving}
-                                  className="h-7 text-xs gap-1 bg-lime-500 hover:bg-lime-600 text-zinc-950 font-bold dark:bg-lime-500 dark:text-zinc-950 dark:hover:bg-lime-400 border-0 shadow-xs"
+                                  className="h-7 text-xs gap-1 shadow-xs"
                                 >
                                   <HugeiconsIcon icon={CheckmarkCircle01Icon} size={13} strokeWidth={2} />
                                   Approve

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import Link from "next/link"
 import { motion } from "framer-motion"
 import { toast } from "sonner"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -24,14 +25,10 @@ import {
 } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge, StatusBadge } from "@/components/ui/badge"
+import { Badge, StatusBadge, ChannelBadge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs"
+import { TabsContent } from "@/components/ui/tabs"
+import { PageTabs } from "@/components/page-tabs"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDate, formatNumber } from "@/lib/utils"
 import { cn } from "@workspace/ui/lib/utils"
@@ -196,23 +193,20 @@ export default function CampaignsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <Button
-            size="sm"
             variant="outline"
-            className="gap-1.5 text-xs h-9"
+            className="gap-2 shadow-xs"
             onClick={() => openTopUpForChannel("sms")}
           >
-            <HugeiconsIcon icon={Wallet01Icon} size={15} strokeWidth={2} />
+            <HugeiconsIcon icon={Wallet01Icon} strokeWidth={2} className="size-4" />
             Top Up Credits
           </Button>
-          <Button
-            size="sm"
-            className="gap-1.5 text-xs h-9 bg-lime-500 hover:bg-lime-600 text-zinc-950 font-bold dark:bg-lime-500 dark:text-zinc-950 dark:hover:bg-lime-400 border-0 shadow-xs"
-            onClick={() => setCreateCampaignOpen(true)}
-          >
-            <HugeiconsIcon icon={Add01Icon} size={15} strokeWidth={2} />
-            New Campaign
+          <Button asChild className="gap-2 shadow-xs">
+            <Link href="/organizer/campaigns/new">
+              <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-4" />
+              New Campaign
+            </Link>
           </Button>
         </div>
       </div>
@@ -223,7 +217,7 @@ export default function CampaignsPage() {
         <Card className="p-4 relative overflow-hidden">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-lime-500/10 text-lime-600 dark:bg-lime-500/20 dark:text-lime-400">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
                 <HugeiconsIcon icon={SmartPhone01Icon} size={16} strokeWidth={2} />
               </div>
               <span className="text-xs font-semibold">SMS Credits</span>
@@ -231,7 +225,7 @@ export default function CampaignsPage() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 text-[11px] text-lime-700 dark:text-lime-400 hover:bg-lime-500/10"
+              className="h-7 text-[11px] text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10 font-semibold"
               onClick={() => openTopUpForChannel("sms")}
             >
               + Top Up
@@ -254,7 +248,7 @@ export default function CampaignsPage() {
         <Card className="p-4 relative overflow-hidden">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-sky-500/10 text-sky-600 dark:bg-sky-500/20 dark:text-sky-400">
                 <HugeiconsIcon icon={Mail01Icon} size={16} strokeWidth={2} />
               </div>
               <span className="text-xs font-semibold">Email Credits</span>
@@ -262,7 +256,7 @@ export default function CampaignsPage() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 text-[11px] text-blue-600 dark:text-blue-400 hover:bg-blue-500/10"
+              className="h-7 text-[11px] text-sky-700 dark:text-sky-400 hover:bg-sky-500/10 font-semibold"
               onClick={() => openTopUpForChannel("email")}
             >
               + Top Up
@@ -284,7 +278,7 @@ export default function CampaignsPage() {
         {/* Broadcast Reach Summary */}
         <Card className="p-4">
           <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400">
               <HugeiconsIcon icon={Megaphone01Icon} size={16} strokeWidth={2} />
             </div>
             <span className="text-xs font-semibold">Campaign Operations</span>
@@ -307,22 +301,14 @@ export default function CampaignsPage() {
         </Card>
       </div>
 
-      {/* ─── Tabbed Workspace ─────────────────────────────────────────────────── */}
-      <Tabs defaultValue="campaigns" className="space-y-4">
-        <TabsList className="bg-muted/60 p-1 rounded-xl">
-          <TabsTrigger value="campaigns" className="text-xs gap-1.5 rounded-lg">
-            <HugeiconsIcon icon={Megaphone01Icon} size={14} />
-            Campaigns ({campaigns.length})
-          </TabsTrigger>
-          <TabsTrigger value="contacts" className="text-xs gap-1.5 rounded-lg">
-            <HugeiconsIcon icon={UserGroupIcon} size={14} />
-            Contact Lists ({contactLists.length})
-          </TabsTrigger>
-          <TabsTrigger value="templates" className="text-xs gap-1.5 rounded-lg">
-            <HugeiconsIcon icon={Copy01Icon} size={14} />
-            Templates & Tags
-          </TabsTrigger>
-        </TabsList>
+      <PageTabs
+        defaultValue="campaigns"
+        tabs={[
+          { value: "campaigns", label: `Campaigns (${campaigns.length})`, icon: Megaphone01Icon },
+          { value: "contacts", label: `Contact Lists (${contactLists.length})`, icon: UserGroupIcon },
+          { value: "templates", label: "Templates & Tags", icon: Copy01Icon },
+        ]}
+      >
 
         {/* ─── TAB 1: CAMPAIGNS ────────────────────────────────────────────────── */}
         <TabsContent value="campaigns" className="space-y-4">
@@ -344,41 +330,51 @@ export default function CampaignsPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              {/* Channel Selector Pills */}
-              <div className="flex items-center rounded-lg border bg-muted/30 p-0.5 text-xs">
-                <button
+            <div className="flex items-center flex-wrap gap-2">
+              {/* Channel Filter Buttons */}
+              <div className="flex items-center gap-1.5">
+                <Button
                   type="button"
-                  onClick={() => setSelectedChannel("all")}
+                  variant={selectedChannel === "all" ? "default" : "outline"}
+                  size="sm"
                   className={cn(
-                    "px-2.5 py-1 rounded-md transition-colors font-medium",
-                    selectedChannel === "all" ? "bg-background shadow-xs font-bold text-foreground" : "text-muted-foreground"
+                    "h-9 px-3 text-xs font-semibold rounded-lg shadow-xs",
+                    selectedChannel !== "all" && "bg-background/80 hover:bg-muted/70 text-muted-foreground hover:text-foreground"
                   )}
+                  onClick={() => setSelectedChannel("all")}
                 >
                   All Channels
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant={selectedChannel === "sms" ? "default" : "outline"}
+                  size="sm"
+                  className={cn(
+                    "h-9 px-3 text-xs font-semibold rounded-lg gap-1.5 shadow-xs transition-all",
+                    selectedChannel === "sms"
+                      ? "bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-500 dark:text-zinc-950 dark:hover:bg-emerald-400 border-emerald-600 dark:border-emerald-500"
+                      : "bg-background/80 hover:bg-muted/70 text-muted-foreground hover:text-foreground"
+                  )}
                   onClick={() => setSelectedChannel("sms")}
-                  className={cn(
-                    "px-2.5 py-1 rounded-md transition-colors font-medium flex items-center gap-1",
-                    selectedChannel === "sms" ? "bg-background shadow-xs font-bold text-foreground" : "text-muted-foreground"
-                  )}
                 >
-                  <HugeiconsIcon icon={SmartPhone01Icon} size={12} />
+                  <HugeiconsIcon icon={SmartPhone01Icon} size={14} strokeWidth={2} />
                   SMS
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
-                  onClick={() => setSelectedChannel("email")}
+                  variant={selectedChannel === "email" ? "default" : "outline"}
+                  size="sm"
                   className={cn(
-                    "px-2.5 py-1 rounded-md transition-colors font-medium flex items-center gap-1",
-                    selectedChannel === "email" ? "bg-background shadow-xs font-bold text-foreground" : "text-muted-foreground"
+                    "h-9 px-3 text-xs font-semibold rounded-lg gap-1.5 shadow-xs transition-all",
+                    selectedChannel === "email"
+                      ? "bg-sky-600 hover:bg-sky-700 text-white dark:bg-sky-500 dark:text-zinc-950 dark:hover:bg-sky-400 border-sky-600 dark:border-sky-500"
+                      : "bg-background/80 hover:bg-muted/70 text-muted-foreground hover:text-foreground"
                   )}
+                  onClick={() => setSelectedChannel("email")}
                 >
-                  <HugeiconsIcon icon={Mail01Icon} size={12} />
+                  <HugeiconsIcon icon={Mail01Icon} size={14} strokeWidth={2} />
                   Email
-                </button>
+                </Button>
               </div>
 
               {/* Status Filter */}
@@ -386,7 +382,7 @@ export default function CampaignsPage() {
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
                 aria-label="Filter campaigns by status"
-                className="h-9 rounded-lg border bg-background px-3 py-1 text-xs text-foreground focus:outline-hidden"
+                className="h-9 rounded-lg border border-input/60 bg-background/80 px-3 py-1 text-xs font-medium text-foreground shadow-xs hover:border-input focus:outline-hidden focus:ring-2 focus:ring-ring/20 transition-all cursor-pointer"
               >
                 <option value="all">All Statuses</option>
                 <option value="draft">Draft</option>
@@ -421,11 +417,13 @@ export default function CampaignsPage() {
                   </p>
                   <Button
                     size="sm"
-                    className="mt-4 gap-1.5 text-xs bg-lime-500 hover:bg-lime-600 text-zinc-950 font-bold dark:bg-lime-500 dark:text-zinc-950 dark:hover:bg-lime-400 border-0 shadow-xs"
-                    onClick={() => setCreateCampaignOpen(true)}
+                    asChild
+                    className="mt-4 gap-1.5 text-xs shadow-xs"
                   >
-                    <HugeiconsIcon icon={Add01Icon} size={14} strokeWidth={2} />
-                    New Campaign
+                    <Link href="/organizer/campaigns/new">
+                      <HugeiconsIcon icon={Add01Icon} size={14} strokeWidth={2} />
+                      New Campaign
+                    </Link>
                   </Button>
                 </div>
               ) : (
@@ -469,36 +467,11 @@ export default function CampaignsPage() {
                             </td>
 
                             <td className="py-3.5 px-4">
-                              <span className="inline-flex items-center gap-1 font-mono text-[11px] capitalize px-2 py-0.5 rounded-md bg-muted border">
-                                <HugeiconsIcon
-                                  icon={campaign.channel === "sms" ? SmartPhone01Icon : Mail01Icon}
-                                  size={12}
-                                />
-                                {campaign.channel.toUpperCase()}
-                              </span>
+                              <ChannelBadge channel={campaign.channel} />
                             </td>
 
                             <td className="py-3.5 px-4">
-                              <Badge
-                                variant={
-                                  isCompleted
-                                    ? "secondary"
-                                    : isSending
-                                    ? "default"
-                                    : isDraft
-                                    ? "outline"
-                                    : isPaused
-                                    ? "secondary"
-                                    : "destructive"
-                                }
-                                className={cn(
-                                  "capitalize text-[10px] font-semibold",
-                                  isCompleted && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
-                                  isSending && "bg-lime-500/15 text-lime-700 dark:text-lime-400 border-lime-500/30 animate-pulse"
-                                )}
-                              >
-                                {campaign.status}
-                              </Badge>
+                              <StatusBadge status={campaign.status} />
                             </td>
 
                             <td className="py-3.5 px-4 font-mono text-muted-foreground">
@@ -522,7 +495,7 @@ export default function CampaignsPage() {
                                 {isDraft && (
                                   <Button
                                     size="sm"
-                                    className="h-7 text-[11px] gap-1 bg-lime-500 hover:bg-lime-600 text-zinc-950 font-bold dark:bg-lime-500 dark:text-zinc-950 dark:hover:bg-lime-400 border-0 shadow-xs"
+                                    className="h-7 text-xs gap-1.5 shadow-xs"
                                     onClick={() =>
                                       setLaunchModal({
                                         open: true,
@@ -530,7 +503,7 @@ export default function CampaignsPage() {
                                       })
                                     }
                                   >
-                                    <HugeiconsIcon icon={Rocket01Icon} size={12} strokeWidth={2} />
+                                    <HugeiconsIcon icon={Rocket01Icon} size={13} strokeWidth={2} />
                                     Launch
                                   </Button>
                                 )}
@@ -622,11 +595,10 @@ export default function CampaignsPage() {
               </p>
             </div>
             <Button
-              size="sm"
-              className="gap-1.5 text-xs h-8 bg-lime-500 hover:bg-lime-600 text-zinc-950 font-bold dark:bg-lime-500 dark:text-zinc-950 dark:hover:bg-lime-400 border-0 shadow-xs"
+              className="gap-2 shadow-xs"
               onClick={() => setCreateListOpen(true)}
             >
-              <HugeiconsIcon icon={Add01Icon} size={14} strokeWidth={2} />
+              <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-4" />
               New Contact List
             </Button>
           </div>
@@ -679,9 +651,7 @@ export default function CampaignsPage() {
                             {formatNumber(list.entries_count || 0)} contacts
                           </td>
                           <td className="py-3.5 px-4">
-                            <Badge variant="secondary" className="capitalize text-[10px]">
-                              {list.status}
-                            </Badge>
+                            <StatusBadge status={list.status} />
                           </td>
                           <td className="py-3.5 px-4 text-muted-foreground">
                             {formatDate(list.created_at)}
@@ -790,7 +760,7 @@ export default function CampaignsPage() {
             </Card>
           </div>
         </TabsContent>
-      </Tabs>
+      </PageTabs>
 
       {/* ─── Modals ───────────────────────────────────────────────────────────── */}
       <CreateCampaignDialog

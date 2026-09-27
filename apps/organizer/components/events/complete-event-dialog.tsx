@@ -161,12 +161,7 @@ export function CompleteEventDialog({
             type="button"
             onClick={handleComplete}
             disabled={isLoading || !isPublished || !allDatesEnded}
-            className={cn(
-              "gap-2 font-medium transition-colors",
-              isPublished && allDatesEnded && !isLoading
-                ? "bg-lime-500 hover:bg-lime-600 text-zinc-950 font-bold dark:bg-lime-500 dark:text-zinc-950 dark:hover:bg-lime-400 border-0 shadow-xs"
-                : ""
-            )}
+            className="gap-2 font-medium shadow-xs"
           >
             {isLoading ? (
               <>

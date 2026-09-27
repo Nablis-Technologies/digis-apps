@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { toast } from "sonner"
 import {
   Popover,
   PopoverContent,
@@ -9,21 +10,21 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { useActiveOrganization } from "../../providers/organization-provider"
 import {
-  useListOwnerOrganizationsQuery,
-  type Organization,
-} from "@workspace/store/reducers/organizationsApi"
+  useActiveOrganization,
+  isOrgSuspendedOrRemoved,
+} from "../../providers/organization-provider"
+import { type Organization } from "@workspace/store/reducers/organizationsApi"
 import { CreateOrgDialog } from "../organizations/create-org-dialog"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { cn } from "@workspace/ui/lib/utils"
 import {
   Building02Icon,
   Search01Icon,
   Tick02Icon,
   Add01Icon,
-  UnfoldMoreIcon,
+  ArrowDown01Icon,
   CheckmarkCircle01Icon,
-  Loading01Icon,
   AlertCircleIcon,
 } from "@hugeicons/core-free-icons"
 
@@ -40,32 +41,30 @@ export function OrgSidebarSwitcher() {
   const [open, setOpen] = React.useState(false)
   const [createDialogOpen, setCreateDialogOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState("")
-  const [debouncedSearch, setDebouncedSearch] = React.useState("")
 
-  // 250ms debounce for search query
-  React.useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(searchQuery.trim())
-    }, 250)
-    return () => clearTimeout(handler)
-  }, [searchQuery])
-
-  // Server-side search query when user types
-  const { data: searchResultsData, isFetching: isSearching } =
-    useListOwnerOrganizationsQuery(
-      { search: debouncedSearch, per_page: 20 },
-      { skip: !debouncedSearch }
+  // Filter within user's organizations (guarantees no cross-org pollution)
+  const displayOrgs = React.useMemo(() => {
+    if (!searchQuery.trim()) return organizations
+    const q = searchQuery.toLowerCase().trim()
+    return organizations.filter(
+      (org) =>
+        org.name.toLowerCase().includes(q) ||
+        org.city?.toLowerCase().includes(q) ||
+        org.category?.toLowerCase().includes(q)
     )
-
-  const searchResults = searchResultsData?.data ?? []
-
-  // Items to display: if searching, show searchResults; otherwise show initial list
-  const displayOrgs = debouncedSearch ? searchResults : organizations
+  }, [organizations, searchQuery])
 
   const handleSelectOrg = (org: Organization) => {
+    const isSuspended = isOrgSuspendedOrRemoved(org)
     setActiveOrgId(org.id)
     setOpen(false)
     setSearchQuery("")
+
+    if (isSuspended) {
+      toast.warning(`Selected ${org.name} (Suspended)`, {
+        description: "Your membership is suspended. Event creation and settings edits are restricted.",
+      })
+    }
   }
 
   // Get 2-letter initials
@@ -79,16 +78,29 @@ export function OrgSidebarSwitcher() {
       .join("")
   }
 
+  const isActiveOrgSuspended = isOrgSuspendedOrRemoved(activeOrg)
+
   return (
     <>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors outline-hidden focus-visible:ring-2 focus-visible:ring-sidebar-ring cursor-pointer group"
+            className={cn(
+              "flex w-full items-center gap-2.5 rounded-xl border border-border/70 bg-card/60 p-2 text-left shadow-2xs transition-all duration-200 outline-hidden hover:border-border hover:bg-muted/50 hover:shadow-xs focus-visible:ring-2 focus-visible:ring-sidebar-ring cursor-pointer group",
+              open && "border-foreground/30 bg-muted/60 ring-1 ring-ring/30",
+              isActiveOrgSuspended && "border-red-500/30 bg-red-500/5 hover:border-red-500/40"
+            )}
           >
             {/* Org Avatar */}
-            <div className="flex aspect-square size-9 items-center justify-center rounded-lg bg-lime-500/15 text-lime-700 dark:bg-lime-500/20 dark:text-lime-300 font-bold text-xs shrink-0 border border-lime-500/20 shadow-xs">
+            <div
+              className={cn(
+                "flex aspect-square size-9 items-center justify-center rounded-lg font-bold text-xs shrink-0 border shadow-xs",
+                isActiveOrgSuspended
+                  ? "bg-red-500/15 text-red-700 dark:bg-red-500/20 dark:text-red-300 border-red-500/30"
+                  : "bg-lime-500/15 text-lime-700 dark:bg-lime-500/20 dark:text-lime-300 border-lime-500/20"
+              )}
+            >
               {activeOrg ? (
                 getInitials(activeOrg.name)
               ) : (
@@ -102,7 +114,19 @@ export function OrgSidebarSwitcher() {
                 {isLoadingContext ? "Loading..." : activeOrg?.name || "Select Organization"}
               </span>
               <div className="flex items-center gap-1.5 mt-0.5">
-                {activeOrg?.verified ? (
+                {isActiveOrgSuspended ? (
+                  <Badge
+                    variant="destructive"
+                    className="h-4 px-1.5 text-[10px] font-semibold border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400 gap-1 w-fit"
+                  >
+                    <HugeiconsIcon
+                      icon={AlertCircleIcon}
+                      strokeWidth={2.5}
+                      className="size-2.5 text-red-600 dark:text-red-400"
+                    />
+                    Suspended
+                  </Badge>
+                ) : activeOrg?.verified ? (
                   <Badge
                     variant="outline"
                     className="h-4 px-1.5 text-[10px] font-semibold border-lime-500/40 bg-lime-500/10 text-lime-700 dark:text-lime-300 gap-1 w-fit"
@@ -130,17 +154,23 @@ export function OrgSidebarSwitcher() {
               </div>
             </div>
 
-            {/* Switcher Indicator */}
-            <div className="text-muted-foreground/70 group-hover:text-foreground shrink-0 pr-1">
-              <HugeiconsIcon icon={UnfoldMoreIcon} strokeWidth={2} className="size-4" />
+            {/* Right-Side Dropdown Indicator */}
+            <div
+              className={cn(
+                "flex size-6 items-center justify-center rounded-md border border-border/50 bg-background/50 text-muted-foreground transition-all duration-200 shrink-0",
+                "group-hover:border-border group-hover:bg-muted group-hover:text-foreground",
+                open && "rotate-180 border-foreground/30 bg-muted text-foreground shadow-2xs"
+              )}
+            >
+              <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2.5} className="size-3.5" />
             </div>
           </button>
         </PopoverTrigger>
 
         <PopoverContent
           align="start"
-          sideOffset={8}
-          className="w-80 p-0 shadow-xl border-border/70 rounded-2xl overflow-hidden"
+          sideOffset={6}
+          className="w-(--radix-popover-trigger-width) min-w-[280px] p-0 shadow-xl border-border/70 rounded-2xl overflow-hidden"
         >
           {/* Search Header */}
           <div className="p-2.5 border-b bg-muted/20">
@@ -155,42 +185,62 @@ export function OrgSidebarSwitcher() {
                 className="pl-8 h-9 text-xs bg-background/80 focus-visible:ring-1"
                 autoFocus
               />
-              {isSearching && (
-                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground animate-spin">
-                  <HugeiconsIcon icon={Loading01Icon} strokeWidth={2} className="size-3.5" />
-                </div>
-              )}
             </div>
           </div>
 
           {/* Organizations List */}
           <div className="max-h-64 overflow-y-auto p-1.5 space-y-1 divide-y divide-border/20">
-            {/* Recent Orgs Section (only shown if not searching and has recents > 1) */}
-            {!debouncedSearch && recentOrgs.length > 1 && (
-              <div className="pb-1.5">
+            {/* Recent Orgs Section */}
+            {!searchQuery.trim() && recentOrgs.length > 1 && (
+              <div className="pb-1.5 space-y-0.5">
                 <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   Recent
                 </div>
                 {recentOrgs.map((org) => {
                   const isActive = org.id === activeOrgId
+                  const isSuspended = isOrgSuspendedOrRemoved(org)
                   return (
                     <button
                       key={`recent-${org.id}`}
                       type="button"
                       onClick={() => handleSelectOrg(org)}
-                      className={`flex w-full items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left cursor-pointer ${
-                        isActive
-                          ? "bg-primary/10 text-primary font-medium"
-                          : "hover:bg-muted text-foreground"
-                      }`}
+                      className={cn(
+                        "flex w-full items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left cursor-pointer",
+                        isSuspended
+                          ? "border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-foreground"
+                          : isActive
+                            ? "bg-primary/10 text-primary font-medium"
+                            : "hover:bg-muted text-foreground"
+                      )}
                     >
-                      <div className="flex aspect-square size-6 items-center justify-center rounded-md bg-lime-500/15 text-lime-700 dark:bg-lime-500/20 dark:text-lime-300 font-bold text-[10px] shrink-0">
+                      <div
+                        className={cn(
+                          "flex aspect-square size-6 items-center justify-center rounded-md font-bold text-[10px] shrink-0 border",
+                          isSuspended
+                            ? "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30"
+                            : "bg-lime-500/15 text-lime-700 dark:bg-lime-500/20 dark:text-lime-300 border-lime-500/20"
+                        )}
+                      >
                         {getInitials(org.name)}
                       </div>
-                      <span className="truncate flex-1">{org.name}</span>
-                      {isActive && (
+                      <span className="truncate flex-1 font-medium">
+                        {org.name}
+                      </span>
+                      {isSuspended ? (
+                        <Badge
+                          variant="destructive"
+                          className="text-[9px] px-1.5 py-0 h-4 shrink-0 font-semibold border-red-500/40 bg-red-500/15 text-red-600 dark:text-red-400 gap-1 shadow-2xs"
+                        >
+                          <HugeiconsIcon
+                            icon={AlertCircleIcon}
+                            strokeWidth={2.5}
+                            className="size-2.5 text-red-600 dark:text-red-400"
+                          />
+                          Suspended
+                        </Badge>
+                      ) : isActive ? (
                         <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} className="size-4 text-primary shrink-0" />
-                      )}
+                      ) : null}
                     </button>
                   )
                 })}
@@ -198,13 +248,13 @@ export function OrgSidebarSwitcher() {
             )}
 
             {/* Main / Filtered List */}
-            <div className="pt-1">
-              {!debouncedSearch && (
+            <div className="pt-1 space-y-0.5">
+              {!searchQuery.trim() && (
                 <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   All Organizations ({organizations.length})
                 </div>
               )}
-              {debouncedSearch && (
+              {searchQuery.trim() && (
                 <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   Search Results ({displayOrgs.length})
                 </div>
@@ -212,45 +262,79 @@ export function OrgSidebarSwitcher() {
 
               {displayOrgs.length === 0 ? (
                 <div className="py-6 text-center text-xs text-muted-foreground">
-                  {debouncedSearch
-                    ? `No organization matching "${debouncedSearch}"`
+                  {searchQuery.trim()
+                    ? `No organization matching "${searchQuery}"`
                     : "No organizations found"}
                 </div>
               ) : (
                 displayOrgs.map((org) => {
                   const isActive = org.id === activeOrgId
+                  const isSuspended = isOrgSuspendedOrRemoved(org)
                   return (
                     <button
                       key={org.id}
                       type="button"
                       onClick={() => handleSelectOrg(org)}
-                      className={`flex w-full items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs transition-colors text-left cursor-pointer group ${
-                        isActive
-                          ? "bg-primary/10 text-primary font-medium"
-                          : "hover:bg-muted text-foreground"
-                      }`}
+                      className={cn(
+                        "flex w-full items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs transition-colors text-left group cursor-pointer",
+                        isSuspended
+                          ? "border border-red-500/25 bg-red-500/5 hover:bg-red-500/10 text-foreground"
+                          : isActive
+                            ? "bg-primary/10 text-primary font-medium"
+                            : "hover:bg-muted text-foreground"
+                      )}
                     >
-                      <div className="flex aspect-square size-7 items-center justify-center rounded-md bg-lime-500/15 text-lime-700 dark:bg-lime-500/20 dark:text-lime-300 font-bold text-[10px] shrink-0 border border-lime-500/10">
+                      <div
+                        className={cn(
+                          "flex aspect-square size-7 items-center justify-center rounded-md font-bold text-[10px] shrink-0 border",
+                          isSuspended
+                            ? "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30"
+                            : "bg-lime-500/15 text-lime-700 dark:bg-lime-500/20 dark:text-lime-300 border-lime-500/10"
+                        )}
+                      >
                         {getInitials(org.name)}
                       </div>
                       <div className="grid flex-1 min-w-0">
-                        <span className="truncate font-medium">{org.name}</span>
-                        <span className="text-[10px] text-muted-foreground truncate">
-                          {org.city ? `${org.city} • ` : ""}
-                          {org.verified ? "Verified" : "Not verified"}
+                        <span className="truncate font-medium text-foreground">
+                          {org.name}
                         </span>
+                        {isSuspended ? (
+                          <span className="text-[10px] text-red-600 dark:text-red-400 font-medium flex items-center gap-1 truncate">
+                            <HugeiconsIcon icon={AlertCircleIcon} strokeWidth={2} className="size-2.5 shrink-0" />
+                            Membership suspended • Actions restricted
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground truncate">
+                            {(org.city ? `${org.city} • ` : "") + (org.verified ? "Verified" : "Not verified")}
+                          </span>
+                        )}
                       </div>
-                      <Badge
-                        variant="outline"
-                        className={`text-[9px] px-1.5 py-0 h-4 shrink-0 font-medium ${
-                          org.verified
-                            ? "border-lime-500/30 bg-lime-500/10 text-lime-600 dark:text-lime-400"
-                            : "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                        }`}
-                      >
-                        {org.verified ? "Verified" : "Not Verified"}
-                      </Badge>
-                      {isActive && (
+                      {isSuspended ? (
+                        <Badge
+                          variant="destructive"
+                          className="text-[9px] px-1.5 py-0 h-4 shrink-0 font-semibold border-red-500/40 bg-red-500/15 text-red-600 dark:text-red-400 gap-1 shadow-2xs"
+                        >
+                          <HugeiconsIcon
+                            icon={AlertCircleIcon}
+                            strokeWidth={2.5}
+                            className="size-2.5 text-red-600 dark:text-red-400"
+                          />
+                          Suspended
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-[9px] px-1.5 py-0 h-4 shrink-0 font-medium",
+                            org.verified
+                              ? "border-lime-500/30 bg-lime-500/10 text-lime-600 dark:text-lime-400"
+                              : "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                          )}
+                        >
+                          {org.verified ? "Verified" : "Not Verified"}
+                        </Badge>
+                      )}
+                      {!isSuspended && isActive && (
                         <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} className="size-4 text-primary shrink-0 ml-1" />
                       )}
                     </button>

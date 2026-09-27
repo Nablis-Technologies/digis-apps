@@ -12,16 +12,14 @@ import {
   SearchIcon,
   ArrowDown01Icon,
   MoreVerticalIcon,
+  GiftIcon,
+  RadioIcon,
 } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs"
+import { TabsContent } from "@/components/ui/tabs"
+import { PageTabs } from "@/components/page-tabs"
 import {
   Select,
   SelectContent,
@@ -329,13 +327,16 @@ export default function TicketsPage() {
       </div>
 
       {/* ── Interactive Navigation Tabs ───────────────────────────────────── */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full sm:w-auto">
-          <TabsTrigger value="tiers">Ticket Tiers</TabsTrigger>
-          <TabsTrigger value="complimentary">Complimentary</TabsTrigger>
-          <TabsTrigger value="scanners">Gate Scanners</TabsTrigger>
-          <TabsTrigger value="exports">Attendee Exports</TabsTrigger>
-        </TabsList>
+      <PageTabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        tabs={[
+          { value: "tiers", label: "Ticket Tiers", icon: Ticket01Icon },
+          { value: "complimentary", label: "Complimentary", icon: GiftIcon },
+          { value: "scanners", label: "Gate Scanners", icon: RadioIcon },
+          { value: "exports", label: "Attendee Exports", icon: ArrowDown01Icon },
+        ]}
+      >
 
         {/* ─── TAB 1: TICKET TIERS & PRODUCTS ──────────────────────────────── */}
         <TabsContent value="tiers" className="mt-4 space-y-4">
@@ -643,7 +644,7 @@ export default function TicketsPage() {
             </CardContent>
           </Card>
         </TabsContent>
-      </Tabs>
+      </PageTabs>
 
       {/* ── Rotate Token Result Dialog ────────────────────────────────────── */}
       <Dialog

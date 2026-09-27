@@ -14,7 +14,8 @@ import { Input } from "@/components/ui/input"
 import { PhoneInput, stripCountryCode, normalizeEthiopianPhone } from "@/components/ui/phone-input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { TabsContent } from "@/components/ui/tabs"
+import { PageTabs } from "@/components/page-tabs"
 import { toast } from "sonner"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -34,6 +35,7 @@ import {
   Cancel01Icon,
   CheckmarkBadge01Icon,
   Link01Icon,
+  Image01Icon,
 } from "@hugeicons/core-free-icons"
 
 const CATEGORIES = [
@@ -408,27 +410,22 @@ export default function OrganizationPage() {
       </div>
 
       {/* Tabs Navigation */}
-      <Tabs defaultValue="general" className="w-full space-y-6">
-        <TabsList className="grid grid-cols-2 sm:grid-cols-5 h-auto p-1 bg-muted/50 rounded-xl gap-1">
-          <TabsTrigger value="general" className="text-xs py-2">
-            General
-          </TabsTrigger>
-          <TabsTrigger value="location" className="text-xs py-2">
-            Location & Scale
-          </TabsTrigger>
-          <TabsTrigger value="branding" className="text-xs py-2">
-            Branding
-          </TabsTrigger>
-          <TabsTrigger value="verification" className="text-xs py-2 relative">
-            Verification
-            {!isVerified && (
-              <span className="ml-1.5 size-2 rounded-full bg-amber-500 inline-block" />
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="socials" className="text-xs py-2 col-span-2 sm:col-span-1">
-            Social Links
-          </TabsTrigger>
-        </TabsList>
+      <PageTabs
+        defaultValue="general"
+        className="w-full space-y-6"
+        tabs={[
+          { value: "general", label: "General Info", icon: Building02Icon },
+          { value: "location", label: "Location & Scale", icon: Location01Icon },
+          { value: "branding", label: "Branding", icon: Image01Icon },
+          {
+            value: "verification",
+            label: "Verification",
+            icon: FileValidationIcon,
+            indicator: !isVerified,
+          },
+          { value: "socials", label: "Social Links", icon: Link01Icon },
+        ]}
+      >
 
         {/* ─── TAB 1: GENERAL ─── */}
         <TabsContent value="general" className="space-y-6">
@@ -551,7 +548,7 @@ export default function OrganizationPage() {
               <Button
                 type="submit"
                 disabled={isUpdating}
-                className="gap-2 bg-lime-500 text-zinc-950 hover:bg-lime-400 font-semibold"
+                className="gap-2 shadow-xs"
               >
                 {isUpdating ? (
                   <HugeiconsIcon icon={Loading01Icon} className="size-4 animate-spin" />
@@ -670,7 +667,7 @@ export default function OrganizationPage() {
               <Button
                 type="submit"
                 disabled={isUpdating}
-                className="gap-2 bg-lime-500 text-zinc-950 hover:bg-lime-400 font-semibold"
+                className="gap-2 shadow-xs"
               >
                 {isUpdating ? (
                   <HugeiconsIcon icon={Loading01Icon} className="size-4 animate-spin" />
@@ -811,7 +808,7 @@ export default function OrganizationPage() {
               <Button
                 onClick={handleUploadMedia}
                 disabled={(!profileFile && !bannerFile) || isUploadingDocs}
-                className="gap-2 bg-lime-500 text-zinc-950 hover:bg-lime-400 font-semibold"
+                className="gap-2 shadow-xs"
               >
                 {isUploadingDocs ? (
                   <HugeiconsIcon icon={Loading01Icon} className="size-4 animate-spin" />
@@ -973,7 +970,7 @@ export default function OrganizationPage() {
                   <Button
                     onClick={handleUploadComplianceDocuments}
                     disabled={(!licenseFile && !tinFile) || isUploadingDocs}
-                    className="gap-2 bg-lime-500 text-zinc-950 hover:bg-lime-400 font-semibold text-xs"
+                    className="gap-2 text-xs shadow-xs"
                   >
                     {isUploadingDocs ? (
                       <HugeiconsIcon icon={Loading01Icon} className="size-4 animate-spin" />
@@ -1063,7 +1060,7 @@ export default function OrganizationPage() {
                     <Button
                       onClick={handleSubmitVerification}
                       disabled={isSubmittingVerification}
-                      className="w-full bg-lime-500 text-zinc-950 hover:bg-lime-400 font-semibold gap-1.5"
+                      className="w-full gap-1.5 shadow-xs"
                     >
                       {isSubmittingVerification ? (
                         <HugeiconsIcon icon={Loading01Icon} className="size-4 animate-spin" />
@@ -1172,7 +1169,7 @@ export default function OrganizationPage() {
             </div>
           </form>
         </TabsContent>
-      </Tabs>
+      </PageTabs>
     </div>
   )
 }

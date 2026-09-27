@@ -24,12 +24,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs"
+import { TabsContent } from "@/components/ui/tabs"
+import { PageTabs } from "@/components/page-tabs"
 import { DataTable, type Column } from "@/components/ui/data-table"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -732,21 +728,15 @@ export default function PayoutsPage() {
           </div>
 
           {/* Navigation Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList>
-              <TabsTrigger value="payouts">
-                <HugeiconsIcon icon={Wallet01Icon} strokeWidth={2} className="size-4" />
-                Payout History ({payoutsList.length})
-              </TabsTrigger>
-              <TabsTrigger value="accounts">
-                <HugeiconsIcon icon={CreditCardIcon} strokeWidth={2} className="size-4" />
-                Payout Accounts ({payoutAccounts.length})
-              </TabsTrigger>
-              <TabsTrigger value="ledger">
-                <HugeiconsIcon icon={Invoice01Icon} strokeWidth={2} className="size-4" />
-                Transaction Ledger
-              </TabsTrigger>
-            </TabsList>
+          <PageTabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            tabs={[
+              { value: "payouts", label: `Payout History (${payoutsList.length})`, icon: Wallet01Icon },
+              { value: "accounts", label: `Payout Accounts (${payoutAccounts.length})`, icon: CreditCardIcon },
+              { value: "ledger", label: "Transaction Ledger", icon: Invoice01Icon },
+            ]}
+          >
 
             {/* ─── TAB 1: PAYOUTS ────────────────────────────────────────────── */}
             <TabsContent value="payouts" className="mt-4">
@@ -979,7 +969,7 @@ export default function PayoutsPage() {
                 }
               />
             </TabsContent>
-          </Tabs>
+          </PageTabs>
         </>
       )}
 

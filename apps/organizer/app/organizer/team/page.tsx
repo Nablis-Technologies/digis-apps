@@ -221,7 +221,7 @@ export default function TeamPage() {
         {canAddMembers && (
           <Button
             onClick={() => setAddDialogOpen(true)}
-            className="gap-2 bg-lime-500 text-zinc-950 hover:bg-lime-400 font-semibold"
+            className="gap-2 shadow-xs"
           >
             <HugeiconsIcon icon={PlusSignIcon} className="size-4" strokeWidth={2.5} />
             Add Team Member
@@ -237,7 +237,7 @@ export default function TeamPage() {
         </div>
         <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-xs space-y-1">
           <span className="text-xs font-medium text-muted-foreground">Active Members</span>
-          <p className="text-2xl font-bold text-lime-600 dark:text-lime-400">{activeCount}</p>
+          <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{activeCount}</p>
         </div>
         <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-xs space-y-1">
           <span className="text-xs font-medium text-muted-foreground">Suspended</span>
@@ -287,7 +287,7 @@ export default function TeamPage() {
               <Button
                 size="sm"
                 onClick={() => setAddDialogOpen(true)}
-                className="bg-lime-500 text-zinc-950 hover:bg-lime-400"
+                className="shadow-xs"
               >
                 Add First Member
               </Button>
@@ -349,7 +349,7 @@ export default function TeamPage() {
                             Suspended
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="border-lime-500/30 text-lime-600 dark:text-lime-400 text-[10px]">
+                          <Badge variant="outline" className="border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-[10px]">
                             Active
                           </Badge>
                         )}
@@ -386,7 +386,7 @@ export default function TeamPage() {
                           disabled={isSuspending || isActivating}
                           className={`text-xs h-8 ${
                             isSuspended
-                              ? "text-lime-600 hover:text-lime-700"
+                              ? "text-emerald-600 hover:text-emerald-700"
                               : "text-amber-600 hover:text-amber-700"
                           }`}
                         >
@@ -425,7 +425,7 @@ export default function TeamPage() {
       {/* Role Explainer Card */}
       <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-xs space-y-4">
         <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
-          <HugeiconsIcon icon={SecurityCheckIcon} className="size-4.5 text-lime-600 dark:text-lime-400" />
+          <HugeiconsIcon icon={SecurityCheckIcon} className="size-4.5 text-primary" />
           Roles & Permissions Explainer
         </h3>
 
@@ -518,7 +518,7 @@ export default function TeamPage() {
               <Button
                 type="submit"
                 disabled={isCreating}
-                className="bg-lime-500 text-zinc-950 hover:bg-lime-400 font-semibold text-xs gap-1.5"
+                className="font-semibold text-xs gap-1.5 shadow-xs"
               >
                 {isCreating ? (
                   <HugeiconsIcon icon={Loading01Icon} className="size-3.5 animate-spin" />

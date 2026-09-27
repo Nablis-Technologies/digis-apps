@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useTransition } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -8,49 +8,77 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Download01Icon,
   Copy01Icon,
-  Share01Icon,
+  SmartPhone01Icon,
+  Image01Icon,
+  Layout01Icon,
+  CheckmarkCircle01Icon,
+  Loading03Icon,
+  QrCodeIcon,
 } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 import type { Event } from "@/lib/types"
 import { useColorPalette, type PaletteKey } from "@/lib/use-color-palette"
 import { generateQRCode } from "@/lib/qr-code"
-import { renderShareCard } from "@/lib/share-card-renderer"
+import { renderShareCard, type ShareCardOrientation } from "@/lib/share-card-renderer"
+import { cn } from "@workspace/ui/lib/utils"
 
 interface ShareCardGeneratorProps {
   event: Event
 }
 
-const PALETTE_LABELS: Record<PaletteKey, string> = {
-  vibrant: "Vibrant",
-  darkVibrant: "Dark",
-  muted: "Muted",
-  brand: "Brand",
-}
+const FORMAT_OPTIONS: {
+  key: ShareCardOrientation
+  label: string
+  ratio: string
+  sublabel: string
+  icon: any
+}[] = [
+  {
+    key: "story",
+    label: "Story / Status",
+    ratio: "9:16",
+    sublabel: "Instagram, TikTok, WhatsApp",
+    icon: SmartPhone01Icon,
+  },
+  {
+    key: "portrait",
+    label: "Feed Post",
+    ratio: "4:5",
+    sublabel: "Instagram & Facebook Feed",
+    icon: Image01Icon,
+  },
+  {
+    key: "landscape",
+    label: "Landscape",
+    ratio: "1.91:1",
+    sublabel: "X (Twitter), LinkedIn, Web",
+    icon: Layout01Icon,
+  },
+]
 
 export function ShareCardGenerator({ event }: ShareCardGeneratorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [orientation, setOrientation] = useState<"landscape" | "portrait">("landscape")
-  const [selectedPalette, setSelectedPalette] = useState<PaletteKey>("vibrant")
+  const [orientation, setOrientation] = useState<ShareCardOrientation>("story")
+  const [selectedColorKey, setSelectedColorKey] = useState<PaletteKey>("vibrant")
+  const [showQrCode, setShowQrCode] = useState(true)
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
   const [isRendering, setIsRendering] = useState(false)
   const [renderError, setRenderError] = useState<string | null>(null)
-  
-  // Debug: Log when component mounts/updates
-  useEffect(() => {
-    console.log("📸 ShareCardGenerator: Event changed to", event.id, "banner:", event.bannerUrl)
-  }, [event.id, event.bannerUrl])
+  const [isCopyingImage, setIsCopyingImage] = useState(false)
 
-  const { palette, loading: paletteLoading } = useColorPalette(event.bannerUrl)
+  // Color extraction from banner
+  const { palette, loading: paletteLoading } = useColorPalette(event.bannerUrl, event.name)
 
-  // Debug: Log palette changes
+  // Generate high-res branded QR code
   useEffect(() => {
-    console.log("🎨 Palette updated:", palette)
-  }, [palette])
-
-  // Generate QR code
-  useEffect(() => {
-    const publicLink = `${window.location.origin}/event/${event.id}`
-    generateQRCode(publicLink)
+    const publicLink = `${window.location.origin}/events/${event.id}`
+    generateQRCode(publicLink, {
+      width: 600,
+      darkColor: "#090d0b",
+      lightColor: "#ffffff",
+      includeLogo: true,
+      logoColor: "#10b981",
+    })
       .then(setQrCodeUrl)
       .catch((error) => {
         console.error("Failed to generate QR code:", error)
@@ -58,7 +86,7 @@ export function ShareCardGenerator({ event }: ShareCardGeneratorProps) {
       })
   }, [event.id])
 
-  // Render canvas whenever config changes
+  // Re-render canvas whenever options change
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || paletteLoading || !qrCodeUrl) return
@@ -66,7 +94,7 @@ export function ShareCardGenerator({ event }: ShareCardGeneratorProps) {
     setIsRendering(true)
     setRenderError(null)
 
-    const baseColor = palette[selectedPalette]
+    const baseColor = palette[selectedColorKey] || palette.vibrant
 
     renderShareCard({
       canvas,
@@ -77,7 +105,13 @@ export function ShareCardGenerator({ event }: ShareCardGeneratorProps) {
       bannerUrl: event.bannerUrl,
       qrCodeUrl,
       baseColor,
+      palette: {
+        ...palette,
+        vibrant: baseColor,
+      },
       orientation,
+      showQrCode,
+      category: event.category,
     })
       .then(() => {
         setIsRendering(false)
@@ -86,15 +120,15 @@ export function ShareCardGenerator({ event }: ShareCardGeneratorProps) {
         console.error("Failed to render share card:", error)
         setRenderError(error.message)
         setIsRendering(false)
-        toast.error("Failed to generate share card")
       })
   }, [
     event,
     qrCodeUrl,
     orientation,
-    selectedPalette,
+    selectedColorKey,
     palette,
     paletteLoading,
+    showQrCode,
   ])
 
   const handleDownload = () => {
@@ -102,15 +136,48 @@ export function ShareCardGenerator({ event }: ShareCardGeneratorProps) {
     if (!canvas) return
 
     const link = document.createElement("a")
-    link.download = `${event.name.toLowerCase().replace(/\s+/g, "-")}-share-card.png`
+    link.download = `${event.name.toLowerCase().replace(/\s+/g, "-")}-${orientation}-card.png`
     link.href = canvas.toDataURL("image/png")
     link.click()
 
-    toast.success("Share card downloaded")
+    toast.success("Share card downloaded in HD!")
+  }
+
+  const handleCopyImage = async () => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    setIsCopyingImage(true)
+    try {
+      canvas.toBlob(async (blob) => {
+        if (!blob) {
+          toast.error("Could not generate image blob")
+          setIsCopyingImage(false)
+          return
+        }
+
+        try {
+          await navigator.clipboard.write([
+            new ClipboardItem({
+              "image/png": blob,
+            }),
+          ])
+          toast.success("Share card copied to clipboard!")
+        } catch (clipErr) {
+          console.warn("Direct clipboard copy failed, falling back to download:", clipErr)
+          handleDownload()
+        } finally {
+          setIsCopyingImage(false)
+        }
+      }, "image/png")
+    } catch (err) {
+      toast.error("Clipboard copy not supported in this browser")
+      setIsCopyingImage(false)
+    }
   }
 
   const handleCopyLink = async () => {
-    const publicLink = `${window.location.origin}/event/${event.id}`
+    const publicLink = `${window.location.origin}/events/${event.id}`
     try {
       await navigator.clipboard.writeText(publicLink)
       toast.success("Event link copied to clipboard")
@@ -119,160 +186,188 @@ export function ShareCardGenerator({ event }: ShareCardGeneratorProps) {
     }
   }
 
-  const handleShare = async () => {
-    const publicLink = `${window.location.origin}/event/${event.id}`
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: event.name,
-          text: `Check out ${event.name}!`,
-          url: publicLink,
-        })
-      } catch (error) {
-        // User cancelled or error occurred
-      }
-    } else {
-      await handleCopyLink()
-    }
-  }
+  // Preview sizing
+  const previewMaxHeight = orientation === "story" ? 480 : orientation === "portrait" ? 440 : 320
 
-  const dimensions =
-    orientation === "landscape"
-      ? { width: 1200, height: 630 }
-      : { width: 800, height: 1200 }
-
-  const previewMaxWidth = orientation === "landscape" ? 720 : 420
+  const paletteSwatches: { key: PaletteKey; label: string; color: string }[] = [
+    { key: "vibrant", label: "Vibrant", color: palette.vibrant },
+    { key: "deepAtmosphere", label: "Deep Atmosphere", color: palette.deepAtmosphere },
+    { key: "edgeColor", label: "Poster Edge", color: palette.edgeColor },
+    { key: "secondary", label: "Secondary", color: palette.secondary },
+    { key: "brand", label: "Digis Emerald", color: palette.brand },
+  ]
 
   return (
     <div className="space-y-6">
-        {/* Orientation Toggle */}
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium">Orientation</span>
-          <div className="flex gap-1 rounded-lg border p-1">
-            <Button
-              onClick={() => setOrientation("landscape")}
-              variant={orientation === "landscape" ? "default" : "ghost"}
-              size="sm"
-              className="h-8"
-            >
-              Landscape
-            </Button>
-            <Button
-              onClick={() => setOrientation("portrait")}
-              variant={orientation === "portrait" ? "default" : "ghost"}
-              size="sm"
-              className="h-8"
-            >
-              Portrait
-            </Button>
-          </div>
-        </div>
-
-        {/* Color Palette Selector */}
-        {!paletteLoading && (
-          <div className="space-y-3">
-            <label className="text-sm font-medium">Extracted palette</label>
-            <div className="flex items-center gap-3">
-              {(Object.keys(palette) as PaletteKey[]).map((key) => (
+      {/* ─── Controls Header: Formats & Options ─────────────────────────────────── */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Format Selector */}
+        <div className="space-y-2">
+          <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+            Social Format &amp; Aspect Ratio
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            {FORMAT_OPTIONS.map((opt) => {
+              const isSelected = orientation === opt.key
+              return (
                 <button
-                  key={key}
-                  onClick={() => setSelectedPalette(key)}
-                  className="group relative size-10 rounded-full transition-all hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
-                  disabled={isRendering}
-                  title={PALETTE_LABELS[key]}
-                >
-                  {/* Color swatch with border */}
-                  <div
-                    className="size-full rounded-full border-2 border-border/20 transition-all group-hover:border-border/40"
-                    style={{ backgroundColor: palette[key] }}
-                  />
-                  
-                  {/* Checkmark for selected state - Spotify style */}
-                  {selectedPalette === key && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <svg
-                        className="size-4 drop-shadow-lg"
-                        viewBox="0 0 20 20"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                          fill="currentColor"
-                          className="text-white drop-shadow-md"
-                          strokeWidth="0.5"
-                          stroke="rgba(0,0,0,0.2)"
-                        />
-                      </svg>
-                    </div>
+                  key={opt.key}
+                  type="button"
+                  onClick={() => setOrientation(opt.key)}
+                  className={cn(
+                    "flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all cursor-pointer",
+                    isSelected
+                      ? "border-emerald-500/80 bg-emerald-500/10 text-foreground shadow-xs ring-1 ring-emerald-500/40"
+                      : "border-border/60 hover:bg-muted/50 text-muted-foreground hover:text-foreground"
                   )}
+                >
+                  <HugeiconsIcon
+                    icon={opt.icon}
+                    size={20}
+                    className={cn("mb-1", isSelected ? "text-emerald-600 dark:text-emerald-400" : "")}
+                  />
+                  <span className="text-xs font-bold leading-tight">{opt.label}</span>
+                  <span className="text-[10px] text-muted-foreground mt-0.5 font-mono">{opt.ratio}</span>
                 </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Error Display */}
-        {renderError && (
-          <div className="rounded-lg bg-destructive/10 p-4 text-destructive">
-            <p className="text-sm font-medium">Failed to render share card</p>
-            <p className="mt-1 text-xs">{renderError}</p>
-          </div>
-        )}
-
-        {/* Canvas Preview */}
-        <div className="space-y-4">
-          <div className="relative rounded-xl border bg-gradient-to-br from-slate-50 to-slate-100 p-6 dark:from-slate-900 dark:to-slate-800">
-            {isRendering && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-background/50 backdrop-blur-sm">
-                <div className="flex items-center gap-2">
-                  <div className="size-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                  <span className="text-sm">Generating...</span>
-                </div>
-              </div>
-            )}
-            <div
-              className="mx-auto overflow-hidden rounded-2xl shadow-2xl"
-              style={{ maxWidth: previewMaxWidth }}
-            >
-              <canvas
-                ref={canvasRef}
-                className="block size-full"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <Badge variant="secondary" className="text-xs">
-              {dimensions.width} × {dimensions.height}px
-            </Badge>
-            <div className="flex gap-2">
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button variant="outline" size="sm" onClick={handleCopyLink}>
-                  <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} className="mr-2 size-4" />
-                  Copy Link
-                </Button>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button variant="outline" size="sm" onClick={handleShare}>
-                  <HugeiconsIcon icon={Share01Icon} strokeWidth={2} className="mr-2 size-4" />
-                  Share
-                </Button>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button size="sm" onClick={handleDownload} disabled={isRendering}>
-                  <HugeiconsIcon icon={Download01Icon} strokeWidth={2} className="mr-2 size-4" />
-                  Download PNG
-                </Button>
-              </motion.div>
-            </div>
+              )
+            })}
           </div>
         </div>
 
-        <p className="text-xs text-muted-foreground">
-          Perfect for Instagram, Facebook, Twitter, and LinkedIn. Choose your preferred color
-          from the extracted palette.
-        </p>
+        {/* Color Palette & Toggles */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-foreground">
+              Extracted Color Harmony
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowQrCode(!showQrCode)}
+              className={cn(
+                "inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md border transition-all cursor-pointer",
+                showQrCode
+                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                  : "border-border text-muted-foreground"
+              )}
+            >
+              <HugeiconsIcon icon={QrCodeIcon} size={12} strokeWidth={2} />
+              <span>{showQrCode ? "QR Ticket: ON" : "QR Ticket: OFF"}</span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2.5 p-2 rounded-xl border bg-muted/20">
+            {paletteLoading ? (
+              <div className="flex items-center gap-2 py-1 text-xs text-muted-foreground">
+                <HugeiconsIcon icon={Loading03Icon} size={14} className="animate-spin" />
+                Extracting tones from artwork...
+              </div>
+            ) : (
+              paletteSwatches.map((swatch) => (
+                <button
+                  key={swatch.key}
+                  type="button"
+                  onClick={() => setSelectedColorKey(swatch.key)}
+                  className="group relative flex flex-col items-center gap-1 cursor-pointer transition-transform hover:scale-105"
+                  title={`${swatch.label} (${swatch.color})`}
+                >
+                  <div
+                    className={cn(
+                      "size-8 rounded-full border-2 transition-all shadow-2xs relative flex items-center justify-center",
+                      selectedColorKey === swatch.key
+                        ? "border-primary ring-2 ring-primary/40 scale-105"
+                        : "border-border/60 group-hover:border-border"
+                    )}
+                    style={{ backgroundColor: swatch.color }}
+                  >
+                    {selectedColorKey === swatch.key && (
+                      <div className="size-2 rounded-full bg-white shadow-xs" />
+                    )}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground truncate max-w-[50px] leading-tight">
+                    {swatch.label}
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ─── Live Canvas Viewport ────────────────────────────────────────── */}
+      <div className="relative flex flex-col items-center justify-center py-2">
+        {isRendering && (
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-background/60 backdrop-blur-xs gap-2 text-foreground">
+            <HugeiconsIcon icon={Loading03Icon} size={28} className="animate-spin text-emerald-500" />
+            <span className="text-xs font-semibold tracking-wide">Rendering high-res card...</span>
+          </div>
+        )}
+
+        {renderError && (
+          <div className="z-10 rounded-xl bg-destructive/15 border border-destructive/30 p-3 text-destructive text-xs max-w-md text-center mb-3">
+            {renderError}
+          </div>
+        )}
+
+        <div
+          className="relative z-10 overflow-hidden rounded-xl shadow-xl transition-all"
+          style={{ maxHeight: previewMaxHeight }}
+        >
+          <canvas
+            ref={canvasRef}
+            className="block max-h-full max-w-full w-auto h-auto object-contain rounded-xl"
+            style={{ maxHeight: previewMaxHeight }}
+          />
+        </div>
+      </div>
+
+      {/* ─── Action Toolbar ────────────────────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="font-mono text-xs text-muted-foreground">
+            {orientation === "story" ? "1080 × 1920 (9:16)" : orientation === "portrait" ? "1080 × 1350 (4:5)" : "1200 × 630 (1.91:1)"}
+          </Badge>
+          <span className="text-xs text-muted-foreground">
+            Seamless ambient blending with Digis branding
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 flex-1 sm:flex-initial"
+            onClick={handleCopyLink}
+          >
+            <HugeiconsIcon icon={Copy01Icon} size={15} strokeWidth={2} />
+            Copy Link
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 flex-1 sm:flex-initial"
+            onClick={handleCopyImage}
+            disabled={isRendering || isCopyingImage}
+          >
+            {isCopyingImage ? (
+              <HugeiconsIcon icon={Loading03Icon} size={15} className="animate-spin" />
+            ) : (
+              <HugeiconsIcon icon={Copy01Icon} size={15} />
+            )}
+            Copy Image
+          </Button>
+
+          <Button
+            size="sm"
+            className="gap-1.5 flex-1 sm:flex-initial shadow-xs"
+            onClick={handleDownload}
+            disabled={isRendering}
+          >
+            <HugeiconsIcon icon={Download01Icon} size={15} strokeWidth={2} />
+            Download HD PNG
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

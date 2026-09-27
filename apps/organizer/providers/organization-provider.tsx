@@ -22,41 +22,104 @@ const OrganizationContext = React.createContext<OrganizationContextValue | null>
 const STORAGE_ACTIVE_ORG_KEY = "digis_active_org_id"
 const STORAGE_RECENT_ORGS_KEY = "digis_recent_org_ids"
 
+export function isOrgSuspendedOrRemoved(org?: Organization | null): boolean {
+  if (!org) return false
+  return (
+    org.membership_status === "suspended" ||
+    org.membership_status === "removed" ||
+    org.status === "suspended" ||
+    org.status === "removed" ||
+    org.archived === true
+  )
+}
+
+export const isOrgSuspended = isOrgSuspendedOrRemoved
+
 export function OrganizationProvider({ children }: { children: React.ReactNode }) {
   const { data, isLoading, refetch } = useListOwnerOrganizationsQuery({ per_page: 50 })
-  const organizations = React.useMemo(() => data?.data ?? [], [data?.data])
-  const [activeOrgId, setActiveOrgIdState] = React.useState<string | null>(null)
-  const [recentOrgIds, setRecentOrgIds] = React.useState<string[]>([])
 
-  // Initialize from localStorage once organizations are loaded or on client mount
-  React.useEffect(() => {
-    if (typeof window === "undefined") return
-
+  // Initialize from localStorage safely once on mount via lazy initializers
+  const [activeOrgId, setActiveOrgIdState] = React.useState<string | null>(() => {
+    if (typeof window === "undefined") return null
     try {
-      const storedActiveId = localStorage.getItem(STORAGE_ACTIVE_ORG_KEY)
-      const storedRecent = JSON.parse(
-        localStorage.getItem(STORAGE_RECENT_ORGS_KEY) || "[]"
-      ) as string[]
-      setRecentOrgIds(storedRecent)
-
-      if (organizations.length > 0) {
-        const found = organizations.find((org) => org.id === storedActiveId)
-        if (found) {
-          setActiveOrgIdState(found.id)
-        } else {
-          // Default to the first organization if none stored or invalid
-          const firstId = organizations[0]?.id ?? null
-          setActiveOrgIdState(firstId)
-          if (firstId) {
-            localStorage.setItem(STORAGE_ACTIVE_ORG_KEY, firstId)
-            document.cookie = `active_org_id=${firstId}; path=/; max-age=31536000; SameSite=Lax`
-          }
-        }
-      }
-    } catch (e) {
-      console.error("Failed to read organization state from localStorage", e)
+      return localStorage.getItem(STORAGE_ACTIVE_ORG_KEY)
+    } catch {
+      return null
     }
-  }, [organizations])
+  })
+
+  const [recentOrgIds, setRecentOrgIds] = React.useState<string[]>(() => {
+    if (typeof window === "undefined") return []
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_RECENT_ORGS_KEY) || "[]")
+    } catch {
+      return []
+    }
+  })
+
+  // Clean up any legacy cached orgs from prior sessions to prevent cross-account pollution
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("digis_cached_orgs_meta")
+      } catch {
+        // ignore
+      }
+    }
+  }, [])
+
+  // Strictly use server-returned organizations for the authenticated user
+  const organizations = React.useMemo(() => data?.data ?? [], [data?.data])
+
+  const activeOrg = React.useMemo(() => {
+    if (activeOrgId) {
+      const match = organizations.find((org) => org.id === activeOrgId)
+      if (match) return match
+    }
+    const firstActive = organizations.find((org) => !isOrgSuspendedOrRemoved(org))
+    return firstActive ?? organizations[0] ?? null
+  }, [activeOrgId, organizations])
+
+  const recentOrgs = React.useMemo(() => {
+    return recentOrgIds
+      .map((id) => organizations.find((org) => org.id === id))
+      .filter((org): org is Organization => org !== undefined)
+  }, [recentOrgIds, organizations])
+
+  const setActiveOrgId = React.useCallback((id: string) => {
+    setActiveOrgIdState(id)
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(STORAGE_ACTIVE_ORG_KEY, id)
+        document.cookie = `active_org_id=${id}; path=/; max-age=31536000; SameSite=Lax`
+
+        // Update recents
+        setRecentOrgIds((prev) => {
+          const next = [id, ...prev.filter((item) => item !== id)].slice(0, 5)
+          if (next.length === prev.length && next.every((val, idx) => val === prev[idx])) {
+            return prev
+          }
+          localStorage.setItem(STORAGE_RECENT_ORGS_KEY, JSON.stringify(next))
+          return next
+        })
+      } catch (e) {
+        console.error("Failed to persist active org", e)
+      }
+    }
+  }, [])
+
+  // Synchronize active organization cookie and localStorage with the derived activeOrg
+  React.useEffect(() => {
+    if (!activeOrg?.id || typeof window === "undefined") return
+    try {
+      if (localStorage.getItem(STORAGE_ACTIVE_ORG_KEY) !== activeOrg.id) {
+        localStorage.setItem(STORAGE_ACTIVE_ORG_KEY, activeOrg.id)
+      }
+      document.cookie = `active_org_id=${activeOrg.id}; path=/; max-age=31536000; SameSite=Lax`
+    } catch {
+      // ignore
+    }
+  }, [activeOrg?.id])
 
   // Sync across tabs
   React.useEffect(() => {
@@ -68,7 +131,15 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
       }
       if (e.key === STORAGE_RECENT_ORGS_KEY && e.newValue) {
         try {
-          setRecentOrgIds(JSON.parse(e.newValue))
+          const next = JSON.parse(e.newValue)
+          if (Array.isArray(next)) {
+            setRecentOrgIds((prev) => {
+              if (next.length === prev.length && next.every((val, idx) => val === prev[idx])) {
+                return prev
+              }
+              return next
+            })
+          }
         } catch {
           // ignore
         }
@@ -78,37 +149,6 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
     window.addEventListener("storage", handleStorage)
     return () => window.removeEventListener("storage", handleStorage)
   }, [])
-
-  const setActiveOrgId = React.useCallback(
-    (id: string) => {
-      setActiveOrgIdState(id)
-      if (typeof window !== "undefined") {
-        try {
-          localStorage.setItem(STORAGE_ACTIVE_ORG_KEY, id)
-          document.cookie = `active_org_id=${id}; path=/; max-age=31536000; SameSite=Lax`
-
-          // Update recents
-          const updatedRecents = [id, ...recentOrgIds.filter((item) => item !== id)].slice(0, 5)
-          setRecentOrgIds(updatedRecents)
-          localStorage.setItem(STORAGE_RECENT_ORGS_KEY, JSON.stringify(updatedRecents))
-        } catch (e) {
-          console.error("Failed to persist active org", e)
-        }
-      }
-    },
-    [recentOrgIds]
-  )
-
-  const activeOrg = React.useMemo(() => {
-    if (!activeOrgId && organizations.length > 0) return organizations[0] ?? null
-    return organizations.find((org) => org.id === activeOrgId) ?? organizations[0] ?? null
-  }, [activeOrgId, organizations])
-
-  const recentOrgs = React.useMemo(() => {
-    return recentOrgIds
-      .map((id) => organizations.find((org) => org.id === id))
-      .filter((org): org is Organization => org !== undefined)
-  }, [recentOrgIds, organizations])
 
   const value = React.useMemo<OrganizationContextValue>(
     () => ({

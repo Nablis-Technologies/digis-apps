@@ -341,7 +341,7 @@ export function ScannersTab({ organizationId }: ScannersTabProps) {
 
           <DialogFooter>
             <Button
-              className="w-full bg-lime-500 hover:bg-lime-600 text-zinc-950 font-bold dark:bg-lime-500 dark:text-zinc-950 dark:hover:bg-lime-400 border-0"
+              className="w-full shadow-xs"
               onClick={() => setTokenResult((prev) => ({ ...prev, open: false }))}
             >
               Done

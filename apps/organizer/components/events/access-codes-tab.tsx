@@ -267,7 +267,7 @@ export function AccessCodesTab({ eventId, eventProducts }: AccessCodesTabProps) 
             <Button
               size="sm"
               onClick={() => setCreateCodeOpen(true)}
-              className="h-8 gap-1.5 text-xs bg-lime-500 hover:bg-lime-600 text-zinc-950 font-bold dark:bg-lime-500 dark:text-zinc-950 dark:hover:bg-lime-400 border-0 shadow-xs"
+              className="h-8 gap-1.5 text-xs shadow-xs"
             >
               <HugeiconsIcon icon={Add01Icon} size={14} strokeWidth={2} />
               New Code
@@ -368,7 +368,7 @@ export function AccessCodesTab({ eventId, eventProducts }: AccessCodesTabProps) 
             <Button
               size="sm"
               onClick={() => setCreateInviteOpen(true)}
-              className="h-8 gap-1.5 text-xs bg-lime-500 hover:bg-lime-600 text-zinc-950 font-bold dark:bg-lime-500 dark:text-zinc-950 dark:hover:bg-lime-400 border-0 shadow-xs"
+              className="h-8 gap-1.5 text-xs shadow-xs"
             >
               <HugeiconsIcon icon={Add01Icon} size={14} strokeWidth={2} />
               Send Invite
@@ -521,7 +521,7 @@ export function AccessCodesTab({ eventId, eventProducts }: AccessCodesTabProps) 
               <Button
                 type="submit"
                 disabled={isCreatingCode || !codeText.trim()}
-                className="gap-2 bg-lime-500 hover:bg-lime-600 text-zinc-950 font-bold dark:bg-lime-500 dark:text-zinc-950 dark:hover:bg-lime-400 border-0 shadow-xs"
+                className="gap-2 shadow-xs"
               >
                 {isCreatingCode ? (
                   <>
@@ -626,7 +626,7 @@ export function AccessCodesTab({ eventId, eventProducts }: AccessCodesTabProps) 
               <Button
                 type="submit"
                 disabled={isCreatingInvite || !inviteName.trim()}
-                className="gap-2 bg-lime-500 hover:bg-lime-600 text-zinc-950 font-bold dark:bg-lime-500 dark:text-zinc-950 dark:hover:bg-lime-400 border-0 shadow-xs"
+                className="gap-2 shadow-xs"
               >
                 {isCreatingInvite ? (
                   <>
