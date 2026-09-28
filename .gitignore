@@ -17,6 +17,10 @@ coverage
 .next/
 out/
 
+# open-next (cloudflare)
+.open-next/
+.wrangler/
+
 # production
 build
 dist
