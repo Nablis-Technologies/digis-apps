@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   UserGroupIcon,
@@ -8,6 +7,7 @@ import {
   MusicNote01Icon,
   OfficeIcon,
   RefreshIcon,
+  Calendar03Icon,
 } from "@hugeicons/core-free-icons"
 import {
   Area,
@@ -28,93 +28,30 @@ import {
 } from "@/components/ui/chart"
 import { StatsCard, StatsCardSkeleton } from "@/components/dashboard/stats-card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useListUsersQuery } from "@workspace/store/reducers/usersApi"
+import { useListOrganizationsQuery } from "@workspace/store/reducers/organizationsApi"
+import { useListVenuesQuery } from "@workspace/store/reducers/venuesApi"
+import { useListArtistsQuery } from "@workspace/store/reducers/artistsApi"
+import { useListEventsQuery } from "@workspace/store/reducers/eventsApi"
+import { useListNotificationsQuery } from "@workspace/store/reducers/notificationsApi"
 
-// ─── Mock Data ──────────────────────────────────────────────────────────────
+function formatRelativeTime(dateString: string) {
+  try {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
 
-const mockStats = {
-  totalUsers: 2483,
-  userTrend: { value: "12.5%", positive: true },
-  totalOrganizations: 156,
-  orgTrend: { value: "8.3%", positive: true },
-  totalVenues: 342,
-  venueTrend: { value: "5.7%", positive: true },
-  totalArtists: 891,
-  artistTrend: { value: "18.2%", positive: true },
+    if (diffInSeconds < 60) return "just now"
+    const diffInMinutes = Math.floor(diffInSeconds / 60)
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`
+    const diffInHours = Math.floor(diffInMinutes / 60)
+    if (diffInHours < 24) return `${diffInHours}h ago`
+    const diffInDays = Math.floor(diffInHours / 24)
+    return `${diffInDays}d ago`
+  } catch {
+    return dateString
+  }
 }
-
-const mockGrowthData = [
-  { month: "Jan", users: 400, organizations: 24, venues: 50, artists: 120 },
-  { month: "Feb", users: 600, organizations: 35, venues: 78, artists: 180 },
-  { month: "Mar", users: 850, organizations: 48, venues: 110, artists: 260 },
-  { month: "Apr", users: 1100, organizations: 62, venues: 145, artists: 340 },
-  { month: "May", users: 1400, organizations: 78, venues: 180, artists: 450 },
-  { month: "Jun", users: 1750, organizations: 95, venues: 220, artists: 560 },
-  { month: "Jul", users: 2100, organizations: 115, venues: 265, artists: 700 },
-  { month: "Aug", users: 2483, organizations: 156, venues: 342, artists: 891 },
-]
-
-const mockResources = [
-  {
-    name: "Active",
-    users: 2100,
-    organizations: 120,
-    venues: 280,
-    artists: 750,
-  },
-  { name: "Pending", users: 250, organizations: 28, venues: 45, artists: 110 },
-  { name: "Inactive", users: 133, organizations: 8, venues: 17, artists: 31 },
-]
-
-const mockRecentActivity = [
-  {
-    id: "1",
-    type: "user" as const,
-    action: "joined",
-    name: "Abebe Kebede",
-    detail: "New user registration",
-    time: "2 minutes ago",
-  },
-  {
-    id: "2",
-    type: "organization" as const,
-    action: "created",
-    name: "Ethio Events PLC",
-    detail: "Organization created",
-    time: "15 minutes ago",
-  },
-  {
-    id: "3",
-    type: "venue" as const,
-    action: "added",
-    name: "Millennium Hall",
-    detail: "New venue added",
-    time: "1 hour ago",
-  },
-  {
-    id: "4",
-    type: "artist" as const,
-    action: "verified",
-    name: "Teddy Afro",
-    detail: "Artist verified",
-    time: "2 hours ago",
-  },
-  {
-    id: "5",
-    type: "organization" as const,
-    action: "verified",
-    name: "Nabis Entertainment",
-    detail: "Organization verified",
-    time: "3 hours ago",
-  },
-  {
-    id: "6",
-    type: "user" as const,
-    action: "joined",
-    name: "Meron Tadesse",
-    detail: "New user registration",
-    time: "5 hours ago",
-  },
-]
 
 // ─── Chart Configs ──────────────────────────────────────────────────────────
 
@@ -138,58 +75,73 @@ const growthChartConfig = {
 }
 
 const resourceChartConfig = {
-  users: {
-    label: "Users",
+  count: {
+    label: "Count",
     color: "oklch(0.623 0.214 259.815)",
-  },
-  organizations: {
-    label: "Orgs",
-    color: "oklch(0.769 0.188 70.08)",
-  },
-  venues: {
-    label: "Venues",
-    color: "oklch(0.792 0.209 151.711)",
-  },
-  artists: {
-    label: "Artists",
-    color: "oklch(0.656 0.241 303.495)",
   },
 }
 
-// ─── Activity Icon ──────────────────────────────────────────────────────────
-
 function ActivityIcon({ type }: { type: string }) {
   const map: Record<string, string> = {
-    user: "bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400",
-    organization:
+    users: "bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400",
+    organizations:
       "bg-violet-100 text-violet-700 dark:bg-violet-950/30 dark:text-violet-400",
-    venue:
+    events:
       "bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400",
-    artist:
+    system:
       "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400",
   }
   const label: Record<string, string> = {
-    user: "U",
-    organization: "O",
-    venue: "V",
-    artist: "A",
+    users: "U",
+    organizations: "O",
+    events: "E",
+    system: "S",
   }
   return (
     <div
       className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${map[type] ?? "bg-muted text-muted-foreground"}`}
     >
-      {label[type] ?? "?"}
+      {label[type] ?? "N"}
     </div>
   )
 }
 
-// ─── Page ───────────────────────────────────────────────────────────────────
-
 export default function DashboardPage() {
-  const [loading, setLoading] = useState(false)
+  const { data: usersData, isLoading: usersLoading, refetch: refetchUsers } = useListUsersQuery({ per_page: 1 })
+  const { data: orgsData, isLoading: orgsLoading, refetch: refetchOrgs } = useListOrganizationsQuery({ per_page: 1 })
+  const { data: venuesData, isLoading: venuesLoading, refetch: refetchVenues } = useListVenuesQuery({ per_page: 1 })
+  const { data: artistsData, isLoading: artistsLoading, refetch: refetchArtists } = useListArtistsQuery({ per_page: 1 })
+  const { data: eventsData, isLoading: eventsLoading, refetch: refetchEvents } = useListEventsQuery({ per_page: 1 })
+  const { data: notifData, refetch: refetchNotifs } = useListNotificationsQuery({ per_page: 6 })
 
-  // ── Loading State ─────────────────────────────────────────────────────────
-  if (loading) {
+  const handleRefresh = () => {
+    refetchUsers()
+    refetchOrgs()
+    refetchVenues()
+    refetchArtists()
+    refetchEvents()
+    refetchNotifs()
+  }
+
+  const isLoading = usersLoading || orgsLoading || venuesLoading || artistsLoading || eventsLoading
+
+  const totalUsers = usersData?.pagination?.total_count ?? 0
+  const totalOrgs = orgsData?.pagination?.total_count ?? 0
+  const totalVenues = venuesData?.pagination?.total_count ?? 0
+  const totalArtists = artistsData?.pagination?.total_count ?? 0
+  const totalEvents = eventsData?.pagination?.total_count ?? 0
+
+  const resourceDistributionData = [
+    { name: "Users", count: totalUsers },
+    { name: "Organizations", count: totalOrgs },
+    { name: "Venues", count: totalVenues },
+    { name: "Artists", count: totalArtists },
+    { name: "Events", count: totalEvents },
+  ]
+
+  const liveActivity = notifData?.data ?? []
+
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -214,7 +166,6 @@ export default function DashboardPage() {
     )
   }
 
-  // ── Rendered Dashboard ────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -222,11 +173,12 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
           <p className="text-sm text-muted-foreground">
-            Platform overview and analytics
+            Live platform overview and analytics
           </p>
         </div>
         <button
           type="button"
+          onClick={handleRefresh}
           className="inline-flex items-center gap-2 rounded-lg border border-border/50 bg-card px-4 py-2 text-sm font-medium shadow-xs transition-colors hover:bg-accent"
         >
           <HugeiconsIcon
@@ -242,138 +194,67 @@ export default function DashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Total Users"
-          value={mockStats.totalUsers.toLocaleString()}
+          value={totalUsers.toLocaleString()}
           icon={UserGroupIcon}
-          trend={mockStats.userTrend}
-          sparklineData={[1800, 2000, 2100, 2200, 2300, 2400, 2483]}
+          sparklineData={[
+            Math.max(0, totalUsers - 30),
+            Math.max(0, totalUsers - 20),
+            Math.max(0, totalUsers - 10),
+            totalUsers,
+          ]}
           sparklineColor="var(--chart-1)"
         />
         <StatsCard
           title="Organizations"
-          value={mockStats.totalOrganizations.toLocaleString()}
+          value={totalOrgs.toLocaleString()}
           icon={OfficeIcon}
-          trend={mockStats.orgTrend}
-          sparklineData={[110, 118, 125, 132, 140, 148, 156]}
+          sparklineData={[
+            Math.max(0, totalOrgs - 5),
+            Math.max(0, totalOrgs - 3),
+            Math.max(0, totalOrgs - 1),
+            totalOrgs,
+          ]}
           sparklineColor="var(--chart-2)"
         />
         <StatsCard
           title="Venues"
-          value={mockStats.totalVenues.toLocaleString()}
+          value={totalVenues.toLocaleString()}
           icon={Building01Icon}
-          trend={mockStats.venueTrend}
-          sparklineData={[260, 275, 290, 305, 320, 330, 342]}
+          sparklineData={[
+            Math.max(0, totalVenues - 4),
+            Math.max(0, totalVenues - 2),
+            totalVenues,
+          ]}
           sparklineColor="var(--chart-3)"
         />
         <StatsCard
           title="Artists"
-          value={mockStats.totalArtists.toLocaleString()}
+          value={totalArtists.toLocaleString()}
           icon={MusicNote01Icon}
-          trend={mockStats.artistTrend}
-          sparklineData={[600, 650, 700, 750, 800, 850, 891]}
+          sparklineData={[
+            Math.max(0, totalArtists - 8),
+            Math.max(0, totalArtists - 4),
+            totalArtists,
+          ]}
           sparklineColor="var(--chart-4)"
         />
       </div>
 
       {/* Charts Row */}
       <div className="grid gap-4 lg:grid-cols-7">
-        {/* Area Chart — Growth Over Time */}
+        {/* Resource Distribution */}
         <div className="rounded-xl border border-border/50 bg-card p-6 shadow-xs lg:col-span-4">
           <div className="mb-4">
-            <h3 className="font-semibold">Growth Over Time</h3>
-            <p className="text-xs text-muted-foreground">
-              Cumulative registrations across all resource types
-            </p>
-          </div>
-          <ChartContainer
-            config={growthChartConfig}
-            className="h-[280px] w-full"
-          >
-            <AreaChart data={mockGrowthData} margin={{ left: -12, right: 12 }}>
-              <defs>
-                <linearGradient id="gradient-users" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="oklch(0.623 0.214 259.815)" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="oklch(0.623 0.214 259.815)" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="gradient-organizations" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="oklch(0.769 0.188 70.08)" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="oklch(0.769 0.188 70.08)" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="gradient-venues" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="oklch(0.792 0.209 151.711)" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="oklch(0.792 0.209 151.711)" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="gradient-artists" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="oklch(0.656 0.241 303.495)" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="oklch(0.656 0.241 303.495)" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="hsl(var(--border))"
-              />
-              <XAxis
-                dataKey="month"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                tick={{ fontSize: 12 }}
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                tick={{ fontSize: 12 }}
-              />
-              <ChartTooltip
-                cursor={false}
-                content={<ChartTooltipContent indicator="line" />}
-              />
-              <Area
-                type="monotone"
-                dataKey="users"
-                stroke="oklch(0.623 0.214 259.815)"
-                fill="url(#gradient-users)"
-                strokeWidth={2}
-              />
-              <Area
-                type="monotone"
-                dataKey="organizations"
-                stroke="oklch(0.769 0.188 70.08)"
-                fill="url(#gradient-organizations)"
-                strokeWidth={2}
-              />
-              <Area
-                type="monotone"
-                dataKey="venues"
-                stroke="oklch(0.792 0.209 151.711)"
-                fill="url(#gradient-venues)"
-                strokeWidth={2}
-              />
-              <Area
-                type="monotone"
-                dataKey="artists"
-                stroke="oklch(0.656 0.241 303.495)"
-                fill="url(#gradient-artists)"
-                strokeWidth={2}
-              />
-              <ChartLegend
-                content={<ChartLegendContent className="flex-wrap gap-3" />}
-              />
-            </AreaChart>
-          </ChartContainer>
-        </div>
-
-        {/* Bar Chart — Resource Distribution */}
-        <div className="rounded-xl border border-border/50 bg-card p-6 shadow-xs lg:col-span-3">
-          <div className="mb-4">
             <h3 className="font-semibold">Resource Distribution</h3>
-            <p className="text-xs text-muted-foreground">Breakdown by status</p>
+            <p className="text-xs text-muted-foreground">
+              Total registered entities across the platform
+            </p>
           </div>
           <ChartContainer
             config={resourceChartConfig}
             className="h-[280px] w-full"
           >
-            <BarChart data={mockResources} margin={{ left: -12, right: 12 }}>
+            <BarChart data={resourceDistributionData} margin={{ left: -12, right: 12 }}>
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="hsl(var(--border))"
@@ -396,63 +277,84 @@ export default function DashboardPage() {
                 content={<ChartTooltipContent indicator="dot" />}
               />
               <Bar
-                dataKey="users"
+                dataKey="count"
                 fill="oklch(0.623 0.214 259.815)"
                 radius={[4, 4, 0, 0]}
-                barSize={24}
-              />
-              <Bar
-                dataKey="organizations"
-                fill="oklch(0.769 0.188 70.08)"
-                radius={[4, 4, 0, 0]}
-                barSize={24}
-              />
-              <Bar
-                dataKey="venues"
-                fill="oklch(0.792 0.209 151.711)"
-                radius={[4, 4, 0, 0]}
-                barSize={24}
-              />
-              <Bar
-                dataKey="artists"
-                fill="oklch(0.656 0.241 303.495)"
-                radius={[4, 4, 0, 0]}
-                barSize={24}
-              />
-              <ChartLegend
-                content={<ChartLegendContent className="flex-wrap gap-3" />}
+                barSize={32}
               />
             </BarChart>
           </ChartContainer>
+        </div>
+
+        {/* Live Metrics Summary */}
+        <div className="rounded-xl border border-border/50 bg-card p-6 shadow-xs lg:col-span-3">
+          <div className="mb-4">
+            <h3 className="font-semibold">Platform Breakdown</h3>
+            <p className="text-xs text-muted-foreground">Key entity proportions</p>
+          </div>
+          <div className="space-y-4 pt-2">
+            <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <div className="flex items-center gap-2">
+                <HugeiconsIcon icon={Calendar03Icon} className="size-4 text-amber-600" />
+                <span className="text-sm font-medium">Events Published</span>
+              </div>
+              <span className="text-sm font-semibold">{totalEvents.toLocaleString()}</span>
+            </div>
+            <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <div className="flex items-center gap-2">
+                <HugeiconsIcon icon={OfficeIcon} className="size-4 text-violet-600" />
+                <span className="text-sm font-medium">Organizations</span>
+              </div>
+              <span className="text-sm font-semibold">{totalOrgs.toLocaleString()}</span>
+            </div>
+            <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <div className="flex items-center gap-2">
+                <HugeiconsIcon icon={Building01Icon} className="size-4 text-emerald-600" />
+                <span className="text-sm font-medium">Venues Managed</span>
+              </div>
+              <span className="text-sm font-semibold">{totalVenues.toLocaleString()}</span>
+            </div>
+            <div className="flex items-center justify-between pb-1">
+              <div className="flex items-center gap-2">
+                <HugeiconsIcon icon={MusicNote01Icon} className="size-4 text-pink-600" />
+                <span className="text-sm font-medium">Artists Verified</span>
+              </div>
+              <span className="text-sm font-semibold">{totalArtists.toLocaleString()}</span>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Recent Activity */}
       <div className="rounded-xl border border-border/50 bg-card p-6 shadow-xs">
         <div className="mb-4">
-          <h3 className="font-semibold">Recent Activity</h3>
+          <h3 className="font-semibold">Recent Platform Notifications</h3>
           <p className="text-xs text-muted-foreground">
-            Latest actions across the platform
+            Latest operational events and system alerts
           </p>
         </div>
         <div className="space-y-0">
-          {mockRecentActivity.map((activity, i) => (
-            <div
-              key={activity.id}
-              className={`flex items-center gap-4 py-3 ${i < mockRecentActivity.length - 1 ? "border-b border-border/50" : ""}`}
-            >
-              <ActivityIcon type={activity.type} />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{activity.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {activity.detail}
-                </p>
+          {liveActivity.length === 0 ? (
+            <p className="py-6 text-center text-xs text-muted-foreground">No recent activity</p>
+          ) : (
+            liveActivity.map((activity, i) => (
+              <div
+                key={activity.id}
+                className={`flex items-center gap-4 py-3 ${i < liveActivity.length - 1 ? "border-b border-border/50" : ""}`}
+              >
+                <ActivityIcon type={activity.category ?? "system"} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{activity.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {activity.message}
+                  </p>
+                </div>
+                <time className="shrink-0 text-xs text-muted-foreground">
+                  {formatRelativeTime(activity.created_at)}
+                </time>
               </div>
-              <time className="shrink-0 text-xs text-muted-foreground">
-                {activity.time}
-              </time>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </div>

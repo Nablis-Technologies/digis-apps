@@ -48,6 +48,7 @@ import {
   useUpdateMembershipMutation,
   useDeleteMembershipMutation,
 } from "@/store/reducers/membershipsApi"
+import { useListEventsQuery, type Event } from "@/store/reducers/eventsApi"
 
 // ─── Mock Data ──────────────────────────────────────────────────────────────
 
@@ -313,6 +314,9 @@ export default function OrgDetailPage() {
 // ─── Tab Components ─────────────────────────────────────────────────────────
 
 function OverviewTab({ org }: { org: Organization }) {
+  const { data: eventsData } = useListEventsQuery({ per_page: 10 })
+  const events = eventsData?.data ?? []
+
   const profileFields = [
     { label: "Organization Type", value: org.organizer_type === "company" ? "Company" : "Individual", icon: Building01Icon },
     { label: "Category", value: org.category ?? "—", icon: Building01Icon },
@@ -326,24 +330,13 @@ function OverviewTab({ org }: { org: Organization }) {
     { label: "Event Frequency", value: org.event_frequency ?? "—", icon: Calendar01Icon },
   ]
 
-  const eventColumns: Column<MockEvent>[] = [
-    { header: "Event", accessorKey: "name", cell: (row) => <span className="font-medium">{row.name}</span> },
-    { header: "Type", accessorKey: "type", hideOnMobile: true, cell: (row) => <span className="text-muted-foreground">{row.type}</span> },
-    { header: "Date", accessorKey: "date", cell: (row) => <span className="text-sm">{fmtDate(row.date)}</span> },
-    { header: "Venue", accessorKey: "venue", hideOnMobile: true },
+  const eventColumns: Column<Event>[] = [
+    { header: "Event", accessorKey: "title", cell: (row) => <span className="font-medium">{row.title}</span> },
     { header: "Status", accessorKey: "status", cell: (row) => {
-      const s = eventStatus[row.status]
+      const s = eventStatus[row.status] ?? { label: row.status, cls: "bg-zinc-100 text-zinc-700" }
       return <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", s.cls)}>{s.label}</span>
     }},
-    { header: "Tickets", accessorKey: "ticketsSold", cell: (row) => (
-      <div className="flex items-center gap-2 min-w-[120px]">
-        <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
-          <div className="h-full rounded-full bg-lime-500 transition-all" style={{ width: `${row.totalTickets > 0 ? (row.ticketsSold / row.totalTickets) * 100 : 0}%` }} />
-        </div>
-        <span className="text-xs text-muted-foreground tabular-nums">{row.ticketsSold}/{row.totalTickets}</span>
-      </div>
-    )},
-    { header: "Revenue", accessorKey: "revenue", cell: (row) => <span className="font-medium tabular-nums">${row.revenue.toLocaleString()}</span> },
+    { header: "Slug", accessorKey: "slug", hideOnMobile: true, cell: (row) => <span className="text-xs text-muted-foreground">{row.slug}</span> },
   ]
 
   return (
@@ -382,9 +375,9 @@ function OverviewTab({ org }: { org: Organization }) {
         <h3 className="font-semibold mb-3">Upcoming / Recent Events</h3>
         <DataTable
           columns={eventColumns}
-          data={mockEvents}
+          data={events}
           keyExtractor={(row) => row.id}
-          pagination={{ page: 1, totalPages: 1, total: mockEvents.length, perPage: 10 }}
+          pagination={{ page: 1, totalPages: 1, total: events.length, perPage: 10 }}
           renderActions={() => (
             <div className="flex items-center gap-1">
               <button className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
