@@ -94,6 +94,16 @@ export const authApi = createApi({
         body,
       }),
     }),
+    createPhoneVerification: builder.mutation<
+      { success: boolean; data: { challenge_id: string } },
+      { phone: string }
+    >({
+      query: (body) => ({
+        url: "/auth/phone_verifications",
+        method: "POST",
+        body,
+      }),
+    }),
     getMe: builder.query<MeResponse, void>({
       query: () => "/auth/me",
     }),
@@ -123,6 +133,7 @@ export const {
   useLoginMutation,
   useSignupMutation,
   useReauthenticateMutation,
+  useCreatePhoneVerificationMutation,
   useGetMeQuery,
   useLazyGetMeQuery,
   useLogoutMutation,
