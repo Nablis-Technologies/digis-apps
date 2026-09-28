@@ -30,6 +30,21 @@ export function clearTokens() {
   Cookies.remove(REFRESH_TOKEN_KEY)
 }
 
+/**
+ * Generates a random UUID v4 for the Idempotency-Key header.
+ * Uses globalThis.crypto.randomUUID() when available with standard fallback.
+ */
+export function generateIdempotencyKey(): string {
+  if (typeof globalThis !== "undefined" && globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID()
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    const v = c === "x" ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
+
 const baseQuery = fetchBaseQuery({
   baseUrl: BASE_URL,
   prepareHeaders: (headers) => {
@@ -48,7 +63,10 @@ function performRefresh(refreshToken: string) {
 
   refreshPromise = fetch(`${BASE_URL}/auth/refresh`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": generateIdempotencyKey(),
+    },
     body: JSON.stringify({ refresh_token: refreshToken }),
   })
     .then(async (res) => {
@@ -71,7 +89,41 @@ export const baseQueryWithReauth: BaseQueryFn<
   unknown,
   FetchBaseQueryError
 > = async (args, api, extraOptions) => {
-  let result = await baseQuery(args, api, extraOptions)
+  // Normalize args to ensure non-GET mutating requests carry an Idempotency-Key header
+  let fetchArgs: FetchArgs
+  if (typeof args === "string") {
+    fetchArgs = { url: args }
+  } else {
+    fetchArgs = { ...args }
+  }
+
+  const method = (fetchArgs.method ?? "GET").toUpperCase()
+  if (method !== "GET" && method !== "HEAD") {
+    const existingHeaders: Record<string, string> = {}
+    if (fetchArgs.headers) {
+      if (fetchArgs.headers instanceof Headers) {
+        fetchArgs.headers.forEach((value, key) => {
+          existingHeaders[key] = value
+        })
+      } else if (Array.isArray(fetchArgs.headers)) {
+        fetchArgs.headers.forEach(([key, value]) => {
+          if (key && value) existingHeaders[key] = value
+        })
+      } else {
+        Object.entries(fetchArgs.headers).forEach(([key, value]) => {
+          if (value !== undefined) existingHeaders[key] = String(value)
+        })
+      }
+    }
+
+    if (!existingHeaders["Idempotency-Key"] && !existingHeaders["idempotency-key"]) {
+      existingHeaders["Idempotency-Key"] = generateIdempotencyKey()
+    }
+
+    fetchArgs.headers = existingHeaders
+  }
+
+  let result = await baseQuery(fetchArgs, api, extraOptions)
 
   if (result.error && result.error.status === 401) {
     const refreshToken = getRefreshToken()
@@ -80,7 +132,7 @@ export const baseQueryWithReauth: BaseQueryFn<
       try {
         const newTokens = await performRefresh(refreshToken)
         setTokens(newTokens.access, newTokens.refresh)
-        result = await baseQuery(args, api, extraOptions)
+        result = await baseQuery(fetchArgs, api, extraOptions)
       } catch {
         clearTokens()
       }
