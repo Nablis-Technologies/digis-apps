@@ -86,14 +86,49 @@ const navSections: NavSection[] = [
     title: "Finance",
     items: [
       {
-        title: "Payouts",
+        title: "Organizer Payouts",
         url: "/admin/payouts",
         icon: <HugeiconsIcon icon={BankIcon} strokeWidth={2} />,
+      },
+      {
+        title: "Seller Payouts",
+        url: "/admin/marketplace/payouts",
+        icon: <HugeiconsIcon icon={BankIcon} strokeWidth={2} />,
+      },
+      {
+        title: "Seller Accounts",
+        url: "/admin/marketplace/accounts",
+        icon: <HugeiconsIcon icon={WalletIcon} strokeWidth={2} />,
       },
       {
         title: "Refunds",
         url: "/admin/refunds",
         icon: <HugeiconsIcon icon={WalletIcon} strokeWidth={2} />,
+      },
+    ],
+  },
+  {
+    title: "Messaging",
+    items: [
+      {
+        title: "Credit Rates",
+        url: "/admin/messaging/credit-rates",
+        icon: <HugeiconsIcon icon={ReceiptDollarIcon} strokeWidth={2} />,
+      },
+      {
+        title: "Campaigns",
+        url: "/admin/messaging/campaigns",
+        icon: <HugeiconsIcon icon={Mail01Icon} strokeWidth={2} />,
+      },
+      {
+        title: "Templates",
+        url: "/admin/messaging/templates",
+        icon: <HugeiconsIcon icon={File01Icon} strokeWidth={2} />,
+      },
+      {
+        title: "Volume Policies",
+        url: "/admin/messaging/volume-policies",
+        icon: <HugeiconsIcon icon={LockIcon} strokeWidth={2} />,
       },
     ],
   },
