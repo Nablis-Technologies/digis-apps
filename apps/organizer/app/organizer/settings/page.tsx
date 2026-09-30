@@ -16,6 +16,7 @@ import {
   CheckmarkBadge01Icon,
   AlertCircleIcon,
   Settings05Icon,
+  NotificationIcon,
 } from "@hugeicons/core-free-icons"
 
 export default function SettingsPage() {
@@ -75,6 +76,18 @@ export default function SettingsPage() {
         </Badge>
       ),
       highlight: "Bank & Mobile Money",
+    },
+    {
+      title: "Notifications & Delivery Channels",
+      description: "Manage in-app notifications and toggle email & SMS channels for transactional, security, and legal alerts.",
+      url: "/organizer/notifications",
+      icon: NotificationIcon,
+      badge: (
+        <Badge variant="secondary" className="text-[10px]">
+          Alerts & Preferences
+        </Badge>
+      ),
+      highlight: "In-App, Email & SMS",
     },
   ]
 

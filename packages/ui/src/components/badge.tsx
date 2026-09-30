@@ -3,6 +3,8 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { Slot } from "radix-ui"
 
 import { cn } from "@workspace/ui/lib/utils"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { SmartPhone01Icon, Mail01Icon } from "@hugeicons/core-free-icons"
 
 const badgeVariants = cva(
   "group/badge inline-flex h-6 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:bg-red-100 aria-invalid:text-red-700 dark:aria-invalid:bg-red-900/30 dark:aria-invalid:text-red-400 [&>svg]:pointer-events-none [&>svg]:size-3",
@@ -184,19 +186,49 @@ export const STATUS_BADGE_DICTIONARY: Record<string, StatusBadgeConfig> = {
     label: "Scheduled",
   },
   completed: {
-    variant: "secondary",
-    dotClass: "bg-muted-foreground",
+    variant: "success",
+    dotClass: "bg-emerald-500",
     label: "Completed",
+  },
+  sending: {
+    variant: "info",
+    dotClass: "bg-sky-500 animate-pulse",
+    label: "Sending",
+  },
+  paused: {
+    variant: "warning",
+    dotClass: "bg-amber-500",
+    label: "Paused",
+  },
+  canceled: {
+    variant: "destructive",
+    dotClass: "bg-red-500",
+    label: "Canceled",
   },
   cancelled: {
     variant: "destructive",
     dotClass: "bg-red-500",
     label: "Cancelled",
   },
+  failed: {
+    variant: "destructive",
+    dotClass: "bg-red-500",
+    label: "Failed",
+  },
   archived: {
     variant: "outline",
     dotClass: "bg-muted-foreground",
     label: "Archived",
+  },
+  suspended: {
+    variant: "destructive",
+    dotClass: "bg-red-500",
+    label: "Suspended",
+  },
+  removed: {
+    variant: "destructive",
+    dotClass: "bg-red-500",
+    label: "Suspended",
   },
   active: {
     variant: "success",
@@ -256,6 +288,50 @@ export function StatusBadge({
     >
       {showDot && <span className={cn("size-1.5 rounded-full shrink-0", config.dotClass)} />}
       <span>{displayLabel}</span>
+    </Badge>
+  )
+}
+
+// ─── Channel Badge Component & Helper ────────────────────────────────────────
+
+export interface ChannelBadgeProps extends React.ComponentProps<typeof Badge> {
+  channel?: "sms" | "email" | string
+}
+
+export function ChannelBadge({
+  channel,
+  className,
+  ...props
+}: ChannelBadgeProps) {
+  const isSms = (channel || "").toLowerCase() === "sms"
+
+  if (isSms) {
+    return (
+      <Badge
+        variant="success"
+        className={cn(
+          "border border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 dark:bg-emerald-500/20 text-[11px] font-semibold h-5 px-2 gap-1 tracking-wide uppercase shadow-2xs",
+          className
+        )}
+        {...props}
+      >
+        <HugeiconsIcon icon={SmartPhone01Icon} size={11} strokeWidth={2} />
+        <span>SMS</span>
+      </Badge>
+    )
+  }
+
+  return (
+    <Badge
+      variant="info"
+      className={cn(
+        "border border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-400 dark:bg-sky-500/20 text-[11px] font-semibold h-5 px-2 gap-1 tracking-wide capitalize shadow-2xs",
+        className
+      )}
+      {...props}
+    >
+      <HugeiconsIcon icon={Mail01Icon} size={11} strokeWidth={2} />
+      <span>Email</span>
     </Badge>
   )
 }

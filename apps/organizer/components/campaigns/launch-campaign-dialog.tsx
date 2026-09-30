@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { ChannelBadge } from "@/components/ui/badge"
 import { formatNumber } from "@/lib/utils"
 import { cn } from "@workspace/ui/lib/utils"
 import {
@@ -60,22 +61,38 @@ export function LaunchCampaignDialog({
   const [launchCampaign, { isLoading: isLaunching }] = useLaunchCampaignMutation()
 
   useEffect(() => {
+    let timer: NodeJS.Timeout | null = null
+    let active = true
+
+    const fetchEstimate = async () => {
+      if (!campaign || !organizationId) return
+      try {
+        const res = await getEstimate({ organizationId, campaignId: campaign.id }).unwrap()
+        if (!active) return
+        setEstimate(res.data)
+        if (res.data?.status === "preparing") {
+          timer = setTimeout(fetchEstimate, 1500)
+        }
+      } catch (err: any) {
+        if (!active) return
+        toast.error("Failed to estimate campaign audience", {
+          description:
+            err?.data?.message || err?.data?.error || err?.message || "Audience calculation failed",
+        })
+      }
+    }
+
     if (open && campaign && organizationId) {
       setHasAttested(false)
       setEstimate(null)
-      getEstimate({ organizationId, campaignId: campaign.id })
-        .unwrap()
-        .then((res) => {
-          setEstimate(res.data)
-        })
-        .catch((err: any) => {
-          toast.error("Failed to estimate campaign audience", {
-            description:
-              err?.data?.message || err?.data?.error || err?.message || "Audience calculation failed",
-          })
-        })
+      fetchEstimate()
     }
-  }, [open, campaign, organizationId, getEstimate])
+
+    return () => {
+      active = false
+      if (timer) clearTimeout(timer)
+    }
+  }, [open, campaign?.id, organizationId, getEstimate])
 
   if (!campaign) return null
 
@@ -128,7 +145,7 @@ export function LaunchCampaignDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-lime-500/10 text-lime-600 dark:bg-lime-500/20 dark:text-lime-400">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <HugeiconsIcon icon={Rocket01Icon} size={20} strokeWidth={2} />
             </div>
             <div>
@@ -145,13 +162,7 @@ export function LaunchCampaignDialog({
           <div className="rounded-xl border bg-muted/20 p-3 text-xs space-y-2">
             <div className="flex items-center justify-between">
               <span className="font-semibold text-foreground text-sm">{campaign.name}</span>
-              <span className="capitalize font-mono text-[10px] px-2 py-0.5 rounded-md bg-muted border flex items-center gap-1">
-                <HugeiconsIcon
-                  icon={campaign.channel === "sms" ? SmartPhone01Icon : Mail01Icon}
-                  size={12}
-                />
-                {campaign.channel.toUpperCase()}
-              </span>
+              <ChannelBadge channel={campaign.channel} />
             </div>
             {campaign.message_subject && (
               <p className="text-muted-foreground text-[11px]">
@@ -164,12 +175,21 @@ export function LaunchCampaignDialog({
           </div>
 
           {/* Quote & Estimate */}
-          {isEstimating ? (
-            <div className="flex flex-col items-center justify-center py-6 gap-2 text-center">
+          {isEstimating || !estimate || estimate.status === "preparing" ? (
+            <div className="flex flex-col items-center justify-center py-6 gap-2 text-center rounded-xl border bg-muted/10 p-4">
               <HugeiconsIcon icon={Loading03Icon} size={24} className="animate-spin text-lime-600 dark:text-lime-400" />
-              <p className="text-xs text-muted-foreground">Calculating audience recipients and rate...</p>
+              <p className="text-xs font-semibold text-foreground">
+                {estimate?.status === "preparing"
+                  ? "Preparing audience snapshot..."
+                  : "Calculating audience recipients and rate..."}
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                {estimate?.status === "preparing"
+                  ? "Deduplicating contacts and validating active channels."
+                  : "Checking subscriber records and credit balance."}
+              </p>
             </div>
-          ) : estimate ? (
+          ) : (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
                 <div className="rounded-xl border p-3">
@@ -223,7 +243,7 @@ export function LaunchCampaignDialog({
                 </div>
               )}
             </div>
-          ) : null}
+          )}
 
           {/* Compliance Attestation Checkbox */}
           <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-2">
@@ -253,9 +273,9 @@ export function LaunchCampaignDialog({
           </Button>
           <Button
             size="sm"
-            disabled={!hasAttested || !hasSufficientCredits || isActionLoading || isEstimating}
+            disabled={!hasAttested || !hasSufficientCredits || isActionLoading || isEstimating || estimate?.status !== "ready"}
             onClick={handleConfirmLaunch}
-            className="gap-1.5 bg-lime-500 hover:bg-lime-600 text-zinc-950 font-bold dark:bg-lime-500 dark:text-zinc-950 dark:hover:bg-lime-400 border-0 shadow-xs"
+            className="gap-1.5 shadow-xs"
           >
             {isActionLoading ? (
               <>

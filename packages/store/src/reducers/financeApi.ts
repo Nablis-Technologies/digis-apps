@@ -241,6 +241,15 @@ export const financeApi = createApi({
       ],
     }),
 
+    // Get Single Payout (Receipt & Audit)
+    getOrganizerPayout: builder.query<SingleResponse<Payout>, { organizationId: string; payoutId: string }>({
+      query: ({ organizationId, payoutId }) => ({
+        url: `/finance/organizations/${organizationId}/payouts/${payoutId}`,
+        method: "GET",
+      }),
+      providesTags: (_res, _err, { payoutId }) => [{ type: "Payout", id: payoutId }],
+    }),
+
     // Ledger Entries
     listOrganizerLedgerEntries: builder.query<PaginatedResponse<LedgerEntry>, ListParams>({
       query: ({ organizationId, currency = "ETB", page = 1, per_page = 25 }) => ({
@@ -266,6 +275,7 @@ export const {
   useSuspendOrganizerPayoutAccountMutation,
   useCloseOrganizerPayoutAccountMutation,
   useListOrganizerPayoutsQuery,
+  useGetOrganizerPayoutQuery,
   useRequestOrganizerPayoutMutation,
   useListOrganizerLedgerEntriesQuery,
 } = financeApi

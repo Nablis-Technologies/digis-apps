@@ -8,6 +8,7 @@ import { CreateOrgDialog } from "../../../components/organizations/create-org-di
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
+import { cn } from "@workspace/ui/lib/utils"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   UserCircleIcon,
@@ -23,13 +24,15 @@ import {
   Loading01Icon,
   ArrowRight01Icon,
   Key01Icon,
+  RefreshIcon,
+  Exchange01Icon,
 } from "@hugeicons/core-free-icons"
 import Link from "next/link"
 
 export default function ProfilePage() {
   const { data: meData, isLoading: meLoading, refetch: refetchMe } = useGetMeQuery()
   const [logout, { isLoading: isLoggingOut }] = useLogoutMutation()
-  const { activeOrgId, setActiveOrgId } = useActiveOrganization()
+  const { activeOrg, activeOrgId, setActiveOrgId } = useActiveOrganization()
   const { data: orgsData, isLoading: orgsLoading } = useListOwnerOrganizationsQuery({ per_page: 50 })
 
   const [copiedId, setCopiedId] = React.useState(false)
@@ -114,11 +117,12 @@ export default function ProfilePage() {
                 variant="outline"
                 size="sm"
                 onClick={handleCopyId}
-                className="gap-1.5 text-xs"
+                className="gap-1.5 text-xs h-9"
               >
                 <HugeiconsIcon
                   icon={copiedId ? CheckmarkCircle01Icon : Copy01Icon}
-                  className="size-3.5 text-muted-foreground"
+                  strokeWidth={2}
+                  className={cn("size-3.5", copiedId ? "text-emerald-500" : "text-muted-foreground")}
                 />
                 {copiedId ? "ID Copied" : "Copy User ID"}
               </Button>
@@ -126,8 +130,14 @@ export default function ProfilePage() {
                 variant="outline"
                 size="sm"
                 onClick={() => refetchMe()}
-                className="text-xs"
+                disabled={meLoading}
+                className="gap-1.5 text-xs h-9"
               >
+                <HugeiconsIcon
+                  icon={RefreshIcon}
+                  strokeWidth={2}
+                  className={cn("size-3.5", meLoading && "animate-spin")}
+                />
                 Refresh
               </Button>
             </div>
@@ -175,13 +185,20 @@ export default function ProfilePage() {
                 </span>
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs font-mono text-foreground truncate">{user?.id || "—"}</p>
-                  <button
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
                     onClick={handleCopyId}
-                    className="text-xs text-muted-foreground hover:text-foreground shrink-0"
+                    className="size-6 text-muted-foreground hover:text-foreground shrink-0"
                     title="Copy UUID"
                   >
-                    <HugeiconsIcon icon={Copy01Icon} className="size-3.5" />
-                  </button>
+                    <HugeiconsIcon
+                      icon={copiedId ? CheckmarkCircle01Icon : Copy01Icon}
+                      strokeWidth={2}
+                      className={cn("size-3.5", copiedId && "text-emerald-500")}
+                    />
+                  </Button>
                 </div>
               </div>
 
@@ -217,10 +234,10 @@ export default function ProfilePage() {
               <Button
                 size="sm"
                 onClick={() => setCreateDialogOpen(true)}
-                className="gap-1.5 bg-lime-500 text-zinc-950 hover:bg-lime-400 font-semibold"
+                className="gap-2 shadow-xs"
               >
-                <HugeiconsIcon icon={PlusSignIcon} className="size-4" strokeWidth={2.5} />
-                New Org
+                <HugeiconsIcon icon={PlusSignIcon} className="size-4" strokeWidth={2} />
+                New Organization
               </Button>
             </div>
 
@@ -240,8 +257,9 @@ export default function ProfilePage() {
                 <Button
                   size="sm"
                   onClick={() => setCreateDialogOpen(true)}
-                  className="bg-lime-500 text-zinc-950 hover:bg-lime-400"
+                  className="gap-2 shadow-xs"
                 >
+                  <HugeiconsIcon icon={PlusSignIcon} className="size-4" strokeWidth={2} />
                   Create Organization
                 </Button>
               </div>
@@ -253,7 +271,7 @@ export default function ProfilePage() {
                     <div
                       key={org.id}
                       className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border transition-colors ${isActive
-                          ? "border-lime-500/50 bg-lime-500/5"
+                          ? "border-primary/40 bg-primary/5"
                           : "border-border/60 bg-muted/10 hover:bg-muted/30"
                         }`}
                     >
@@ -269,15 +287,28 @@ export default function ProfilePage() {
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-semibold text-sm truncate">{org.name}</span>
                             {isActive && (
-                              <Badge className="bg-lime-500 text-zinc-950 text-[10px] font-bold px-1.5 py-0">
+                              <Badge className="bg-primary/15 text-primary border border-primary/30 text-[10px] font-semibold px-2 py-0.5">
                                 Active Workspace
                               </Badge>
                             )}
-                            {org.verified && (
+                            {org.membership_role && (
+                              <Badge variant="outline" className="border-primary/30 text-primary text-[10px] px-1.5 py-0 capitalize font-semibold">
+                                {org.membership_role}
+                              </Badge>
+                            )}
+                            {org.archived ? (
+                              <Badge variant="outline" className="border-zinc-500/30 text-zinc-500 text-[10px] px-1.5 py-0">
+                                Archived
+                              </Badge>
+                            ) : org.membership_status === "suspended" ? (
+                              <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                                Suspended
+                              </Badge>
+                            ) : org.verified ? (
                               <Badge variant="outline" className="border-lime-500/30 text-lime-600 dark:text-lime-400 text-[10px] px-1.5 py-0">
                                 Verified
                               </Badge>
-                            )}
+                            ) : null}
                           </div>
                           <p className="text-xs text-muted-foreground capitalize">
                             {org.organizer_type} • {org.category || "General"}
@@ -290,20 +321,36 @@ export default function ProfilePage() {
                           <Button
                             variant="outline"
                             size="sm"
+                            disabled={org.archived}
                             onClick={() => {
+                              if (org.archived) {
+                                toast.error("Archived organizations cannot be entered.")
+                                return
+                              }
                               setActiveOrgId(org.id)
-                              toast.success(`Switched active workspace to ${org.name}`)
+                              if (org.membership_status === "suspended") {
+                                toast.warning(`Switched to ${org.name} (Suspended membership)`)
+                              } else {
+                                toast.success(`Switched active workspace to ${org.name}`)
+                              }
                             }}
-                            className="text-xs"
+                            className="h-8 gap-1.5 text-xs font-medium"
                           >
-                            Switch Workspace
+                            <HugeiconsIcon icon={Exchange01Icon} strokeWidth={2} className="size-3.5 text-muted-foreground" />
+                            {org.archived ? "Archived" : "Switch Workspace"}
                           </Button>
                         ) : (
-                          <Link href="/organizer/organization">
-                            <Button variant="secondary" size="sm" className="text-xs gap-1">
-                              Manage <HugeiconsIcon icon={ArrowRight01Icon} className="size-3" />
-                            </Button>
-                          </Link>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            asChild
+                            className="h-8 gap-1.5 text-xs font-medium"
+                          >
+                            <Link href="/organizer/organization">
+                              Manage
+                              <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-3.5" />
+                            </Link>
+                          </Button>
                         )}
                       </div>
                     </div>
@@ -316,28 +363,35 @@ export default function ProfilePage() {
 
         {/* Right 1 Col: Roles & Security */}
         <div className="space-y-6">
-          {/* Account Roles */}
+          {/* Account & Workspace Roles */}
           <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-xs space-y-4">
             <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
               <HugeiconsIcon icon={Shield01Icon} className="size-4.5 text-lime-600 dark:text-lime-400" />
-              Account Roles
+              Workspace Roles
             </h3>
 
-            <div>
-              <span className="text-xs text-muted-foreground">Assigned System Roles</span>
-              <div className="flex flex-wrap gap-1.5 mt-1.5">
-                {user?.roles && user.roles.length > 0 ? (
-                  user.roles.map((r, i) => (
-                    <Badge key={i} variant="secondary" className="text-xs font-mono">
-                      {r.name || r.code}
-                    </Badge>
-                  ))
-                ) : (
-                  <Badge variant="secondary" className="text-xs font-mono">
-                    {user?.role || "ORGANIZER"}
+            <div className="space-y-3">
+              <div>
+                <span className="text-xs text-muted-foreground">Active Workspace Role</span>
+                <div className="mt-1">
+                  <Badge variant="outline" className="text-xs capitalize font-semibold border-primary/30 text-primary">
+                    {activeOrg?.membership_role || "Member"} ({activeOrg?.name || "Active Workspace"})
                   </Badge>
-                )}
+                </div>
               </div>
+
+              {user?.roles && user.roles.length > 0 && (
+                <div>
+                  <span className="text-xs text-muted-foreground">System Roles</span>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {user.roles.map((r, i) => (
+                      <Badge key={i} variant="secondary" className="text-xs font-mono">
+                        {r.name || r.code}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -357,9 +411,13 @@ export default function ProfilePage() {
                 size="sm"
                 onClick={handleLogout}
                 disabled={isLoggingOut}
-                className="w-full gap-1.5 text-xs font-semibold"
+                className="w-full gap-2 shadow-xs"
               >
-                <HugeiconsIcon icon={Logout01Icon} className="size-4" />
+                <HugeiconsIcon
+                  icon={isLoggingOut ? Loading01Icon : Logout01Icon}
+                  strokeWidth={2}
+                  className={cn("size-4", isLoggingOut && "animate-spin")}
+                />
                 {isLoggingOut ? "Signing out..." : "Sign Out of Account"}
               </Button>
             </div>

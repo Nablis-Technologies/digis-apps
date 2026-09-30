@@ -7,12 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs"
+import { TabsContent } from "@/components/ui/tabs"
+import { PageTabs } from "@/components/page-tabs"
 import { DataTable, type Column } from "@/components/ui/data-table"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -447,21 +443,14 @@ export default function OrganizerDashboard() {
       {isLoading ? (
         <DashboardSkeletons />
       ) : (
-        <Tabs defaultValue="overview">
-          <TabsList>
-            <TabsTrigger value="overview">
-              <HugeiconsIcon icon={LayoutTopIcon} strokeWidth={2} className="size-4" />
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="tickets">
-              <HugeiconsIcon icon={TicketIcon} strokeWidth={2} className="size-4" />
-              Tickets ({tableRows.length})
-            </TabsTrigger>
-            <TabsTrigger value="sales">
-              <HugeiconsIcon icon={BarChartIcon} strokeWidth={2} className="size-4" />
-              Sales
-            </TabsTrigger>
-          </TabsList>
+        <PageTabs
+          defaultValue="overview"
+          tabs={[
+            { value: "overview", label: "Overview", icon: LayoutTopIcon },
+            { value: "tickets", label: `Tickets (${tableRows.length})`, icon: TicketIcon },
+            { value: "sales", label: "Sales", icon: BarChartIcon },
+          ]}
+        >
 
           {/* ─── OVERVIEW ──────────────────────────────────────────────────────── */}
           <TabsContent value="overview" className="flex flex-col gap-4">
@@ -810,7 +799,7 @@ export default function OrganizerDashboard() {
               </div>
             </motion.div>
           </TabsContent>
-        </Tabs>
+        </PageTabs>
       )}
     </div>
   )

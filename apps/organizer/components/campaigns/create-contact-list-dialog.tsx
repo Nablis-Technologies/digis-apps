@@ -62,7 +62,7 @@ export function CreateContactListDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-lime-500/10 text-lime-600 dark:bg-lime-500/20 dark:text-lime-400">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <HugeiconsIcon icon={UserGroupIcon} size={20} strokeWidth={2} />
             </div>
             <div>
@@ -97,7 +97,7 @@ export function CreateContactListDialog({
               type="submit"
               size="sm"
               disabled={isLoading || !name.trim()}
-              className="gap-1.5 bg-lime-500 hover:bg-lime-600 text-zinc-950 font-bold dark:bg-lime-500 dark:text-zinc-950 dark:hover:bg-lime-400 border-0 shadow-xs"
+              className="gap-1.5 shadow-xs"
             >
               {isLoading ? (
                 <>

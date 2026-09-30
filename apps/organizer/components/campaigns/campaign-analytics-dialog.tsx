@@ -19,7 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { Badge, ChannelBadge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { formatNumber, formatDate } from "@/lib/utils"
 import {
@@ -50,12 +50,42 @@ export function CampaignAnalyticsDialog({
 
   if (!campaign) return null
 
+  // Safely extract backend telemetry values
+  const sent = stats?.sent ?? stats?.sent_count ?? campaign.quoted_quantity ?? 0
+  const delivered =
+    stats?.delivered ??
+    stats?.delivered_count ??
+    (campaign.status === "completed" ? sent : 0)
+  const failed =
+    (stats?.failed ?? stats?.failed_count ?? 0) + (stats?.unavailable ?? 0)
+  const suppressed = stats?.suppressed ?? stats?.unsubscribed_count ?? 0
+  const clicks = stats?.clicks ?? stats?.link_clicks_count ?? 0
+  const consumedCredits = stats?.consumed ?? 0
+
+  const totalRecipients =
+    stats?.total_recipients ??
+    (sent > 0 ? sent : campaign.quoted_quantity ?? 0)
+
+  const deliveryRate =
+    typeof stats?.delivery_rate_percentage === "number"
+      ? stats.delivery_rate_percentage.toFixed(1)
+      : sent > 0
+      ? ((delivered / sent) * 100).toFixed(1)
+      : "100.0"
+
+  const ctrRate =
+    typeof stats?.click_through_rate_percentage === "number"
+      ? stats.click_through_rate_percentage.toFixed(1)
+      : delivered > 0 && clicks > 0
+      ? ((clicks / delivered) * 100).toFixed(1)
+      : "0.0"
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-lime-500/10 text-lime-600 dark:bg-lime-500/20 dark:text-lime-400">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <HugeiconsIcon icon={ChartBarLineIcon} size={20} strokeWidth={2} />
             </div>
             <div>
@@ -69,7 +99,7 @@ export function CampaignAnalyticsDialog({
 
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-10 gap-2">
-            <HugeiconsIcon icon={Loading03Icon} size={24} className="animate-spin text-lime-600 dark:text-lime-400" />
+            <HugeiconsIcon icon={Loading03Icon} size={24} className="animate-spin text-primary" />
             <p className="text-xs text-muted-foreground">Aggregating telemetry logs...</p>
           </div>
         ) : (
@@ -79,20 +109,21 @@ export function CampaignAnalyticsDialog({
               <Card className="p-3">
                 <p className="text-[10px] text-muted-foreground font-medium">Total Recipients</p>
                 <p className="text-xl font-bold mt-1">
-                  {formatNumber(stats?.total_recipients ?? campaign.quoted_quantity ?? 0)}
+                  {formatNumber(totalRecipients)}
                 </p>
-                <p className="text-[10px] text-muted-foreground mt-0.5 capitalize">
-                  {campaign.channel.toUpperCase()} Broadcast
-                </p>
+                <div className="mt-1 flex items-center gap-1.5">
+                  <ChannelBadge channel={campaign.channel} />
+                  <span className="text-[10px] text-muted-foreground">Broadcast</span>
+                </div>
               </Card>
 
               <Card className="p-3">
                 <p className="text-[10px] text-muted-foreground font-medium">Delivered Rate</p>
                 <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-                  {stats ? `${stats.delivery_rate_percentage.toFixed(1)}%` : "100.0%"}
+                  {deliveryRate}%
                 </p>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
-                  {formatNumber(stats?.delivered_count ?? campaign.quoted_quantity ?? 0)} verified
+                  {formatNumber(delivered)} verified
                 </p>
               </Card>
             </div>
@@ -104,8 +135,8 @@ export function CampaignAnalyticsDialog({
                   <HugeiconsIcon icon={CheckmarkCircle01Icon} size={14} className="text-emerald-600" />
                   Successfully Delivered
                 </span>
-                <span className="font-semibold font-mono">
-                  {formatNumber(stats?.delivered_count ?? campaign.quoted_quantity ?? 0)}
+                <span className="font-semibold font-mono text-emerald-600 dark:text-emerald-400">
+                  {formatNumber(delivered)}
                 </span>
               </div>
 
@@ -115,29 +146,39 @@ export function CampaignAnalyticsDialog({
                   Bounced / Failed
                 </span>
                 <span className="font-semibold font-mono text-muted-foreground">
-                  {formatNumber(stats?.failed_count ?? 0)}
+                  {formatNumber(failed)}
                 </span>
               </div>
 
               <div className="flex items-center justify-between p-2.5">
                 <span className="text-muted-foreground flex items-center gap-1.5">
                   <HugeiconsIcon icon={Cancel01Icon} size={14} className="text-muted-foreground" />
-                  Unsubscribed Contacts
+                  Suppressed / Unsubscribed
                 </span>
                 <span className="font-semibold font-mono text-muted-foreground">
-                  {formatNumber(stats?.unsubscribed_count ?? 0)}
+                  {formatNumber(suppressed)}
                 </span>
               </div>
 
-              {stats?.link_clicks_count !== undefined && stats.link_clicks_count > 0 && (
+              {clicks > 0 && (
                 <div className="flex items-center justify-between p-2.5 bg-muted/20">
                   <span className="text-foreground font-medium flex items-center gap-1.5">
                     <HugeiconsIcon icon={ArrowUpRight01Icon} size={14} className="text-primary" />
                     Link Click-Through (CTR)
                   </span>
                   <span className="font-bold font-mono text-primary">
-                    {stats.link_clicks_count} clicks (
-                    {stats.click_through_rate_percentage?.toFixed(1) ?? "0"}%)
+                    {formatNumber(clicks)} clicks ({ctrRate}%)
+                  </span>
+                </div>
+              )}
+
+              {consumedCredits > 0 && (
+                <div className="flex items-center justify-between p-2.5 bg-muted/10">
+                  <span className="text-muted-foreground flex items-center gap-1.5">
+                    Credits Consumed
+                  </span>
+                  <span className="font-semibold font-mono">
+                    {formatNumber(consumedCredits)} credits
                   </span>
                 </div>
               )}

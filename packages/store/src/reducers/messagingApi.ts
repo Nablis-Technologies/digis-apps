@@ -44,6 +44,18 @@ export interface CreditTopUpResponse {
   }
 }
 
+export interface CreditLedgerEntry {
+  id: string
+  credit_account_id: string
+  rate_version_id?: string | null
+  entry_type: "top_up" | "reserve" | "consume" | "release" | "refund" | "adjustment" | string
+  quantity: number
+  available_delta: number
+  reference_type?: string | null
+  reference_id?: string | null
+  created_at: string
+}
+
 export interface Campaign {
   id: string
   organization_id: string
@@ -90,16 +102,25 @@ export interface CampaignAttestation {
 }
 
 export interface CampaignAnalytics {
-  campaign_id: string
-  channel: "sms" | "email"
-  total_recipients: number
-  sent_count: number
-  delivered_count: number
-  failed_count: number
-  unsubscribed_count: number
+  campaign_id?: string
+  channel?: "sms" | "email"
+  sent?: number
+  delivered?: number
+  failed?: number
+  suppressed?: number
+  unavailable?: number
+  consumed?: number
+  refunded?: number
+  released?: number
+  clicks?: number
+  total_recipients?: number
+  sent_count?: number
+  delivered_count?: number
+  failed_count?: number
+  unsubscribed_count?: number
   link_clicks_count?: number
-  delivery_rate_percentage: number
-  bounce_rate_percentage: number
+  delivery_rate_percentage?: number
+  bounce_rate_percentage?: number
   click_through_rate_percentage?: number
 }
 
@@ -109,6 +130,25 @@ export interface CampaignContactList {
   name: string
   status: "active" | "archived"
   entries_count?: number
+  created_at: string
+  updated_at: string
+}
+
+export interface CampaignContactListImport {
+  id: string
+  campaign_contact_list_id: string
+  created_by_id?: string | null
+  status: "pending" | "processing" | "completed" | "failed"
+  filename: string
+  total_rows?: number
+  accepted_rows?: number
+  duplicate_rows?: number
+  invalid_rows?: number
+  suppressed_rows?: number
+  missing_channel_rows?: number
+  error_detail?: string | null
+  started_at?: string | null
+  completed_at?: string | null
   created_at: string
   updated_at: string
 }
@@ -242,6 +282,17 @@ export const messagingApi = createApi({
       invalidatesTags: (_res, _err, { organizationId }) => [
         { type: "Credits", id: organizationId },
       ],
+    }),
+
+    listCreditLedger: builder.query<
+      PaginatedResponse<CreditLedgerEntry>,
+      { organizationId: string; page?: number; per_page?: number }
+    >({
+      query: ({ organizationId, page = 1, per_page = 25 }) => ({
+        url: `/organizations/${organizationId}/messaging/credit_ledger?page=${page}&per_page=${per_page}`,
+        method: "GET",
+      }),
+      providesTags: ["Credits"],
     }),
 
     // ─── Campaigns ─────────────────────────────────────────────────────────────
@@ -542,7 +593,7 @@ export const messagingApi = createApi({
     }),
 
     importContactListCsv: builder.mutation<
-      SingleResponse<{ import_id: string }>,
+      SingleResponse<CampaignContactListImport>,
       { organizationId: string; contactListId: string; file: File; idempotencyKey?: string }
     >({
       query: ({ organizationId, contactListId, file, idempotencyKey }) => {
@@ -561,6 +612,16 @@ export const messagingApi = createApi({
         { type: "ContactList", id: contactListId },
         { type: "ContactList", id: `LIST_${organizationId}` },
       ],
+    }),
+
+    getContactListImport: builder.query<
+      SingleResponse<CampaignContactListImport>,
+      { organizationId: string; contactListId: string; importId: string }
+    >({
+      query: ({ organizationId, contactListId, importId }) => ({
+        url: `/organizations/${organizationId}/campaign_contact_lists/${contactListId}/imports/${importId}`,
+        method: "GET",
+      }),
     }),
 
     getContactListImportReport: builder.query<
@@ -589,6 +650,7 @@ export const messagingApi = createApi({
 
 export const {
   useListCreditsQuery,
+  useListCreditLedgerQuery,
   useListCreditRatesQuery,
   useEstimateCreditTopUpMutation,
   useCreateCreditTopUpMutation,
@@ -607,6 +669,7 @@ export const {
   useListContactListsQuery,
   useCreateContactListMutation,
   useImportContactListCsvMutation,
+  useGetContactListImportQuery,
   useGetContactListImportReportQuery,
   useListCampaignTemplatesQuery,
 } = messagingApi

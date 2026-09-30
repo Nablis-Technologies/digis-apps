@@ -181,3 +181,106 @@ export const isOnboardingComplete = (): boolean => {
 export const generateId = (): string => {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 }
+
+/**
+ * Normalizes a user-entered YouTube URL by ensuring https:// protocol
+ * and transforming embed URLs to watch URLs so backend validation passes.
+ */
+export const normalizeYoutubeUrl = (raw: string): string => {
+  let trimmed = (raw || "").trim()
+  if (!trimmed) return ""
+  if (!/^https?:\/\//i.test(trimmed)) {
+    trimmed = "https://" + trimmed
+  } else if (/^http:\/\//i.test(trimmed)) {
+    trimmed = trimmed.replace(/^http:\/\//i, "https://")
+  }
+  try {
+    const urlObj = new URL(trimmed)
+    const embedMatch = urlObj.pathname.match(/^\/embed\/([\w-]{6,})/)
+    if (embedMatch && embedMatch[1]) {
+      return `https://www.youtube.com/watch?v=${embedMatch[1]}`
+    }
+  } catch {
+    // Return trimmed if URL constructor fails
+  }
+  return trimmed
+}
+
+/**
+ * Validates whether a given URL is an allowed YouTube link matching the backend's criteria:
+ * - Host must be one of: youtube.com, www.youtube.com, m.youtube.com, youtube-nocookie.com, youtu.be
+ * - youtu.be must have path with video ID (e.g. /VIDEO_ID)
+ * - youtube.com must be /watch?v=..., /shorts/..., /embed/..., or have v= query parameter
+ */
+export const validateYoutubeUrl = (
+  raw: string
+): { valid: boolean; error?: string; normalizedUrl?: string } => {
+  const trimmed = (raw || "").trim()
+  if (!trimmed) {
+    return { valid: false, error: "Please enter a YouTube video URL" }
+  }
+  const normalized = normalizeYoutubeUrl(trimmed)
+  let urlObj: URL
+  try {
+    urlObj = new URL(normalized)
+  } catch {
+    return { valid: false, error: "Invalid URL format" }
+  }
+
+  const allowedHosts = [
+    "youtube.com",
+    "www.youtube.com",
+    "m.youtube.com",
+    "youtube-nocookie.com",
+    "youtu.be",
+  ]
+  const host = urlObj.hostname.toLowerCase()
+  if (!allowedHosts.includes(host)) {
+    return {
+      valid: false,
+      error: "URL must be a YouTube link (e.g. youtube.com or youtu.be)",
+    }
+  }
+
+  if (host === "youtu.be") {
+    if (!/^\/[\w-]{6,}\/?$/.test(urlObj.pathname)) {
+      return {
+        valid: false,
+        error: "Invalid youtu.be link format (e.g. https://youtu.be/VIDEO_ID)",
+      }
+    }
+  } else {
+    const isWatch = urlObj.pathname.startsWith("/watch")
+    const isShorts = /^\/shorts\/[\w-]{6,}\/?/.test(urlObj.pathname)
+    const isEmbed = /^\/embed\/[\w-]{6,}\/?/.test(urlObj.pathname)
+    const vParam = urlObj.searchParams.get("v")
+    const hasVParam = Boolean(vParam && /^[\w-]{6,}$/.test(vParam))
+
+    if (isWatch && !hasVParam) {
+      return {
+        valid: false,
+        error: "YouTube watch link must include the video ID (e.g. ?v=...)",
+      }
+    }
+    if (!isWatch && !isShorts && !isEmbed && !hasVParam) {
+      return {
+        valid: false,
+        error: "Must be a YouTube watch, shorts, or share link",
+      }
+    }
+  }
+
+  return { valid: true, normalizedUrl: normalized }
+}
+
+/**
+ * Maps frontend date selection options ("all_dates", "fixed", "attendee_choice")
+ * to backend API valid date_selection values ("fixed", "choose_one")
+ */
+export const mapDateSelection = (ds?: string): "fixed" | "choose_one" => {
+  if (ds === "attendee_choice" || ds === "choose_one") {
+    return "choose_one"
+  }
+  return "fixed"
+}
+

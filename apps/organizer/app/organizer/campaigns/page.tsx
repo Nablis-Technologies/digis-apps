@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import Link from "next/link"
 import { motion } from "framer-motion"
 import { toast } from "sonner"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -21,23 +22,21 @@ import {
   InformationCircleIcon,
   Copy01Icon,
   Loading03Icon,
+  Invoice01Icon,
 } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge, StatusBadge } from "@/components/ui/badge"
+import { Badge, StatusBadge, ChannelBadge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs"
+import { TabsContent } from "@/components/ui/tabs"
+import { PageTabs } from "@/components/page-tabs"
 import { Skeleton } from "@/components/ui/skeleton"
-import { formatDate, formatNumber } from "@/lib/utils"
+import { formatDate, formatDateTime, formatNumber } from "@/lib/utils"
 import { cn } from "@workspace/ui/lib/utils"
 import { useActiveOrganization } from "../../../providers/organization-provider"
 import {
   useListCreditsQuery,
+  useListCreditLedgerQuery,
   useListCreditRatesQuery,
   useListCampaignsQuery,
   usePauseCampaignMutation,
@@ -48,6 +47,7 @@ import {
   useListCampaignTemplatesQuery,
   type Campaign,
   type CampaignContactList,
+  type CreditLedgerEntry,
 } from "@workspace/store/reducers/messagingApi"
 import { CreateCampaignDialog } from "../../../components/campaigns/create-campaign-dialog"
 import { LaunchCampaignDialog } from "../../../components/campaigns/launch-campaign-dialog"
@@ -119,6 +119,12 @@ export default function CampaignsPage() {
 
   const { data: templatesData } = useListCampaignTemplatesQuery({ organizationId }, { skip: !organizationId })
   const templates = templatesData?.data ?? []
+
+  const { data: ledgerData, isLoading: isLoadingLedger } = useListCreditLedgerQuery(
+    { organizationId, page: 1, per_page: 50 },
+    { skip: !organizationId }
+  )
+  const creditLedgerEntries: CreditLedgerEntry[] = ledgerData?.data ?? []
 
   // Operational Mutations
   const [pauseCampaign, { isLoading: isPausing }] = usePauseCampaignMutation()
@@ -196,23 +202,20 @@ export default function CampaignsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <Button
-            size="sm"
             variant="outline"
-            className="gap-1.5 text-xs h-9"
+            className="gap-2 shadow-xs"
             onClick={() => openTopUpForChannel("sms")}
           >
-            <HugeiconsIcon icon={Wallet01Icon} size={15} strokeWidth={2} />
+            <HugeiconsIcon icon={Wallet01Icon} strokeWidth={2} className="size-4" />
             Top Up Credits
           </Button>
-          <Button
-            size="sm"
-            className="gap-1.5 text-xs h-9 bg-lime-500 hover:bg-lime-600 text-zinc-950 font-bold dark:bg-lime-500 dark:text-zinc-950 dark:hover:bg-lime-400 border-0 shadow-xs"
-            onClick={() => setCreateCampaignOpen(true)}
-          >
-            <HugeiconsIcon icon={Add01Icon} size={15} strokeWidth={2} />
-            New Campaign
+          <Button asChild className="gap-2 shadow-xs">
+            <Link href="/organizer/campaigns/new">
+              <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-4" />
+              New Campaign
+            </Link>
           </Button>
         </div>
       </div>
@@ -223,7 +226,7 @@ export default function CampaignsPage() {
         <Card className="p-4 relative overflow-hidden">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-lime-500/10 text-lime-600 dark:bg-lime-500/20 dark:text-lime-400">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
                 <HugeiconsIcon icon={SmartPhone01Icon} size={16} strokeWidth={2} />
               </div>
               <span className="text-xs font-semibold">SMS Credits</span>
@@ -231,7 +234,7 @@ export default function CampaignsPage() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 text-[11px] text-lime-700 dark:text-lime-400 hover:bg-lime-500/10"
+              className="h-7 text-[11px] text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10 font-semibold"
               onClick={() => openTopUpForChannel("sms")}
             >
               + Top Up
@@ -254,7 +257,7 @@ export default function CampaignsPage() {
         <Card className="p-4 relative overflow-hidden">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-sky-500/10 text-sky-600 dark:bg-sky-500/20 dark:text-sky-400">
                 <HugeiconsIcon icon={Mail01Icon} size={16} strokeWidth={2} />
               </div>
               <span className="text-xs font-semibold">Email Credits</span>
@@ -262,7 +265,7 @@ export default function CampaignsPage() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 text-[11px] text-blue-600 dark:text-blue-400 hover:bg-blue-500/10"
+              className="h-7 text-[11px] text-sky-700 dark:text-sky-400 hover:bg-sky-500/10 font-semibold"
               onClick={() => openTopUpForChannel("email")}
             >
               + Top Up
@@ -284,7 +287,7 @@ export default function CampaignsPage() {
         {/* Broadcast Reach Summary */}
         <Card className="p-4">
           <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400">
               <HugeiconsIcon icon={Megaphone01Icon} size={16} strokeWidth={2} />
             </div>
             <span className="text-xs font-semibold">Campaign Operations</span>
@@ -307,22 +310,15 @@ export default function CampaignsPage() {
         </Card>
       </div>
 
-      {/* ─── Tabbed Workspace ─────────────────────────────────────────────────── */}
-      <Tabs defaultValue="campaigns" className="space-y-4">
-        <TabsList className="bg-muted/60 p-1 rounded-xl">
-          <TabsTrigger value="campaigns" className="text-xs gap-1.5 rounded-lg">
-            <HugeiconsIcon icon={Megaphone01Icon} size={14} />
-            Campaigns ({campaigns.length})
-          </TabsTrigger>
-          <TabsTrigger value="contacts" className="text-xs gap-1.5 rounded-lg">
-            <HugeiconsIcon icon={UserGroupIcon} size={14} />
-            Contact Lists ({contactLists.length})
-          </TabsTrigger>
-          <TabsTrigger value="templates" className="text-xs gap-1.5 rounded-lg">
-            <HugeiconsIcon icon={Copy01Icon} size={14} />
-            Templates & Tags
-          </TabsTrigger>
-        </TabsList>
+      <PageTabs
+        defaultValue="campaigns"
+        tabs={[
+          { value: "campaigns", label: `Campaigns (${campaigns.length})`, icon: Megaphone01Icon },
+          { value: "contacts", label: `Contact Lists (${contactLists.length})`, icon: UserGroupIcon },
+          { value: "templates", label: "Templates & Tags", icon: Copy01Icon },
+          { value: "ledger", label: `Credit Ledger (${creditLedgerEntries.length})`, icon: Invoice01Icon },
+        ]}
+      >
 
         {/* ─── TAB 1: CAMPAIGNS ────────────────────────────────────────────────── */}
         <TabsContent value="campaigns" className="space-y-4">
@@ -344,41 +340,51 @@ export default function CampaignsPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              {/* Channel Selector Pills */}
-              <div className="flex items-center rounded-lg border bg-muted/30 p-0.5 text-xs">
-                <button
+            <div className="flex items-center flex-wrap gap-2">
+              {/* Channel Filter Buttons */}
+              <div className="flex items-center gap-1.5">
+                <Button
                   type="button"
-                  onClick={() => setSelectedChannel("all")}
+                  variant={selectedChannel === "all" ? "default" : "outline"}
+                  size="sm"
                   className={cn(
-                    "px-2.5 py-1 rounded-md transition-colors font-medium",
-                    selectedChannel === "all" ? "bg-background shadow-xs font-bold text-foreground" : "text-muted-foreground"
+                    "h-9 px-3 text-xs font-semibold rounded-lg shadow-xs",
+                    selectedChannel !== "all" && "bg-background/80 hover:bg-muted/70 text-muted-foreground hover:text-foreground"
                   )}
+                  onClick={() => setSelectedChannel("all")}
                 >
                   All Channels
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant={selectedChannel === "sms" ? "default" : "outline"}
+                  size="sm"
+                  className={cn(
+                    "h-9 px-3 text-xs font-semibold rounded-lg gap-1.5 shadow-xs transition-all",
+                    selectedChannel === "sms"
+                      ? "bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-500 dark:text-zinc-950 dark:hover:bg-emerald-400 border-emerald-600 dark:border-emerald-500"
+                      : "bg-background/80 hover:bg-muted/70 text-muted-foreground hover:text-foreground"
+                  )}
                   onClick={() => setSelectedChannel("sms")}
-                  className={cn(
-                    "px-2.5 py-1 rounded-md transition-colors font-medium flex items-center gap-1",
-                    selectedChannel === "sms" ? "bg-background shadow-xs font-bold text-foreground" : "text-muted-foreground"
-                  )}
                 >
-                  <HugeiconsIcon icon={SmartPhone01Icon} size={12} />
+                  <HugeiconsIcon icon={SmartPhone01Icon} size={14} strokeWidth={2} />
                   SMS
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
-                  onClick={() => setSelectedChannel("email")}
+                  variant={selectedChannel === "email" ? "default" : "outline"}
+                  size="sm"
                   className={cn(
-                    "px-2.5 py-1 rounded-md transition-colors font-medium flex items-center gap-1",
-                    selectedChannel === "email" ? "bg-background shadow-xs font-bold text-foreground" : "text-muted-foreground"
+                    "h-9 px-3 text-xs font-semibold rounded-lg gap-1.5 shadow-xs transition-all",
+                    selectedChannel === "email"
+                      ? "bg-sky-600 hover:bg-sky-700 text-white dark:bg-sky-500 dark:text-zinc-950 dark:hover:bg-sky-400 border-sky-600 dark:border-sky-500"
+                      : "bg-background/80 hover:bg-muted/70 text-muted-foreground hover:text-foreground"
                   )}
+                  onClick={() => setSelectedChannel("email")}
                 >
-                  <HugeiconsIcon icon={Mail01Icon} size={12} />
+                  <HugeiconsIcon icon={Mail01Icon} size={14} strokeWidth={2} />
                   Email
-                </button>
+                </Button>
               </div>
 
               {/* Status Filter */}
@@ -386,7 +392,7 @@ export default function CampaignsPage() {
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
                 aria-label="Filter campaigns by status"
-                className="h-9 rounded-lg border bg-background px-3 py-1 text-xs text-foreground focus:outline-hidden"
+                className="h-9 rounded-lg border border-input/60 bg-background/80 px-3 py-1 text-xs font-medium text-foreground shadow-xs hover:border-input focus:outline-hidden focus:ring-2 focus:ring-ring/20 transition-all cursor-pointer"
               >
                 <option value="all">All Statuses</option>
                 <option value="draft">Draft</option>
@@ -421,11 +427,13 @@ export default function CampaignsPage() {
                   </p>
                   <Button
                     size="sm"
-                    className="mt-4 gap-1.5 text-xs bg-lime-500 hover:bg-lime-600 text-zinc-950 font-bold dark:bg-lime-500 dark:text-zinc-950 dark:hover:bg-lime-400 border-0 shadow-xs"
-                    onClick={() => setCreateCampaignOpen(true)}
+                    asChild
+                    className="mt-4 gap-1.5 text-xs shadow-xs"
                   >
-                    <HugeiconsIcon icon={Add01Icon} size={14} strokeWidth={2} />
-                    New Campaign
+                    <Link href="/organizer/campaigns/new">
+                      <HugeiconsIcon icon={Add01Icon} size={14} strokeWidth={2} />
+                      New Campaign
+                    </Link>
                   </Button>
                 </div>
               ) : (
@@ -469,36 +477,11 @@ export default function CampaignsPage() {
                             </td>
 
                             <td className="py-3.5 px-4">
-                              <span className="inline-flex items-center gap-1 font-mono text-[11px] capitalize px-2 py-0.5 rounded-md bg-muted border">
-                                <HugeiconsIcon
-                                  icon={campaign.channel === "sms" ? SmartPhone01Icon : Mail01Icon}
-                                  size={12}
-                                />
-                                {campaign.channel.toUpperCase()}
-                              </span>
+                              <ChannelBadge channel={campaign.channel} />
                             </td>
 
                             <td className="py-3.5 px-4">
-                              <Badge
-                                variant={
-                                  isCompleted
-                                    ? "secondary"
-                                    : isSending
-                                    ? "default"
-                                    : isDraft
-                                    ? "outline"
-                                    : isPaused
-                                    ? "secondary"
-                                    : "destructive"
-                                }
-                                className={cn(
-                                  "capitalize text-[10px] font-semibold",
-                                  isCompleted && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
-                                  isSending && "bg-lime-500/15 text-lime-700 dark:text-lime-400 border-lime-500/30 animate-pulse"
-                                )}
-                              >
-                                {campaign.status}
-                              </Badge>
+                              <StatusBadge status={campaign.status} />
                             </td>
 
                             <td className="py-3.5 px-4 font-mono text-muted-foreground">
@@ -522,7 +505,7 @@ export default function CampaignsPage() {
                                 {isDraft && (
                                   <Button
                                     size="sm"
-                                    className="h-7 text-[11px] gap-1 bg-lime-500 hover:bg-lime-600 text-zinc-950 font-bold dark:bg-lime-500 dark:text-zinc-950 dark:hover:bg-lime-400 border-0 shadow-xs"
+                                    className="h-7 text-xs gap-1.5 shadow-xs"
                                     onClick={() =>
                                       setLaunchModal({
                                         open: true,
@@ -530,7 +513,7 @@ export default function CampaignsPage() {
                                       })
                                     }
                                   >
-                                    <HugeiconsIcon icon={Rocket01Icon} size={12} strokeWidth={2} />
+                                    <HugeiconsIcon icon={Rocket01Icon} size={13} strokeWidth={2} />
                                     Launch
                                   </Button>
                                 )}
@@ -622,11 +605,10 @@ export default function CampaignsPage() {
               </p>
             </div>
             <Button
-              size="sm"
-              className="gap-1.5 text-xs h-8 bg-lime-500 hover:bg-lime-600 text-zinc-950 font-bold dark:bg-lime-500 dark:text-zinc-950 dark:hover:bg-lime-400 border-0 shadow-xs"
+              className="gap-2 shadow-xs"
               onClick={() => setCreateListOpen(true)}
             >
-              <HugeiconsIcon icon={Add01Icon} size={14} strokeWidth={2} />
+              <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-4" />
               New Contact List
             </Button>
           </div>
@@ -679,9 +661,7 @@ export default function CampaignsPage() {
                             {formatNumber(list.entries_count || 0)} contacts
                           </td>
                           <td className="py-3.5 px-4">
-                            <Badge variant="secondary" className="capitalize text-[10px]">
-                              {list.status}
-                            </Badge>
+                            <StatusBadge status={list.status} />
                           </td>
                           <td className="py-3.5 px-4 text-muted-foreground">
                             {formatDate(list.created_at)}
@@ -790,7 +770,121 @@ export default function CampaignsPage() {
             </Card>
           </div>
         </TabsContent>
-      </Tabs>
+
+        {/* ─── TAB 4: CREDIT LEDGER ────────────────────────────────────────────── */}
+        <TabsContent value="ledger" className="space-y-4">
+          <div className="flex flex-col gap-1">
+            <h3 className="text-base font-semibold text-foreground">Marketing Credit Ledger</h3>
+            <p className="text-xs text-muted-foreground">
+              Immutable audit log of all SMS & Email credit top-ups, reservation holds, and campaign deliveries.
+            </p>
+          </div>
+
+          {isLoadingLedger ? (
+            <div className="space-y-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-16 rounded-xl bg-muted/40 animate-pulse border border-border/50" />
+              ))}
+            </div>
+          ) : creditLedgerEntries.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/80 p-12 text-center bg-card/40">
+              <div className="size-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground mb-3">
+                <HugeiconsIcon icon={Invoice01Icon} className="size-6" />
+              </div>
+              <h4 className="text-sm font-semibold">No Credit Transactions Recorded</h4>
+              <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+                Purchasing SMS or Email top-ups and launching broadcasts will record entries in this ledger.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-4 gap-1.5 text-xs"
+                onClick={() => openTopUpForChannel("sms")}
+              >
+                <HugeiconsIcon icon={Wallet01Icon} className="size-3.5" />
+                Top Up Credits
+              </Button>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-border/70 bg-card overflow-hidden shadow-xs">
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="border-b border-border/50 bg-muted/30 text-muted-foreground uppercase font-semibold text-[10px]">
+                    <tr>
+                      <th className="py-3 px-4 text-left">Entry Type</th>
+                      <th className="py-3 px-4 text-left">Quantity</th>
+                      <th className="py-3 px-4 text-left">Available Delta</th>
+                      <th className="py-3 px-4 text-left">Reference</th>
+                      <th className="py-3 px-4 text-right">Timestamp</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/40">
+                    {creditLedgerEntries.map((entry) => {
+                      const isPositive = entry.available_delta > 0
+                      const isNegative = entry.available_delta < 0
+
+                      const typeBadgeConfig: Record<string, { label: string; className: string }> = {
+                        top_up: { label: "Top-Up", className: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30" },
+                        reserve: { label: "Hold / Reserve", className: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30" },
+                        consume: { label: "Dispatched", className: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30" },
+                        release: { label: "Released", className: "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30" },
+                        refund: { label: "Refund", className: "bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/30" },
+                        adjustment: { label: "Adjustment", className: "bg-muted text-muted-foreground border-border/60" },
+                      }
+
+                      const badge = typeBadgeConfig[entry.entry_type] || {
+                        label: entry.entry_type,
+                        className: "bg-muted text-muted-foreground",
+                      }
+
+                      return (
+                        <tr key={entry.id} className="hover:bg-muted/20 transition-colors">
+                          <td className="py-3.5 px-4 font-medium">
+                            <Badge variant="outline" className={`text-[10px] font-semibold ${badge.className}`}>
+                              {badge.label}
+                            </Badge>
+                          </td>
+                          <td className="py-3.5 px-4 font-mono font-bold text-foreground">
+                            {formatNumber(entry.quantity)}
+                          </td>
+                          <td className="py-3.5 px-4 font-mono font-bold">
+                            <span
+                              className={
+                                isPositive
+                                  ? "text-emerald-600 dark:text-emerald-400"
+                                  : isNegative
+                                  ? "text-rose-600 dark:text-rose-400"
+                                  : "text-muted-foreground"
+                              }
+                            >
+                              {isPositive ? `+${formatNumber(entry.available_delta)}` : formatNumber(entry.available_delta)}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <div className="space-y-0.5">
+                              <span className="font-semibold text-foreground capitalize">
+                                {entry.reference_type || "System Entry"}
+                              </span>
+                              {entry.reference_id && (
+                                <p className="font-mono text-[10px] text-muted-foreground/80 truncate max-w-[140px]">
+                                  {entry.reference_id}
+                                </p>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 text-right text-muted-foreground whitespace-nowrap">
+                            {formatDateTime(entry.created_at)}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </TabsContent>
+      </PageTabs>
 
       {/* ─── Modals ───────────────────────────────────────────────────────────── */}
       <CreateCampaignDialog

@@ -95,10 +95,21 @@ export function EventDialog({
   }
 
   function toggleCategory(id: string) {
-    setForm((p) => ({
-      ...p,
-      categoryIds: p.categoryIds.includes(id) ? p.categoryIds.filter((c) => c !== id) : [...p.categoryIds, id],
-    }))
+    setForm((p) => {
+      if (p.categoryIds.includes(id)) {
+        return {
+          ...p,
+          categoryIds: p.categoryIds.filter((c) => c !== id),
+        }
+      }
+      if (p.categoryIds.length >= 3) {
+        return p
+      }
+      return {
+        ...p,
+        categoryIds: [...p.categoryIds, id],
+      }
+    })
   }
 
   function isValid() {
@@ -118,7 +129,7 @@ export function EventDialog({
         timezone: form.timezone,
         currency: form.currency,
         organization_id: form.organizationId,
-        category_ids: form.categoryIds,
+        category_ids: form.categoryIds.slice(0, 3),
       },
     }
 
@@ -244,7 +255,7 @@ export function EventDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Categories</Label>
+            <Label>Category (Select up to 3)</Label>
             {catsLoading ? (
               <p className="text-sm text-muted-foreground">Loading categories...</p>
             ) : (

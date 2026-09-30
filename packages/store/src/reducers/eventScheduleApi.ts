@@ -76,13 +76,22 @@ interface UpdateEventOrgPayload {
 
 export interface EventStaffAssignment {
   id: string
-  role: string
-  status: string
+  role: "manager" | "staff" | "scanner" | "contractor" | string
+  status: "active" | "suspended" | "revoked" | "expired" | string
   user_id: string
   organization_id: string | null
   event_id: string
   created_at: string
   updated_at: string
+  user?: {
+    id: string
+    email?: string
+    phone?: string
+  }
+  organization?: {
+    id: string
+    name?: string
+  }
 }
 
 interface CreateStaffPayload {
@@ -160,7 +169,7 @@ export const eventScheduleApi = createApi({
         params,
       }),
       providesTags: (result, _error, { eventId }) =>
-        result
+        Array.isArray(result?.data)
           ? [
               ...result.data.map(({ id }) => ({ type: "EventDates" as const, id })),
               { type: "EventDates", id: `LIST-${eventId}` },
@@ -209,13 +218,18 @@ export const eventScheduleApi = createApi({
         url: `/events/${eventId}/event_organizations`,
         params,
       }),
-      providesTags: (result, _error, { eventId }) =>
-        result
-          ? [
-              ...result.data.map(({ id }) => ({ type: "EventOrganizations" as const, id })),
-              { type: "EventOrganizations", id: `LIST-${eventId}` },
-            ]
-          : [{ type: "EventOrganizations", id: `LIST-${eventId}` }],
+      providesTags: (result, _error, { eventId }) => {
+        const raw = result?.data as any
+        const items: any[] = Array.isArray(raw?.collaborators)
+          ? raw.collaborators
+          : Array.isArray(raw)
+          ? raw
+          : []
+        return [
+          ...items.map(({ id }) => ({ type: "EventOrganizations" as const, id })),
+          { type: "EventOrganizations", id: `LIST-${eventId}` },
+        ]
+      },
     }),
     createEventOrganization: builder.mutation<
       SingleResponse<EventOrganization>,
@@ -280,7 +294,7 @@ export const eventScheduleApi = createApi({
         params,
       }),
       providesTags: (result, _error, { eventId }) =>
-        result
+        Array.isArray(result?.data)
           ? [
               ...result.data.map(({ id }) => ({ type: "StaffAssignments" as const, id })),
               { type: "StaffAssignments", id: `LIST-${eventId}` },
@@ -360,7 +374,7 @@ export const eventScheduleApi = createApi({
         params,
       }),
       providesTags: (result, _error, { eventId }) =>
-        result
+        Array.isArray(result?.data)
           ? [
               ...result.data.map(({ id }) => ({ type: "AccessZones" as const, id })),
               { type: "AccessZones", id: `LIST-${eventId}` },

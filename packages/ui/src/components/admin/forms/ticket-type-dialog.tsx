@@ -21,7 +21,7 @@ import {
 
 const approvalModes = ["automatic", "manual"] as const
 const audiences = ["public", "private"] as const
-const dateSelections = ["fixed", "flexible"] as const
+const dateSelections = ["fixed", "choose_one"] as const
 const validationModes = ["offline_allowed", "online_required"] as const
 const entryModes = ["qr", "manual"] as const
 

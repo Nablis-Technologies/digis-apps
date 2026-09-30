@@ -748,14 +748,14 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
 
           {step === 0 && (
             <Button
-              className="w-full h-10 font-bold bg-lime-500 hover:bg-lime-600 text-zinc-950 dark:bg-lime-500 dark:text-zinc-950 dark:hover:bg-lime-400 border-0"
+              className="w-full gap-2 shadow-xs"
               onClick={() => {
                 setError("")
                 setStep(1)
               }}
             >
               Next: Organization Info
-              <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="ml-2 size-4" />
+              <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4" />
             </Button>
           )}
 
@@ -763,16 +763,16 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                className="flex-1 h-10"
+                className="flex-1 gap-1.5"
                 onClick={() => {
                   setError("")
                   setStep(0)
                 }}
               >
-                <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4 mr-1.5" /> Back
+                <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4" /> Back
               </Button>
               <Button
-                className="flex-1 h-10 font-bold bg-lime-500 hover:bg-lime-600 text-zinc-950 dark:bg-lime-500 dark:text-zinc-950 dark:hover:bg-lime-400 border-0"
+                className="flex-1 gap-2 shadow-xs"
                 onClick={() => {
                   if (!name.trim()) {
                     setError("Organization name is required")
@@ -783,7 +783,7 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
                 }}
               >
                 Next: Contact & Location
-                <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="ml-2 size-4" />
+                <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4" />
               </Button>
             </div>
           )}
@@ -792,23 +792,23 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                className="flex-1 h-10"
+                className="flex-1 gap-1.5"
                 onClick={() => {
                   setError("")
                   setStep(1)
                 }}
               >
-                <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4 mr-1.5" /> Back
+                <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4" /> Back
               </Button>
               <Button
-                className="flex-1 h-10 font-bold bg-lime-500 hover:bg-lime-600 text-zinc-950 dark:bg-lime-500 dark:text-zinc-950 dark:hover:bg-lime-400 border-0"
+                className="flex-1 gap-2 shadow-xs"
                 onClick={() => {
                   setError("")
                   setStep(3)
                 }}
               >
                 Next: Verification
-                <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="ml-2 size-4" />
+                <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4" />
               </Button>
             </div>
           )}
@@ -818,18 +818,18 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
               <div className="flex gap-2">
                 <Button
                   variant="outline"
-                  className="flex-1 h-10"
+                  className="flex-1 gap-1.5"
                   onClick={() => {
                     setError("")
                     setStep(2)
                   }}
                   disabled={isSubmitting}
                 >
-                  <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4 mr-1.5" /> Back
+                  <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4" /> Back
                 </Button>
                 <Button
                   variant="outline"
-                  className="flex-1 h-10"
+                  className="flex-1"
                   onClick={() => handleCreate(true)}
                   disabled={isSubmitting}
                 >
@@ -837,18 +837,18 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
                 </Button>
               </div>
               <Button
-                className="w-full h-11 font-bold text-sm bg-lime-500 hover:bg-lime-600 text-zinc-950 dark:bg-lime-500 dark:text-zinc-950 dark:hover:bg-lime-400 border-0"
+                className="w-full gap-2 shadow-xs"
                 onClick={() => handleCreate(false)}
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
                   <>
-                    <HugeiconsIcon icon={Loading01Icon} strokeWidth={2} className="size-4 animate-spin mr-2" />
+                    <HugeiconsIcon icon={Loading01Icon} strokeWidth={2} className="size-4 animate-spin" />
                     Creating Organization...
                   </>
                 ) : (
                   <>
-                    <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-4 mr-2" />
+                    <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-4" />
                     {licenseFile && tinFile ? "Create & Submit for Verification" : "Create Organization"}
                   </>
                 )}

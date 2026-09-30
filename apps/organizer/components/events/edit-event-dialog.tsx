@@ -118,7 +118,7 @@ export function EditEventDialog({
       setTimezone(typeof event.timezone === "string" ? event.timezone : "Africa/Addis_Ababa")
       setCurrency(typeof event.currency === "string" ? event.currency : "ETB")
       
-      const categoryIds = event.categories?.map((c) => c.id) || event.category_ids || []
+      const categoryIds = (event.categories?.map((c) => c.id) || event.category_ids || []).slice(0, 3)
       setSelectedCategories(categoryIds)
       
       const currentCover =
@@ -132,11 +132,16 @@ export function EditEventDialog({
   const categories = categoriesData?.data || []
 
   function toggleCategory(categoryId: string) {
-    setSelectedCategories((prev) =>
-      prev.includes(categoryId)
-        ? prev.filter((id) => id !== categoryId)
-        : [...prev, categoryId]
-    )
+    setSelectedCategories((prev) => {
+      if (prev.includes(categoryId)) {
+        return prev.filter((id) => id !== categoryId)
+      }
+      if (prev.length >= 3) {
+        toast.error("You can select up to 3 categories")
+        return prev
+      }
+      return [...prev, categoryId]
+    })
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -191,7 +196,7 @@ export function EditEventDialog({
             visibility,
             timezone,
             currency,
-            category_ids: selectedCategories,
+            category_ids: selectedCategories.slice(0, 3),
           },
         },
       }).unwrap()
@@ -461,14 +466,14 @@ export function EditEventDialog({
             </div>
           </div>
 
-          {/* Categories */}
+          {/* Category */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label className="text-xs font-semibold">
-                Categories
+                Category
               </Label>
               <span className="text-[11px] text-muted-foreground">
-                {selectedCategories.length} selected
+                {selectedCategories.length}/3 selected (up to 3)
               </span>
             </div>
             {isLoadingCategories ? (
@@ -489,7 +494,7 @@ export function EditEventDialog({
                       className={cn(
                         "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
                         isSelected
-                          ? "bg-lime-500 text-white shadow-xs"
+                          ? "bg-primary text-white shadow-xs font-semibold"
                           : "bg-background text-muted-foreground hover:bg-accent border border-border/60"
                       )}
                     >
