@@ -358,7 +358,7 @@ export default function OrganizationPage() {
     setDownloadingDoc(docType)
     try {
       const token = getAccessToken()
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000"
+      const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000").trim().replace(/\/+$/, "")
       const res = await fetch(`${baseUrl}/organizations/owner/${activeOrgId}/documents/${docType}`, {
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
