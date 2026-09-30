@@ -46,6 +46,7 @@ import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 import { formatCurrency, formatNumber, formatDate } from "@/lib/utils"
+import { cn } from "@workspace/ui/lib/utils"
 import { useListOwnerOrganizationsQuery } from "@workspace/store/reducers/organizationsApi"
 import { useActiveOrganization } from "../../../providers/organization-provider"
 import { useListEventsQuery } from "@workspace/store/reducers/organizerEventsApi"
@@ -84,7 +85,14 @@ export default function TicketsPage() {
   })
 
   // 1. Active Organization from context
-  const { activeOrg, activeOrgId, isLoading: isLoadingOrgs } = useActiveOrganization()
+  const {
+    activeOrg,
+    activeOrgId,
+    isOwnerOrAdmin,
+    canExportAttendees,
+    canExportContactInfo,
+    isLoading: isLoadingOrgs,
+  } = useActiveOrganization()
   const organizationId = activeOrgId || activeOrg?.id
 
   // 2. Fetch Events scoped to active organization
@@ -236,9 +244,14 @@ export default function TicketsPage() {
           <Button
             variant="outline"
             size="sm"
-            className="gap-2"
+            className={cn("gap-2", !canExportAttendees && "opacity-60 cursor-not-allowed")}
             onClick={() => setExportDialogOpen(true)}
-            disabled={!effectiveEventId}
+            disabled={!effectiveEventId || !canExportAttendees}
+            title={
+              !canExportAttendees
+                ? "Attendee export is available to organization owners, admins, and event managers."
+                : undefined
+            }
           >
             <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2} className="size-4" />
             Export Attendees
@@ -742,6 +755,7 @@ export default function TicketsPage() {
         open={exportDialogOpen}
         onOpenChange={setExportDialogOpen}
         eventId={effectiveEventId ?? ""}
+        canExportContactInfo={canExportContactInfo}
       />
     </div>
   )

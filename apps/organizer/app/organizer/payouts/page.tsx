@@ -54,6 +54,7 @@ import {
   useSetDefaultOrganizerPayoutAccountMutation,
   useCloseOrganizerPayoutAccountMutation,
   useListOrganizerPayoutsQuery,
+  useGetOrganizerPayoutQuery,
   useRequestOrganizerPayoutMutation,
   useListOrganizerLedgerEntriesQuery,
   type Payout,
@@ -278,6 +279,12 @@ export default function PayoutsPage() {
   } = useListOrganizerLedgerEntriesQuery(
     { organizationId: activeOrgId, currency: "ETB", page: 1, per_page: 50 },
     { skip: !activeOrgId }
+  )
+
+  const [selectedPayoutId, setSelectedPayoutId] = useState<string | null>(null)
+  const { data: singlePayoutData, isLoading: isLoadingSinglePayout } = useGetOrganizerPayoutQuery(
+    { organizationId: activeOrgId, payoutId: selectedPayoutId || "" },
+    { skip: !selectedPayoutId || !activeOrgId }
   )
 
   // Mutations
@@ -535,6 +542,20 @@ export default function PayoutsPage() {
         <span className="text-xs text-muted-foreground">
           {row.paid_at ? formatDateTime(row.paid_at) : "In Review"}
         </span>
+      ),
+    },
+    {
+      header: "Action",
+      cell: (row: Payout) => (
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 gap-1.5 text-xs font-medium text-foreground hover:bg-muted"
+          onClick={() => setSelectedPayoutId(row.id)}
+        >
+          <HugeiconsIcon icon={Invoice01Icon} strokeWidth={2} className="size-3.5" />
+          <span>Receipt</span>
+        </Button>
       ),
     },
   ]
@@ -1392,6 +1413,134 @@ export default function PayoutsPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Payout Receipt Dialog ─── */}
+      <Dialog
+        open={!!selectedPayoutId}
+        onOpenChange={(open) => !open && setSelectedPayoutId(null)}
+      >
+        <DialogContent className="max-w-md rounded-2xl border-border/70 p-6 shadow-xl">
+          {(() => {
+            const p = singlePayoutData?.data || payoutsList.find((item) => item.id === selectedPayoutId)
+            if (!p) {
+              return (
+                <div className="flex h-40 items-center justify-center">
+                  <HugeiconsIcon icon={Clock01Icon} className="size-6 animate-spin text-muted-foreground" />
+                </div>
+              )
+            }
+
+            const acc = p.payout_account
+            const dest = getDestinationDisplay(acc?.bank_slug, acc?.type)
+            const amount = p.amount_minor / 100
+
+            return (
+              <div className="space-y-6">
+                <DialogHeader className="border-b border-border/50 pb-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Settlement Receipt
+                    </span>
+                    <Badge variant={getPayoutStatusVariant(p.status)} className="capitalize font-semibold text-[11px]">
+                      {p.status}
+                    </Badge>
+                  </div>
+                  <DialogTitle className="text-2xl font-bold tracking-tight text-foreground pt-2">
+                    {formatCurrency(amount)}
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-muted-foreground">
+                    Official transfer record issued by Digis Settlement Clearing.
+                  </DialogDescription>
+                </DialogHeader>
+
+                {/* Details Grid */}
+                <div className="space-y-3.5 text-xs">
+                  <div className="flex items-center justify-between py-1 border-b border-border/30">
+                    <span className="text-muted-foreground">Transfer Reference</span>
+                    <span className="font-mono font-medium text-foreground select-all">
+                      {p.id}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-1 border-b border-border/30">
+                    <span className="text-muted-foreground">Destination Provider</span>
+                    <span className="font-semibold text-foreground flex items-center gap-1.5">
+                      <HugeiconsIcon
+                        icon={dest.isMobile ? SmartPhone01Icon : BankIcon}
+                        className="size-3.5 text-lime-600 dark:text-lime-400"
+                      />
+                      {dest.name} ({dest.typeBadge})
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-1 border-b border-border/30">
+                    <span className="text-muted-foreground">Account Number</span>
+                    <span className="font-mono font-medium text-foreground">
+                      {acc?.account_number
+                        ? dest.isMobile
+                          ? acc.account_number
+                          : `•••• •••• ${acc.account_number.slice(-4)}`
+                        : "Verified Payout Account"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-1 border-b border-border/30">
+                    <span className="text-muted-foreground">Beneficiary Name</span>
+                    <span className="font-medium text-foreground">
+                      {acc?.account_name || "Verified Organization"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-1 border-b border-border/30">
+                    <span className="text-muted-foreground">Requested At</span>
+                    <span className="font-medium text-foreground">
+                      {formatDateTime(p.requested_at)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-1 border-b border-border/30">
+                    <span className="text-muted-foreground">Settlement Completed</span>
+                    <span className="font-medium text-foreground">
+                      {p.paid_at ? formatDateTime(p.paid_at) : "Pending Clearance"}
+                    </span>
+                  </div>
+
+                  {p.status_reason_code && (
+                    <div className="rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-destructive space-y-1">
+                      <p className="font-semibold text-[11px] uppercase">Reason Code</p>
+                      <p className="text-xs">{p.status_reason_code}</p>
+                    </div>
+                  )}
+                </div>
+
+                <DialogFooter className="flex-row items-center justify-between sm:justify-between pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-xs"
+                    onClick={() => {
+                      if (typeof window !== "undefined") window.print()
+                    }}
+                  >
+                    <HugeiconsIcon icon={Invoice01Icon} className="size-3.5" />
+                    Print Receipt
+                  </Button>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setSelectedPayoutId(null)}
+                    className="text-xs"
+                  >
+                    Done
+                  </Button>
+                </DialogFooter>
+              </div>
+            )
+          })()}
         </DialogContent>
       </Dialog>
     </div>

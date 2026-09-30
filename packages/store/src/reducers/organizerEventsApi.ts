@@ -71,13 +71,13 @@ export interface EventDate {
 
 export interface TicketTypeAttributes {
   approval_mode?: "automatic" | "manual"
-  audience?: "public" | "invite_only" | "passcode"
-  date_selection?: "fixed" | "flexible"
+  audience?: "public" | "invite_only" | "passcode" | "access_code" | "invitation" | "code_or_invitation" | string
+  date_selection?: "fixed" | "flexible" | "all_dates" | "attendee_choice" | string
   admissions_per_unit?: number
   waitlist_enabled?: boolean
   transferable?: boolean
   delegation_enabled?: boolean
-  entry_validation_mode?: "qr" | "manual"
+  entry_validation_mode?: "qr" | "manual" | string
   resale_enabled?: boolean
   max_packages_per_user?: number
 }
@@ -238,6 +238,72 @@ export interface EventMedia {
   updated_at?: string
 }
 
+export interface EventParticipant {
+  id: string
+  event_id: string
+  event_date_id?: string | null
+  artist_id?: string | null
+  name: string
+  type: string
+  description?: string | null
+  display_order?: number | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface CreateEventParticipantPayload {
+  event_date_id?: string
+  artist_id?: string
+  name: string
+  type?: string
+  description?: string
+  display_order?: number
+}
+
+export interface EventVideoLink {
+  id: string
+  event_id: string
+  title: string
+  url: string
+  provider?: string | null
+  caption?: string | null
+  position?: number | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface CreateEventVideoLinkPayload {
+  title: string
+  url: string
+  provider?: string
+  caption?: string
+  position?: number
+}
+
+export interface EventOrganization {
+  id: string
+  type: string
+  role: string
+  status: string
+  organization_id: string
+  event_id: string
+  organization?: {
+    id: string
+    name: string
+    slug?: string
+    logo_url?: string | null
+    verified?: boolean
+  }
+  created_at?: string
+  updated_at?: string
+}
+
+export interface CreateEventOrgPayload {
+  organization_id: string
+  type: string
+  role: string
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Request / Response Wrappers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -303,6 +369,9 @@ export const organizerEventsApi = createApi({
     "RegistrationForms",
     "RegistrationFormVersions",
     "EventMedia",
+    "EventParticipants",
+    "EventVideoLinks",
+    "EventOrganizations",
   ],
   endpoints: (builder) => ({
     // ─── Event Core Operations ───────────────────────────────────────────────
@@ -819,6 +888,137 @@ export const organizerEventsApi = createApi({
         { type: "Events", id: "LIST" },
       ],
     }),
+
+    // ─── Event Participants ──────────────────────────────────────────────────
+    listEventParticipants: builder.query<
+      PaginatedResponse<EventParticipant>,
+      { eventId: string; params?: { page?: number; per_page?: number } }
+    >({
+      query: ({ eventId, params }) => ({
+        url: `/events/${eventId}/event_participants`,
+        params,
+      }),
+      providesTags: (result, _error, { eventId }) =>
+        Array.isArray(result?.data)
+          ? [
+              ...result.data.map(({ id }) => ({ type: "EventParticipants" as const, id })),
+              { type: "EventParticipants", id: `LIST-${eventId}` },
+            ]
+          : [{ type: "EventParticipants", id: `LIST-${eventId}` }],
+    }),
+
+    createEventParticipant: builder.mutation<
+      SingleResponse<EventParticipant>,
+      { eventId: string; participant: CreateEventParticipantPayload }
+    >({
+      query: ({ eventId, participant }) => ({
+        url: `/events/${eventId}/event_participants`,
+        method: "POST",
+        body: { event_participant: participant },
+      }),
+      invalidatesTags: (_result, _error, { eventId }) => [
+        { type: "EventParticipants", id: `LIST-${eventId}` },
+      ],
+    }),
+
+    deleteEventParticipant: builder.mutation<void, { eventId: string; participantId: string }>({
+      query: ({ eventId, participantId }) => ({
+        url: `/events/${eventId}/event_participants/${participantId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, { eventId }) => [
+        { type: "EventParticipants", id: `LIST-${eventId}` },
+      ],
+    }),
+
+    // ─── Event Video Links ───────────────────────────────────────────────────
+    listEventVideoLinks: builder.query<
+      PaginatedResponse<EventVideoLink>,
+      { eventId: string; params?: { page?: number; per_page?: number } }
+    >({
+      query: ({ eventId, params }) => ({
+        url: `/events/${eventId}/event_video_links`,
+        params,
+      }),
+      providesTags: (result, _error, { eventId }) =>
+        Array.isArray(result?.data)
+          ? [
+              ...result.data.map(({ id }) => ({ type: "EventVideoLinks" as const, id })),
+              { type: "EventVideoLinks", id: `LIST-${eventId}` },
+            ]
+          : [{ type: "EventVideoLinks", id: `LIST-${eventId}` }],
+    }),
+
+    createEventVideoLink: builder.mutation<
+      SingleResponse<EventVideoLink>,
+      { eventId: string; videoLink: CreateEventVideoLinkPayload }
+    >({
+      query: ({ eventId, videoLink }) => ({
+        url: `/events/${eventId}/event_video_links`,
+        method: "POST",
+        body: { event_video_link: videoLink },
+      }),
+      invalidatesTags: (_result, _error, { eventId }) => [
+        { type: "EventVideoLinks", id: `LIST-${eventId}` },
+      ],
+    }),
+
+    deleteEventVideoLink: builder.mutation<void, { eventId: string; videoLinkId: string }>({
+      query: ({ eventId, videoLinkId }) => ({
+        url: `/events/${eventId}/event_video_links/${videoLinkId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, { eventId }) => [
+        { type: "EventVideoLinks", id: `LIST-${eventId}` },
+      ],
+    }),
+
+    // ─── Event Organizations (Collaborators) ──────────────────────────────────
+    listEventOrganizations: builder.query<
+      PaginatedResponse<EventOrganization>,
+      { eventId: string; params?: { page?: number; per_page?: number } }
+    >({
+      query: ({ eventId, params }) => ({
+        url: `/events/${eventId}/event_organizations`,
+        params,
+      }),
+      providesTags: (result, _error, { eventId }) => {
+        const raw = result?.data as any
+        const items: any[] = Array.isArray(raw?.collaborators)
+          ? raw.collaborators
+          : Array.isArray(raw)
+          ? raw
+          : []
+        return [
+          ...items.map(({ id }) => ({ type: "EventOrganizations" as const, id })),
+          { type: "EventOrganizations", id: `LIST-${eventId}` },
+        ]
+      },
+    }),
+
+    createEventOrganization: builder.mutation<
+      SingleResponse<EventOrganization>,
+      { eventId: string; organization: CreateEventOrgPayload }
+    >({
+      query: ({ eventId, organization }) => ({
+        url: `/events/${eventId}/event_organizations`,
+        method: "POST",
+        body: { event_organization: organization },
+      }),
+      invalidatesTags: (_result, _error, { eventId }) => [
+        { type: "EventOrganizations", id: `LIST-${eventId}` },
+      ],
+    }),
+
+    deleteEventOrganization: builder.mutation<void, { eventId: string; orgId: string }>({
+      query: ({ eventId, orgId }) => ({
+        url: `/events/${eventId}/event_organizations/${orgId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, { eventId }) => [
+        { type: "EventOrganizations", id: `LIST-${eventId}` },
+      ],
+    }),
   }),
 })
 
@@ -890,4 +1090,19 @@ export const {
   useUpdateEventMediaMutation,
   useDeleteEventMediaMutation,
   useReorderEventMediaMutation,
+
+  // Event Participants
+  useListEventParticipantsQuery,
+  useCreateEventParticipantMutation,
+  useDeleteEventParticipantMutation,
+
+  // Event Video Links
+  useListEventVideoLinksQuery,
+  useCreateEventVideoLinkMutation,
+  useDeleteEventVideoLinkMutation,
+
+  // Event Organizations
+  useListEventOrganizationsQuery,
+  useCreateEventOrganizationMutation,
+  useDeleteEventOrganizationMutation,
 } = organizerEventsApi

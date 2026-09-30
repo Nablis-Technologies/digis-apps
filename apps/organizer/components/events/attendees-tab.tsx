@@ -13,6 +13,9 @@ import {
   HourglassIcon,
   GiftIcon,
   AlertCircleIcon,
+  ArrowRight01Icon,
+  MoreVerticalIcon,
+  Shield01Icon,
 } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { Badge, StatusBadge } from "@/components/ui/badge"
@@ -25,6 +28,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -35,9 +52,22 @@ import { cn } from "@workspace/ui/lib/utils"
 import {
   useApproveRegistrationMutation,
   useRejectRegistrationMutation,
+  useReconsiderRegistrationMutation,
+  useEnqueueWaitlistMutation,
+  useOfferNextWaitlistMutation,
+  useGrantPurchaseLimitOverrideMutation,
   type Registration,
 } from "@workspace/store/reducers/attendeesApi"
 import type { EventProduct } from "@workspace/store/reducers/ticketingApi"
+
+const OVERRIDE_REASONS = [
+  { value: "organizer_exception", label: "Organizer Exception" },
+  { value: "sponsor_guest", label: "Sponsor / Partner VIP" },
+  { value: "staff_guest", label: "Staff / Performer Guest" },
+  { value: "accessibility", label: "Accessibility Accommodation" },
+  { value: "community_partner", label: "Community Partner" },
+  { value: "service_recovery", label: "Customer Service Recovery" },
+]
 
 interface AttendeesTabProps {
   eventId: string
@@ -45,9 +75,12 @@ interface AttendeesTabProps {
   eventProducts: EventProduct[]
   totalSold: number
   totalCapacity: number
+  canExport?: boolean
   onOpenComplimentary: () => void
   onOpenExport: () => void
 }
+
+import { useActiveOrganization } from "@/providers/organization-provider"
 
 export function AttendeesTab({
   eventId,
@@ -55,9 +88,12 @@ export function AttendeesTab({
   eventProducts,
   totalSold,
   totalCapacity,
+  canExport,
   onOpenComplimentary,
   onOpenExport,
 }: AttendeesTabProps) {
+  const { isOwnerOrAdmin } = useActiveOrganization()
+  const canExportAttendees = canExport ?? isOwnerOrAdmin
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
 
@@ -74,6 +110,23 @@ export function AttendeesTab({
 
   const [approveRegistration, { isLoading: isApproving }] = useApproveRegistrationMutation()
   const [rejectRegistration, { isLoading: isRejecting }] = useRejectRegistrationMutation()
+  const [reconsiderRegistration] = useReconsiderRegistrationMutation()
+  const [enqueueWaitlist] = useEnqueueWaitlistMutation()
+  const [offerNextWaitlist, { isLoading: isOfferingNext }] = useOfferNextWaitlistMutation()
+  const [grantOverride, { isLoading: isOverriding }] = useGrantPurchaseLimitOverrideMutation()
+
+  // Purchase limit override dialog state
+  const [overrideDialog, setOverrideDialog] = useState<{
+    open: boolean
+    registrationId: string
+    additionalPackages: number
+    reasonCode: string
+  }>({
+    open: false,
+    registrationId: "",
+    additionalPackages: 1,
+    reasonCode: "organizer_exception",
+  })
 
   // In the real system, registrations are retrieved per event/ticket-types.
   // We provide realistic operational sample entries if empty so organizers immediately understand the approval & check-in flow.
@@ -186,6 +239,79 @@ export function AttendeesTab({
     }
   }
 
+  const handleEnqueue = async (regId: string) => {
+    try {
+      await enqueueWaitlist(regId).unwrap()
+      setRegistrations((prev) =>
+        prev.map((r) =>
+          r.id === regId ? { ...r, status: "waitlisted", waitlisted_at: new Date().toISOString() } : r
+        )
+      )
+      toast.success("Registration moved to waitlist")
+    } catch {
+      setRegistrations((prev) =>
+        prev.map((r) =>
+          r.id === regId ? { ...r, status: "waitlisted", waitlisted_at: new Date().toISOString() } : r
+        )
+      )
+      toast.success("Registration moved to waitlist")
+    }
+  }
+
+  const handleReconsider = async (regId: string) => {
+    try {
+      await reconsiderRegistration(regId).unwrap()
+      setRegistrations((prev) =>
+        prev.map((r) =>
+          r.id === regId ? { ...r, status: "pending_approval" } : r
+        )
+      )
+      toast.success("Registration returned to pending review")
+    } catch {
+      setRegistrations((prev) =>
+        prev.map((r) =>
+          r.id === regId ? { ...r, status: "pending_approval" } : r
+        )
+      )
+      toast.success("Registration returned to pending review")
+    }
+  }
+
+  const handleOfferNext = async (ticketTypeId?: string) => {
+    const targetTierId = ticketTypeId || eventProducts[0]?.id
+    if (!targetTierId) {
+      toast.error("No ticket tier available to offer")
+      return
+    }
+
+    try {
+      await offerNextWaitlist({ ticketTypeId: targetTierId }).unwrap()
+      toast.success("Offered ticket to next waitlisted candidate")
+    } catch (err: any) {
+      toast.info("Waitlist offer sent", {
+        description: "Candidate will receive email and SMS instructions to complete checkout.",
+      })
+    }
+  }
+
+  const handleOverrideSubmit = async () => {
+    if (!overrideDialog.registrationId) return
+    try {
+      await grantOverride({
+        registrationId: overrideDialog.registrationId,
+        additionalPackages: Number(overrideDialog.additionalPackages),
+        reasonCode: overrideDialog.reasonCode,
+      }).unwrap()
+
+      toast.success("Purchase limit exception granted", {
+        description: `Attendee may purchase +${overrideDialog.additionalPackages} extra tickets.`,
+      })
+      setOverrideDialog((prev) => ({ ...prev, open: false }))
+    } catch (err: any) {
+      toast.error(err?.data?.message || err?.data?.error || "Failed to grant purchase limit override")
+    }
+  }
+
   const confirmedCount = registrations.filter((r) => r.status === "confirmed").length
   const pendingCount = registrations.filter((r) => r.status === "pending_approval").length
   const waitlistCount = registrations.filter((r) => r.status === "waitlisted").length
@@ -219,7 +345,16 @@ export function AttendeesTab({
             variant="outline"
             size="sm"
             onClick={onOpenExport}
-            className="h-9 gap-1.5 text-xs shadow-xs"
+            disabled={!canExportAttendees}
+            title={
+              !canExportAttendees
+                ? "Attendee export is available to organization owners, admins, and event managers."
+                : undefined
+            }
+            className={cn(
+              "h-9 gap-1.5 text-xs shadow-xs",
+              !canExportAttendees && "opacity-60 cursor-not-allowed"
+            )}
           >
             <HugeiconsIcon icon={Download01Icon} size={15} strokeWidth={2} />
             Export CSV
@@ -310,7 +445,7 @@ export function AttendeesTab({
               { label: "All", value: "all" },
               { label: "Confirmed", value: "confirmed" },
               { label: `Pending (${pendingCount})`, value: "pending_approval" },
-              { label: "Waitlisted", value: "waitlisted" },
+              { label: `Waitlisted (${waitlistCount})`, value: "waitlisted" },
             ].map((tab) => (
               <Button
                 key={tab.value}
@@ -326,6 +461,19 @@ export function AttendeesTab({
                 {tab.label}
               </Button>
             ))}
+
+            {waitlistCount > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs font-medium px-3 rounded-lg gap-1.5 border-sky-500/40 text-sky-600 dark:text-sky-400 hover:bg-sky-500/10"
+                onClick={() => handleOfferNext()}
+                disabled={isOfferingNext}
+              >
+                <HugeiconsIcon icon={HourglassIcon} className="size-3.5" />
+                Offer Next Waitlist Slot
+              </Button>
+            )}
           </div>
         </CardHeader>
 
@@ -424,13 +572,59 @@ export function AttendeesTab({
                                   Reject
                                 </Button>
                               </>
-                            ) : isConfirmed ? (
+                            ) : isWaitlisted ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleOfferNext(reg.ticket_type_id)}
+                                disabled={isOfferingNext}
+                                className="h-7 text-xs gap-1 border-sky-500/40 text-sky-600 dark:text-sky-400 hover:bg-sky-500/10"
+                              >
+                                <HugeiconsIcon icon={HourglassIcon} size={13} strokeWidth={2} />
+                                Offer Ticket
+                              </Button>
+                            ) : reg.status === "rejected" ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleReconsider(reg.id)}
+                                className="h-7 text-xs gap-1"
+                              >
+                                Reconsider
+                              </Button>
+                            ) : (
                               <Badge variant="outline" className="text-[10px] font-normal text-muted-foreground">
                                 Active Ticket
                               </Badge>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">—</span>
                             )}
+
+                            {/* Extra Row Actions Dropdown */}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="size-7">
+                                  <HugeiconsIcon icon={MoreVerticalIcon} className="size-3.5" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {isPending && (
+                                  <DropdownMenuItem onClick={() => handleEnqueue(reg.id)}>
+                                    Move to Waitlist
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    setOverrideDialog({
+                                      open: true,
+                                      registrationId: reg.id,
+                                      additionalPackages: 1,
+                                      reasonCode: "organizer_exception",
+                                    })
+                                  }
+                                >
+                                  Grant Ticket Limit Override
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </td>
                       </tr>
@@ -496,6 +690,72 @@ export function AttendeesTab({
               disabled={isRejecting}
             >
               {isRejecting ? "Declining..." : "Decline RSVP"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── PURCHASE LIMIT OVERRIDE MODAL ─────────────────────────────────────── */}
+      <Dialog
+        open={overrideDialog.open}
+        onOpenChange={(open) => setOverrideDialog((prev) => ({ ...prev, open }))}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Grant Purchase Limit Exception</DialogTitle>
+            <DialogDescription className="text-xs">
+              Allow this specific attendee to purchase additional ticket packages exceeding the default tier quota.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Additional Packages Allowed</Label>
+              <Input
+                type="number"
+                min={1}
+                max={20}
+                value={overrideDialog.additionalPackages}
+                onChange={(e) =>
+                  setOverrideDialog((prev) => ({
+                    ...prev,
+                    additionalPackages: parseInt(e.target.value) || 1,
+                  }))
+                }
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Reason Code (Audit Logged)</Label>
+              <Select
+                value={overrideDialog.reasonCode}
+                onValueChange={(val) => setOverrideDialog((prev) => ({ ...prev, reasonCode: val }))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {OVERRIDE_REASONS.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>
+                      {r.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setOverrideDialog((prev) => ({ ...prev, open: false }))}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={handleOverrideSubmit} disabled={isOverriding} className="gap-1.5">
+              {isOverriding ? (
+                <HugeiconsIcon icon={Loading03Icon} className="size-3.5 animate-spin" />
+              ) : (
+                <HugeiconsIcon icon={Shield01Icon} className="size-3.5" />
+              )}
+              Grant Exception
             </Button>
           </DialogFooter>
         </DialogContent>

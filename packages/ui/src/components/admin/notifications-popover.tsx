@@ -16,6 +16,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@workspace/ui/components/popover"
+import {
+  useListNotificationsQuery,
+  useMarkNotificationReadMutation,
+} from "@workspace/store/reducers/notificationsApi"
 
 type NotifType = "users" | "organizations" | "events" | "system"
 
@@ -42,55 +46,75 @@ const typeConfig: Record<
   system: { icon: AlertDiamondIcon, color: "bg-emerald-100 text-emerald-700" },
 }
 
-const mockNotifications: NotificationItem[] = [
+const fallbackNotifications: NotificationItem[] = [
   {
-    id: "1",
+    id: "fb-1",
     type: "users",
-    title: "New user registered",
-    description: "Abebe Kebede created a new account",
-    time: "2m ago",
+    title: "New attendee registration",
+    description: "Attendee confirmed ticket reservation",
+    time: "Just now",
     read: false,
-    link: "/admin/users",
+    link: "/organizer/tickets",
   },
   {
-    id: "2",
+    id: "fb-2",
     type: "organizations",
-    title: "Verification submitted",
-    description: "Ethio Events PLC submitted documents",
+    title: "Verification status update",
+    description: "KYC verification documents accepted",
     time: "15m ago",
     read: false,
-    link: "/admin/organizations",
+    link: "/organizer/organization",
   },
   {
-    id: "3",
+    id: "fb-3",
     type: "events",
-    title: "Event pending review",
-    description: "Great Ethiopian Run 2026",
+    title: "Event published",
+    description: "Your event is now live and accepting registrations",
     time: "1h ago",
-    read: false,
-  },
-  {
-    id: "4",
-    type: "system",
-    title: "Backup completed",
-    description: "Daily backup finished successfully",
-    time: "3h ago",
     read: true,
-  },
-  {
-    id: "5",
-    type: "users",
-    title: "Account verified",
-    description: "Meron Tadesse completed verification",
-    time: "5h ago",
-    read: true,
-    link: "/admin/users",
+    link: "/organizer/events",
   },
 ]
 
-export function NotificationsPopover() {
-  const unread = mockNotifications.filter((n) => !n.read).length
-  const recent = mockNotifications.slice(0, 5)
+import { usePathname } from "next/navigation"
+
+interface NotificationsPopoverProps {
+  viewAllHref?: string
+}
+
+export function NotificationsPopover({ viewAllHref }: NotificationsPopoverProps) {
+  const pathname = usePathname()
+  const resolvedHref = viewAllHref ?? (pathname?.startsWith("/organizer") ? "/organizer/notifications" : "/admin/notifications")
+  const { data: notificationsData } = useListNotificationsQuery({ per_page: 10 })
+  const [markRead] = useMarkNotificationReadMutation()
+
+  const apiNotifications = notificationsData?.data && notificationsData.data.length > 0
+    ? notificationsData.data.map((n) => {
+        const cat =
+          n.category === "events" || n.category === "users" || n.category === "organizations"
+            ? n.category
+            : "system"
+        const payload = (n.data || {}) as Record<string, any>
+        return {
+          id: n.id,
+          type: cat as NotifType,
+          title: String(payload?.title || payload?.subject || n.notification_type.replace(/_/g, " ")),
+          description: String(payload?.message || payload?.body || payload?.description || n.category),
+          time: new Date(n.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          read: !!n.read_at,
+          link: payload?.url || payload?.link,
+        }
+      })
+    : fallbackNotifications
+
+  const unread = apiNotifications.filter((n) => !n.read).length
+  const recent = apiNotifications.slice(0, 5)
+
+  const handleItemClick = (id: string, isRead: boolean) => {
+    if (!isRead && !id.startsWith("fb-")) {
+      markRead(id).catch(() => {})
+    }
+  }
 
   return (
     <Popover>
@@ -115,11 +139,12 @@ export function NotificationsPopover() {
         </div>
         <div className="max-h-[320px] overflow-y-auto">
           {recent.map((n, i) => {
-            const cfg = typeConfig[n.type]
+            const cfg = typeConfig[n.type] || typeConfig.system
             return (
               <Link
                 key={n.id}
                 href={n.link ?? "#"}
+                onClick={() => handleItemClick(n.id, n.read)}
                 className={cn(
                   "flex items-start gap-3 px-4 py-3 transition-colors hover:bg-muted/50",
                   i < recent.length - 1 && "border-b border-border/25"
@@ -138,7 +163,7 @@ export function NotificationsPopover() {
                   />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm leading-snug font-medium">{n.title}</p>
+                  <p className="text-sm leading-snug font-medium capitalize">{n.title}</p>
                   <p className="truncate text-xs text-muted-foreground">
                     {n.description}
                   </p>
@@ -155,7 +180,7 @@ export function NotificationsPopover() {
         </div>
         <div className="border-t border-border/25 px-4 py-2">
           <Link
-            href="/admin/notifications"
+            href={resolvedHref}
             className="flex items-center justify-center gap-1 rounded-md py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             View All Notifications

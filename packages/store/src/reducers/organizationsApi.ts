@@ -31,6 +31,10 @@ export interface Organization {
   membership_status?: "active" | "suspended" | "removed" | string
   membership_role?: "owner" | "admin" | "staff" | string
   archived?: boolean
+  verification_status?: "draft" | "pending" | "approved" | "rejected" | "modify" | string
+  verification_feedback?: Record<string, any> | null
+  has_business_license?: boolean
+  has_tin_certificate?: boolean
   status?: string
   created_at?: string
   updated_at?: string

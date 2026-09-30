@@ -266,6 +266,64 @@ export const attendeesApi = createApi({
       }),
       invalidatesTags: (_result, _error, id) => [{ type: "Registrations", id }],
     }),
+
+    enqueueWaitlist: builder.mutation<SingleResponse<Registration>, string>({
+      query: (registrationId) => ({
+        url: `/registrations/${registrationId}/enqueue_waitlist`,
+        method: "POST",
+        headers: {
+          "Idempotency-Key": crypto.randomUUID(),
+        },
+      }),
+      invalidatesTags: (_result, _error, id) => [{ type: "Registrations", id }],
+    }),
+
+    offerNextWaitlist: builder.mutation<
+      SingleResponse<Registration>,
+      { ticketTypeId: string; selectedEventDateId?: string }
+    >({
+      query: ({ ticketTypeId, selectedEventDateId }) => ({
+        url: `/ticket_types/${ticketTypeId}/offer_next`,
+        method: "POST",
+        headers: {
+          "Idempotency-Key": crypto.randomUUID(),
+        },
+        body: selectedEventDateId ? { selected_event_date_id: selectedEventDateId } : {},
+      }),
+      invalidatesTags: [{ type: "Registrations" }],
+    }),
+
+    grantPurchaseLimitOverride: builder.mutation<
+      SingleResponse<unknown>,
+      {
+        registrationId: string
+        additionalPackages: number
+        reasonCode:
+          | "accessibility"
+          | "accommodation"
+          | "community_partner"
+          | "service_recovery"
+          | "sponsor_guest"
+          | "staff_guest"
+          | "organizer_exception"
+          | string
+      }
+    >({
+      query: ({ registrationId, additionalPackages, reasonCode }) => ({
+        url: `/registrations/${registrationId}/purchase_limit_override`,
+        method: "POST",
+        headers: {
+          "Idempotency-Key": crypto.randomUUID(),
+        },
+        body: {
+          additional_packages: additionalPackages,
+          reason_code: reasonCode,
+        },
+      }),
+      invalidatesTags: (_result, _error, { registrationId }) => [
+        { type: "Registrations", id: registrationId },
+      ],
+    }),
   }),
 })
 
@@ -286,4 +344,7 @@ export const {
   useRejectRegistrationMutation,
   useReconsiderRegistrationMutation,
   useReleaseRegistrationMutation,
+  useEnqueueWaitlistMutation,
+  useOfferNextWaitlistMutation,
+  useGrantPurchaseLimitOverrideMutation,
 } = attendeesApi

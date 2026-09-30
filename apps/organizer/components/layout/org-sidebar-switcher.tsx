@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import {
   useActiveOrganization,
   isOrgSuspendedOrRemoved,
+  canEnterWorkspace,
 } from "../../providers/organization-provider"
 import { type Organization } from "@workspace/store/reducers/organizationsApi"
 import { CreateOrgDialog } from "../organizations/create-org-dialog"
@@ -55,14 +56,22 @@ export function OrgSidebarSwitcher() {
   }, [organizations, searchQuery])
 
   const handleSelectOrg = (org: Organization) => {
-    const isSuspended = isOrgSuspendedOrRemoved(org)
+    if (org.archived) {
+      toast.error(`Cannot enter ${org.name}`, {
+        description: "This workspace has been archived and is inaccessible.",
+      })
+      return
+    }
+
+    const isSuspended =
+      org.membership_status === "suspended" || org.status === "suspended"
     setActiveOrgId(org.id)
     setOpen(false)
     setSearchQuery("")
 
     if (isSuspended) {
       toast.warning(`Selected ${org.name} (Suspended)`, {
-        description: "Your membership is suspended. Event creation and settings edits are restricted.",
+        description: "Your membership in this organization is suspended. Action permissions are restricted.",
       })
     }
   }
@@ -114,7 +123,22 @@ export function OrgSidebarSwitcher() {
                 {isLoadingContext ? "Loading..." : activeOrg?.name || "Select Organization"}
               </span>
               <div className="flex items-center gap-1.5 mt-0.5">
-                {isActiveOrgSuspended ? (
+                {activeOrg?.membership_role && !isActiveOrgSuspended && !activeOrg.archived && (
+                  <Badge
+                    variant="outline"
+                    className="h-4 px-1.5 text-[9px] font-semibold capitalize border-primary/30 text-primary gap-0.5 w-fit"
+                  >
+                    {activeOrg.membership_role}
+                  </Badge>
+                )}
+                {activeOrg?.archived ? (
+                  <Badge
+                    variant="outline"
+                    className="h-4 px-1.5 text-[10px] font-semibold border-zinc-500/40 bg-zinc-500/10 text-zinc-500 gap-1 w-fit"
+                  >
+                    Archived
+                  </Badge>
+                ) : isActiveOrgSuspended ? (
                   <Badge
                     variant="destructive"
                     className="h-4 px-1.5 text-[10px] font-semibold border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400 gap-1 w-fit"
@@ -198,7 +222,9 @@ export function OrgSidebarSwitcher() {
                 </div>
                 {recentOrgs.map((org) => {
                   const isActive = org.id === activeOrgId
-                  const isSuspended = isOrgSuspendedOrRemoved(org)
+                  const isArchived = org.archived === true
+                  const isSuspended =
+                    org.membership_status === "suspended" || org.status === "suspended"
                   return (
                     <button
                       key={`recent-${org.id}`}
@@ -206,19 +232,23 @@ export function OrgSidebarSwitcher() {
                       onClick={() => handleSelectOrg(org)}
                       className={cn(
                         "flex w-full items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left cursor-pointer",
-                        isSuspended
-                          ? "border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-foreground"
-                          : isActive
-                            ? "bg-primary/10 text-primary font-medium"
-                            : "hover:bg-muted text-foreground"
+                        isArchived
+                          ? "opacity-60 bg-muted/30 hover:bg-muted/50 text-muted-foreground"
+                          : isSuspended
+                            ? "border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-foreground"
+                            : isActive
+                              ? "bg-primary/10 text-primary font-medium"
+                              : "hover:bg-muted text-foreground"
                       )}
                     >
                       <div
                         className={cn(
                           "flex aspect-square size-6 items-center justify-center rounded-md font-bold text-[10px] shrink-0 border",
-                          isSuspended
-                            ? "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30"
-                            : "bg-lime-500/15 text-lime-700 dark:bg-lime-500/20 dark:text-lime-300 border-lime-500/20"
+                          isArchived
+                            ? "bg-muted text-muted-foreground border-border"
+                            : isSuspended
+                              ? "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30"
+                              : "bg-lime-500/15 text-lime-700 dark:bg-lime-500/20 dark:text-lime-300 border-lime-500/20"
                         )}
                       >
                         {getInitials(org.name)}
@@ -226,7 +256,14 @@ export function OrgSidebarSwitcher() {
                       <span className="truncate flex-1 font-medium">
                         {org.name}
                       </span>
-                      {isSuspended ? (
+                      {isArchived ? (
+                        <Badge
+                          variant="outline"
+                          className="text-[9px] px-1.5 py-0 h-4 shrink-0 border-zinc-500/30 text-zinc-500"
+                        >
+                          Archived
+                        </Badge>
+                      ) : isSuspended ? (
                         <Badge
                           variant="destructive"
                           className="text-[9px] px-1.5 py-0 h-4 shrink-0 font-semibold border-red-500/40 bg-red-500/15 text-red-600 dark:text-red-400 gap-1 shadow-2xs"
@@ -238,9 +275,21 @@ export function OrgSidebarSwitcher() {
                           />
                           Suspended
                         </Badge>
-                      ) : isActive ? (
-                        <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} className="size-4 text-primary shrink-0" />
-                      ) : null}
+                      ) : (
+                        <div className="flex items-center gap-1 shrink-0">
+                          {org.membership_role && (
+                            <Badge
+                              variant="outline"
+                              className="text-[9px] px-1.5 py-0 h-4 capitalize font-semibold border-primary/30 text-primary"
+                            >
+                              {org.membership_role}
+                            </Badge>
+                          )}
+                          {isActive && (
+                            <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} className="size-4 text-primary shrink-0" />
+                          )}
+                        </div>
+                      )}
                     </button>
                   )
                 })}
@@ -269,7 +318,9 @@ export function OrgSidebarSwitcher() {
               ) : (
                 displayOrgs.map((org) => {
                   const isActive = org.id === activeOrgId
-                  const isSuspended = isOrgSuspendedOrRemoved(org)
+                  const isArchived = org.archived === true
+                  const isSuspended =
+                    org.membership_status === "suspended" || org.status === "suspended"
                   return (
                     <button
                       key={org.id}
@@ -277,19 +328,23 @@ export function OrgSidebarSwitcher() {
                       onClick={() => handleSelectOrg(org)}
                       className={cn(
                         "flex w-full items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs transition-colors text-left group cursor-pointer",
-                        isSuspended
-                          ? "border border-red-500/25 bg-red-500/5 hover:bg-red-500/10 text-foreground"
-                          : isActive
-                            ? "bg-primary/10 text-primary font-medium"
-                            : "hover:bg-muted text-foreground"
+                        isArchived
+                          ? "opacity-60 bg-muted/30 hover:bg-muted/50 text-muted-foreground"
+                          : isSuspended
+                            ? "border border-red-500/25 bg-red-500/5 hover:bg-red-500/10 text-foreground"
+                            : isActive
+                              ? "bg-primary/10 text-primary font-medium"
+                              : "hover:bg-muted text-foreground"
                       )}
                     >
                       <div
                         className={cn(
                           "flex aspect-square size-7 items-center justify-center rounded-md font-bold text-[10px] shrink-0 border",
-                          isSuspended
-                            ? "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30"
-                            : "bg-lime-500/15 text-lime-700 dark:bg-lime-500/20 dark:text-lime-300 border-lime-500/10"
+                          isArchived
+                            ? "bg-muted text-muted-foreground border-border"
+                            : isSuspended
+                              ? "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30"
+                              : "bg-lime-500/15 text-lime-700 dark:bg-lime-500/20 dark:text-lime-300 border-lime-500/10"
                         )}
                       >
                         {getInitials(org.name)}
@@ -298,7 +353,11 @@ export function OrgSidebarSwitcher() {
                         <span className="truncate font-medium text-foreground">
                           {org.name}
                         </span>
-                        {isSuspended ? (
+                        {isArchived ? (
+                          <span className="text-[10px] text-muted-foreground truncate">
+                            Workspace archived • Inaccessible
+                          </span>
+                        ) : isSuspended ? (
                           <span className="text-[10px] text-red-600 dark:text-red-400 font-medium flex items-center gap-1 truncate">
                             <HugeiconsIcon icon={AlertCircleIcon} strokeWidth={2} className="size-2.5 shrink-0" />
                             Membership suspended • Actions restricted
@@ -309,7 +368,14 @@ export function OrgSidebarSwitcher() {
                           </span>
                         )}
                       </div>
-                      {isSuspended ? (
+                      {isArchived ? (
+                        <Badge
+                          variant="outline"
+                          className="text-[9px] px-1.5 py-0 h-4 shrink-0 border-zinc-500/40 text-zinc-500 bg-zinc-500/10"
+                        >
+                          Archived
+                        </Badge>
+                      ) : isSuspended ? (
                         <Badge
                           variant="destructive"
                           className="text-[9px] px-1.5 py-0 h-4 shrink-0 font-semibold border-red-500/40 bg-red-500/15 text-red-600 dark:text-red-400 gap-1 shadow-2xs"
@@ -322,20 +388,30 @@ export function OrgSidebarSwitcher() {
                           Suspended
                         </Badge>
                       ) : (
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "text-[9px] px-1.5 py-0 h-4 shrink-0 font-medium",
-                            org.verified
-                              ? "border-lime-500/30 bg-lime-500/10 text-lime-600 dark:text-lime-400"
-                              : "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {org.membership_role && (
+                            <Badge
+                              variant="outline"
+                              className="text-[9px] px-1.5 py-0 h-4 capitalize font-semibold border-primary/30 text-primary"
+                            >
+                              {org.membership_role}
+                            </Badge>
                           )}
-                        >
-                          {org.verified ? "Verified" : "Not Verified"}
-                        </Badge>
-                      )}
-                      {!isSuspended && isActive && (
-                        <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} className="size-4 text-primary shrink-0 ml-1" />
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-[9px] px-1.5 py-0 h-4 font-medium",
+                              org.verified
+                                ? "border-lime-500/30 bg-lime-500/10 text-lime-600 dark:text-lime-400"
+                                : "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                            )}
+                          >
+                            {org.verified ? "Verified" : "Not Verified"}
+                          </Badge>
+                          {!isSuspended && isActive && (
+                            <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} className="size-4 text-primary shrink-0 ml-0.5" />
+                          )}
+                        </div>
                       )}
                     </button>
                   )

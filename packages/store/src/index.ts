@@ -18,6 +18,8 @@ import { registrationApi } from "./reducers/registrationApi"
 import { financeApi } from "./reducers/financeApi"
 import { attendeesApi } from "./reducers/attendeesApi"
 import { messagingApi } from "./reducers/messagingApi"
+import { commercialApi } from "./reducers/commercialApi"
+import { notificationsApi } from "./reducers/notificationsApi"
 
 export const store = configureStore({
   reducer: {
@@ -40,6 +42,8 @@ export const store = configureStore({
     [financeApi.reducerPath]: financeApi.reducer,
     [attendeesApi.reducerPath]: attendeesApi.reducer,
     [messagingApi.reducerPath]: messagingApi.reducer,
+    [commercialApi.reducerPath]: commercialApi.reducer,
+    [notificationsApi.reducerPath]: notificationsApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
@@ -61,7 +65,9 @@ export const store = configureStore({
       registrationApi.middleware,
       financeApi.middleware,
       attendeesApi.middleware,
-      messagingApi.middleware
+      messagingApi.middleware,
+      commercialApi.middleware,
+      notificationsApi.middleware
     ),
 })
 
@@ -69,3 +75,6 @@ export type RootState = ReturnType<typeof store.getState>
 export type AppDispatch = typeof store.dispatch
 
 export * from "./reducers/messagingApi"
+export * from "./reducers/commercialApi"
+export * from "./reducers/notificationsApi"
+

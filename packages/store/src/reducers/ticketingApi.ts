@@ -271,6 +271,30 @@ export const ticketingApi = createApi({
         { type: "EventProducts", id: `LIST-${eventId}` },
       ],
     }),
+    updateInventoryConfiguration: builder.mutation<
+      SingleResponse<EventProduct>,
+      {
+        eventId: string
+        productId: string
+        body: {
+          inventory_configuration: {
+            mode?: string
+            capacity?: number
+            dates?: Array<{ event_date_id: string; capacity: number }>
+          }
+        }
+      }
+    >({
+      query: ({ eventId, productId, body }) => ({
+        url: `/events/${eventId}/event_products/${productId}/update_inventory_configuration`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { eventId, productId }) => [
+        { type: "EventProducts", id: productId },
+        { type: "EventProducts", id: `LIST-${eventId}` },
+      ],
+    }),
 
     // ── Ticket Types ──
     getTicketType: builder.query<
@@ -383,6 +407,7 @@ export const {
   useDeleteEventProductMutation,
   useActivateEventProductMutation,
   useDeactivateEventProductMutation,
+  useUpdateInventoryConfigurationMutation,
   useGetTicketTypeQuery,
   useCreateTicketTypeMutation,
   useUpdateTicketTypeMutation,

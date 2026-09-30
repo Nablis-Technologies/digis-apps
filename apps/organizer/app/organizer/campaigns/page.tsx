@@ -22,6 +22,7 @@ import {
   InformationCircleIcon,
   Copy01Icon,
   Loading03Icon,
+  Invoice01Icon,
 } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,11 +31,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { TabsContent } from "@/components/ui/tabs"
 import { PageTabs } from "@/components/page-tabs"
 import { Skeleton } from "@/components/ui/skeleton"
-import { formatDate, formatNumber } from "@/lib/utils"
+import { formatDate, formatDateTime, formatNumber } from "@/lib/utils"
 import { cn } from "@workspace/ui/lib/utils"
 import { useActiveOrganization } from "../../../providers/organization-provider"
 import {
   useListCreditsQuery,
+  useListCreditLedgerQuery,
   useListCreditRatesQuery,
   useListCampaignsQuery,
   usePauseCampaignMutation,
@@ -45,6 +47,7 @@ import {
   useListCampaignTemplatesQuery,
   type Campaign,
   type CampaignContactList,
+  type CreditLedgerEntry,
 } from "@workspace/store/reducers/messagingApi"
 import { CreateCampaignDialog } from "../../../components/campaigns/create-campaign-dialog"
 import { LaunchCampaignDialog } from "../../../components/campaigns/launch-campaign-dialog"
@@ -116,6 +119,12 @@ export default function CampaignsPage() {
 
   const { data: templatesData } = useListCampaignTemplatesQuery({ organizationId }, { skip: !organizationId })
   const templates = templatesData?.data ?? []
+
+  const { data: ledgerData, isLoading: isLoadingLedger } = useListCreditLedgerQuery(
+    { organizationId, page: 1, per_page: 50 },
+    { skip: !organizationId }
+  )
+  const creditLedgerEntries: CreditLedgerEntry[] = ledgerData?.data ?? []
 
   // Operational Mutations
   const [pauseCampaign, { isLoading: isPausing }] = usePauseCampaignMutation()
@@ -307,6 +316,7 @@ export default function CampaignsPage() {
           { value: "campaigns", label: `Campaigns (${campaigns.length})`, icon: Megaphone01Icon },
           { value: "contacts", label: `Contact Lists (${contactLists.length})`, icon: UserGroupIcon },
           { value: "templates", label: "Templates & Tags", icon: Copy01Icon },
+          { value: "ledger", label: `Credit Ledger (${creditLedgerEntries.length})`, icon: Invoice01Icon },
         ]}
       >
 
@@ -759,6 +769,120 @@ export default function CampaignsPage() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* ─── TAB 4: CREDIT LEDGER ────────────────────────────────────────────── */}
+        <TabsContent value="ledger" className="space-y-4">
+          <div className="flex flex-col gap-1">
+            <h3 className="text-base font-semibold text-foreground">Marketing Credit Ledger</h3>
+            <p className="text-xs text-muted-foreground">
+              Immutable audit log of all SMS & Email credit top-ups, reservation holds, and campaign deliveries.
+            </p>
+          </div>
+
+          {isLoadingLedger ? (
+            <div className="space-y-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-16 rounded-xl bg-muted/40 animate-pulse border border-border/50" />
+              ))}
+            </div>
+          ) : creditLedgerEntries.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/80 p-12 text-center bg-card/40">
+              <div className="size-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground mb-3">
+                <HugeiconsIcon icon={Invoice01Icon} className="size-6" />
+              </div>
+              <h4 className="text-sm font-semibold">No Credit Transactions Recorded</h4>
+              <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+                Purchasing SMS or Email top-ups and launching broadcasts will record entries in this ledger.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-4 gap-1.5 text-xs"
+                onClick={() => openTopUpForChannel("sms")}
+              >
+                <HugeiconsIcon icon={Wallet01Icon} className="size-3.5" />
+                Top Up Credits
+              </Button>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-border/70 bg-card overflow-hidden shadow-xs">
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="border-b border-border/50 bg-muted/30 text-muted-foreground uppercase font-semibold text-[10px]">
+                    <tr>
+                      <th className="py-3 px-4 text-left">Entry Type</th>
+                      <th className="py-3 px-4 text-left">Quantity</th>
+                      <th className="py-3 px-4 text-left">Available Delta</th>
+                      <th className="py-3 px-4 text-left">Reference</th>
+                      <th className="py-3 px-4 text-right">Timestamp</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/40">
+                    {creditLedgerEntries.map((entry) => {
+                      const isPositive = entry.available_delta > 0
+                      const isNegative = entry.available_delta < 0
+
+                      const typeBadgeConfig: Record<string, { label: string; className: string }> = {
+                        top_up: { label: "Top-Up", className: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30" },
+                        reserve: { label: "Hold / Reserve", className: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30" },
+                        consume: { label: "Dispatched", className: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30" },
+                        release: { label: "Released", className: "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30" },
+                        refund: { label: "Refund", className: "bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/30" },
+                        adjustment: { label: "Adjustment", className: "bg-muted text-muted-foreground border-border/60" },
+                      }
+
+                      const badge = typeBadgeConfig[entry.entry_type] || {
+                        label: entry.entry_type,
+                        className: "bg-muted text-muted-foreground",
+                      }
+
+                      return (
+                        <tr key={entry.id} className="hover:bg-muted/20 transition-colors">
+                          <td className="py-3.5 px-4 font-medium">
+                            <Badge variant="outline" className={`text-[10px] font-semibold ${badge.className}`}>
+                              {badge.label}
+                            </Badge>
+                          </td>
+                          <td className="py-3.5 px-4 font-mono font-bold text-foreground">
+                            {formatNumber(entry.quantity)}
+                          </td>
+                          <td className="py-3.5 px-4 font-mono font-bold">
+                            <span
+                              className={
+                                isPositive
+                                  ? "text-emerald-600 dark:text-emerald-400"
+                                  : isNegative
+                                  ? "text-rose-600 dark:text-rose-400"
+                                  : "text-muted-foreground"
+                              }
+                            >
+                              {isPositive ? `+${formatNumber(entry.available_delta)}` : formatNumber(entry.available_delta)}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <div className="space-y-0.5">
+                              <span className="font-semibold text-foreground capitalize">
+                                {entry.reference_type || "System Entry"}
+                              </span>
+                              {entry.reference_id && (
+                                <p className="font-mono text-[10px] text-muted-foreground/80 truncate max-w-[140px]">
+                                  {entry.reference_id}
+                                </p>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 text-right text-muted-foreground whitespace-nowrap">
+                            {formatDateTime(entry.created_at)}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </TabsContent>
       </PageTabs>
 

@@ -44,6 +44,18 @@ export interface CreditTopUpResponse {
   }
 }
 
+export interface CreditLedgerEntry {
+  id: string
+  credit_account_id: string
+  rate_version_id?: string | null
+  entry_type: "top_up" | "reserve" | "consume" | "release" | "refund" | "adjustment" | string
+  quantity: number
+  available_delta: number
+  reference_type?: string | null
+  reference_id?: string | null
+  created_at: string
+}
+
 export interface Campaign {
   id: string
   organization_id: string
@@ -270,6 +282,17 @@ export const messagingApi = createApi({
       invalidatesTags: (_res, _err, { organizationId }) => [
         { type: "Credits", id: organizationId },
       ],
+    }),
+
+    listCreditLedger: builder.query<
+      PaginatedResponse<CreditLedgerEntry>,
+      { organizationId: string; page?: number; per_page?: number }
+    >({
+      query: ({ organizationId, page = 1, per_page = 25 }) => ({
+        url: `/organizations/${organizationId}/messaging/credit_ledger?page=${page}&per_page=${per_page}`,
+        method: "GET",
+      }),
+      providesTags: ["Credits"],
     }),
 
     // ─── Campaigns ─────────────────────────────────────────────────────────────
@@ -627,6 +650,7 @@ export const messagingApi = createApi({
 
 export const {
   useListCreditsQuery,
+  useListCreditLedgerQuery,
   useListCreditRatesQuery,
   useEstimateCreditTopUpMutation,
   useCreateCreditTopUpMutation,

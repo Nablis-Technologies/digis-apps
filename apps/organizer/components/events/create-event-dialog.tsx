@@ -16,7 +16,7 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
         showCloseButton
       >
         <div className="pr-1 flex flex-col max-h-[75vh] min-h-0">
-          <CreateEventForm onSuccess={() => onOpenChange(false)} />
+          {open && <CreateEventForm key="create-event-form" onSuccess={() => onOpenChange(false)} />}
         </div>
       </DialogContent>
     </Dialog>

@@ -6,21 +6,17 @@ import {
   type Organization,
 } from "@workspace/store/reducers/organizationsApi"
 
-interface OrganizationContextValue {
-  activeOrg: Organization | null
-  activeOrgId: string | null
-  setActiveOrgId: (id: string) => void
-  organizations: Organization[]
-  recentOrgs: Organization[]
-  isLoading: boolean
-  hasOrganizations: boolean
-  refetchOrganizations: () => void
+export function canEnterWorkspace(org?: Organization | null): boolean {
+  if (!org) return false
+  if (org.archived === true) return false
+  if (org.status === "suspended" || org.status === "removed") return false
+  if (org.membership_status === "suspended" || org.membership_status === "removed") return false
+
+  const role = org.membership_role?.toLowerCase()
+  if (!role || !["owner", "admin", "staff"].includes(role)) return false
+
+  return true
 }
-
-const OrganizationContext = React.createContext<OrganizationContextValue | null>(null)
-
-const STORAGE_ACTIVE_ORG_KEY = "digis_active_org_id"
-const STORAGE_RECENT_ORGS_KEY = "digis_recent_org_ids"
 
 export function isOrgSuspendedOrRemoved(org?: Organization | null): boolean {
   if (!org) return false
@@ -35,8 +31,39 @@ export function isOrgSuspendedOrRemoved(org?: Organization | null): boolean {
 
 export const isOrgSuspended = isOrgSuspendedOrRemoved
 
+interface OrganizationContextValue {
+  activeOrg: Organization | null
+  activeOrgId: string | null
+  setActiveOrgId: (id: string) => void
+  organizations: Organization[]
+  accessibleOrgs: Organization[]
+  inaccessibleOrgs: Organization[]
+  recentOrgs: Organization[]
+  isLoading: boolean
+  isError: boolean
+  hasOrganizations: boolean
+  hasAccessibleWorkspaces: boolean
+  refetchOrganizations: () => void
+
+  // Derived role and capability flags based on caller's active workspace membership
+  membershipRole: "owner" | "admin" | "staff" | string | null
+  membershipStatus: "active" | "suspended" | "removed" | string | null
+  isOwner: boolean
+  isAdmin: boolean
+  isStaff: boolean
+  isOwnerOrAdmin: boolean
+  canExportAttendees: boolean
+  canExportContactInfo: boolean
+  canEnterWorkspace: (org?: Organization | null) => boolean
+}
+
+const OrganizationContext = React.createContext<OrganizationContextValue | null>(null)
+
+const STORAGE_ACTIVE_ORG_KEY = "digis_active_org_id"
+const STORAGE_RECENT_ORGS_KEY = "digis_recent_org_ids"
+
 export function OrganizationProvider({ children }: { children: React.ReactNode }) {
-  const { data, isLoading, refetch } = useListOwnerOrganizationsQuery({ per_page: 50 })
+  const { data, isLoading, isError, refetch } = useListOwnerOrganizationsQuery({ per_page: 50 })
 
   // Initialize from localStorage safely once on mount via lazy initializers
   const [activeOrgId, setActiveOrgIdState] = React.useState<string | null>(() => {
@@ -68,17 +95,35 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
     }
   }, [])
 
-  // Strictly use server-returned organizations for the authenticated user
+  // Strictly use server-returned organizations for the authenticated user from GET /organizations/owner
   const organizations = React.useMemo(() => data?.data ?? [], [data?.data])
 
+  // Determine accessible workspaces based on membership_role, membership_status, and archived status
+  const accessibleOrgs = React.useMemo(() => {
+    return organizations.filter(canEnterWorkspace)
+  }, [organizations])
+
+  const inaccessibleOrgs = React.useMemo(() => {
+    return organizations.filter((org) => !canEnterWorkspace(org))
+  }, [organizations])
+
   const activeOrg = React.useMemo(() => {
+    // 1. Try to find activeOrgId in accessible workspaces first
     if (activeOrgId) {
-      const match = organizations.find((org) => org.id === activeOrgId)
-      if (match) return match
+      const accessibleMatch = accessibleOrgs.find((org) => org.id === activeOrgId)
+      if (accessibleMatch) return accessibleMatch
     }
-    const firstActive = organizations.find((org) => !isOrgSuspendedOrRemoved(org))
-    return firstActive ?? organizations[0] ?? null
-  }, [activeOrgId, organizations])
+    // 2. Default to first accessible workspace if available
+    if (accessibleOrgs.length > 0) {
+      return accessibleOrgs[0]
+    }
+    // 3. Fallback to activeOrgId in all orgs or first org
+    if (activeOrgId) {
+      const anyMatch = organizations.find((org) => org.id === activeOrgId)
+      if (anyMatch) return anyMatch
+    }
+    return organizations[0] ?? null
+  }, [activeOrgId, accessibleOrgs, organizations])
 
   const recentOrgs = React.useMemo(() => {
     return recentOrgIds
@@ -150,18 +195,59 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
     return () => window.removeEventListener("storage", handleStorage)
   }, [])
 
+  // Derived role flags from the caller's preloaded membership in activeOrg
+  const rawRole = activeOrg?.membership_role?.toLowerCase() ?? null
+  const isOwner = rawRole === "owner"
+  const isAdmin = rawRole === "admin"
+  const isStaff = rawRole === "staff"
+  const isOwnerOrAdmin = isOwner || isAdmin
+
+  // Permissions derived from workspace membership
+  const canExportAttendees = isOwnerOrAdmin
+  const canExportContactInfo = isOwnerOrAdmin
+
   const value = React.useMemo<OrganizationContextValue>(
     () => ({
       activeOrg,
       activeOrgId: activeOrg?.id ?? null,
       setActiveOrgId,
       organizations,
+      accessibleOrgs,
+      inaccessibleOrgs,
       recentOrgs,
       isLoading,
+      isError,
       hasOrganizations: organizations.length > 0,
+      hasAccessibleWorkspaces: accessibleOrgs.length > 0,
       refetchOrganizations: refetch,
+
+      membershipRole: activeOrg?.membership_role ?? null,
+      membershipStatus: activeOrg?.membership_status ?? null,
+      isOwner,
+      isAdmin,
+      isStaff,
+      isOwnerOrAdmin,
+      canExportAttendees,
+      canExportContactInfo,
+      canEnterWorkspace,
     }),
-    [activeOrg, setActiveOrgId, organizations, recentOrgs, isLoading, refetch]
+    [
+      activeOrg,
+      setActiveOrgId,
+      organizations,
+      accessibleOrgs,
+      inaccessibleOrgs,
+      recentOrgs,
+      isLoading,
+      isError,
+      refetch,
+      isOwner,
+      isAdmin,
+      isStaff,
+      isOwnerOrAdmin,
+      canExportAttendees,
+      canExportContactInfo,
+    ]
   )
 
   return (

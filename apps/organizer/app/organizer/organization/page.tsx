@@ -7,8 +7,10 @@ import {
   useUpdateOwnerOrganizationMutation,
   useUploadOwnerOrganizationDocumentsMutation,
   useSubmitVerificationMutation,
+  useResubmitVerificationMutation,
   type UpdateOrgPayload,
 } from "@workspace/store/reducers/organizationsApi"
+import { getAccessToken } from "@workspace/store/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PhoneInput, stripCountryCode, normalizeEthiopianPhone } from "@/components/ui/phone-input"
@@ -23,6 +25,7 @@ import {
   CheckmarkCircle01Icon,
   AlertCircleIcon,
   Upload01Icon,
+  Download01Icon,
   File01Icon,
   Loading01Icon,
   Globe02Icon,
@@ -30,13 +33,16 @@ import {
   Location01Icon,
   UserGroupIcon,
   Calendar03Icon,
+  Clock01Icon,
   FileValidationIcon,
   FloppyDiskIcon,
   Cancel01Icon,
   CheckmarkBadge01Icon,
   Link01Icon,
   Image01Icon,
+  Coins01Icon,
 } from "@hugeicons/core-free-icons"
+import { CommercialTermsCard } from "@/organizer-components/organizations/commercial-terms-card"
 
 const CATEGORIES = [
   "conference",
@@ -80,6 +86,8 @@ export default function OrganizationPage() {
   const [updateOrg, { isLoading: isUpdating }] = useUpdateOwnerOrganizationMutation()
   const [uploadDocs, { isLoading: isUploadingDocs }] = useUploadOwnerOrganizationDocumentsMutation()
   const [submitVerification, { isLoading: isSubmittingVerification }] = useSubmitVerificationMutation()
+  const [resubmitVerification, { isLoading: isResubmittingVerification }] = useResubmitVerificationMutation()
+  const [downloadingDoc, setDownloadingDoc] = React.useState<string | null>(null)
 
   const org = fullOrgData?.data ?? activeOrg
 
@@ -330,6 +338,52 @@ export default function OrganizationPage() {
     }
   }
 
+  const handleResubmitVerification = async () => {
+    try {
+      await resubmitVerification(activeOrgId).unwrap()
+      toast.success("Organization resubmitted for verification review!", {
+        description: "Our compliance team will review your updated documents within 24-48 hours.",
+      })
+      refetchFullOrg()
+      refetchOrganizations()
+    } catch (err: any) {
+      toast.error("Resubmission failed", {
+        description: err?.data?.message || err?.data?.error || "Ensure all required documents and TIN are provided.",
+      })
+    }
+  }
+
+  const handleDownloadDocument = async (docType: string, docLabel: string) => {
+    if (!activeOrgId) return
+    setDownloadingDoc(docType)
+    try {
+      const token = getAccessToken()
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000"
+      const res = await fetch(`${baseUrl}/organizations/owner/${activeOrgId}/documents/${docType}`, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      })
+      if (!res.ok) {
+        throw new Error(`Failed to download ${docLabel}. Document may not be uploaded yet.`)
+      }
+      const blob = await res.blob()
+      const objectUrl = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = objectUrl
+      link.download = `${docType}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      window.URL.revokeObjectURL(objectUrl)
+      document.body.removeChild(link)
+      toast.success(`Downloaded ${docLabel}`)
+    } catch (err: any) {
+      toast.error(err.message || `Failed to download ${docLabel}`)
+    } finally {
+      setDownloadingDoc(null)
+    }
+  }
+
   // Verification Checklist calculation
   const hasName = Boolean(org?.name)
   const hasTin = Boolean(org?.tin_number)
@@ -423,6 +477,7 @@ export default function OrganizationPage() {
             icon: FileValidationIcon,
             indicator: !isVerified,
           },
+          { value: "commercial", label: "Commercial Terms", icon: Coins01Icon },
           { value: "socials", label: "Social Links", icon: Link01Icon },
         ]}
       >
@@ -870,34 +925,63 @@ export default function OrganizationPage() {
                   {/* Business License */}
                   <div className="rounded-xl border border-border/70 bg-muted/20 p-4 space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                        Business License / Registration
-                      </Label>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs font-semibold uppercase text-muted-foreground">
+                          Business License / Registration
+                        </Label>
+                        {org?.has_business_license && (
+                          <Badge variant="outline" className="border-lime-500/30 text-lime-600 dark:text-lime-400 text-[10px] gap-1 py-0">
+                            <HugeiconsIcon icon={CheckmarkCircle01Icon} className="size-2.5" /> On File
+                          </Badge>
+                        )}
+                      </div>
                       {licenseFile && (
                         <button
                           type="button"
                           onClick={() => setLicenseFile(null)}
                           className="text-xs text-destructive hover:underline"
                         >
-                          Remove
+                          Remove New
                         </button>
                       )}
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="size-10 rounded-lg bg-card border border-border flex items-center justify-center text-muted-foreground shrink-0">
-                        <HugeiconsIcon icon={File01Icon} className="size-5" />
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="size-10 rounded-lg bg-card border border-border flex items-center justify-center text-muted-foreground shrink-0">
+                          <HugeiconsIcon icon={File01Icon} className="size-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-foreground truncate">
+                            {licenseFile ? licenseFile.name : org?.has_business_license ? "business_license (active on file)" : "business_license.pdf / image"}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {licenseFile
+                              ? `${(licenseFile.size / 1024).toFixed(1)} KB (ready to upload)`
+                              : org?.has_business_license
+                              ? "Valid commercial registration certificate uploaded"
+                              : "Upload valid commercial registration certificate"}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-foreground truncate">
-                          {licenseFile ? licenseFile.name : "business_license.pdf / image"}
-                        </p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {licenseFile
-                            ? `${(licenseFile.size / 1024).toFixed(1)} KB`
-                            : "Upload valid commercial registration certificate"}
-                        </p>
-                      </div>
-                      <div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {org?.has_business_license && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            type="button"
+                            onClick={() => handleDownloadDocument("business_license", "Business License")}
+                            disabled={downloadingDoc === "business_license"}
+                            className="h-8 gap-1.5 text-xs font-medium"
+                          >
+                            <HugeiconsIcon
+                              icon={downloadingDoc === "business_license" ? Loading01Icon : Download01Icon}
+                              className={`size-3.5 ${downloadingDoc === "business_license" ? "animate-spin" : ""}`}
+                            />
+                            Download
+                          </Button>
+                        )}
+
                         <input
                           id="license-file-input"
                           type="file"
@@ -910,7 +994,7 @@ export default function OrganizationPage() {
                           className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-input bg-card px-3 text-xs font-medium shadow-xs hover:bg-muted cursor-pointer transition-colors"
                         >
                           <HugeiconsIcon icon={Upload01Icon} className="size-3" />
-                          {licenseFile ? "Replace" : "Select File"}
+                          {licenseFile ? "Replace Selection" : org?.has_business_license ? "Upload Replacement" : "Select File"}
                         </Label>
                       </div>
                     </div>
@@ -919,34 +1003,63 @@ export default function OrganizationPage() {
                   {/* TIN Certificate */}
                   <div className="rounded-xl border border-border/70 bg-muted/20 p-4 space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                        TIN Certificate
-                      </Label>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs font-semibold uppercase text-muted-foreground">
+                          TIN Certificate
+                        </Label>
+                        {org?.has_tin_certificate && (
+                          <Badge variant="outline" className="border-lime-500/30 text-lime-600 dark:text-lime-400 text-[10px] gap-1 py-0">
+                            <HugeiconsIcon icon={CheckmarkCircle01Icon} className="size-2.5" /> On File
+                          </Badge>
+                        )}
+                      </div>
                       {tinFile && (
                         <button
                           type="button"
                           onClick={() => setTinFile(null)}
                           className="text-xs text-destructive hover:underline"
                         >
-                          Remove
+                          Remove New
                         </button>
                       )}
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="size-10 rounded-lg bg-card border border-border flex items-center justify-center text-muted-foreground shrink-0">
-                        <HugeiconsIcon icon={File01Icon} className="size-5" />
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="size-10 rounded-lg bg-card border border-border flex items-center justify-center text-muted-foreground shrink-0">
+                          <HugeiconsIcon icon={File01Icon} className="size-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-foreground truncate">
+                            {tinFile ? tinFile.name : org?.has_tin_certificate ? "tin_certificate (active on file)" : "tin_certificate.pdf / image"}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {tinFile
+                              ? `${(tinFile.size / 1024).toFixed(1)} KB (ready to upload)`
+                              : org?.has_tin_certificate
+                              ? "Ministry of Revenues TIN certificate uploaded"
+                              : "Upload TIN registration document issued by Ministry of Revenues"}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-foreground truncate">
-                          {tinFile ? tinFile.name : "tin_certificate.pdf / image"}
-                        </p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {tinFile
-                            ? `${(tinFile.size / 1024).toFixed(1)} KB`
-                            : "Upload TIN registration document issued by Ministry of Revenues"}
-                        </p>
-                      </div>
-                      <div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {org?.has_tin_certificate && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            type="button"
+                            onClick={() => handleDownloadDocument("tin_certificate", "TIN Certificate")}
+                            disabled={downloadingDoc === "tin_certificate"}
+                            className="h-8 gap-1.5 text-xs font-medium"
+                          >
+                            <HugeiconsIcon
+                              icon={downloadingDoc === "tin_certificate" ? Loading01Icon : Download01Icon}
+                              className={`size-3.5 ${downloadingDoc === "tin_certificate" ? "animate-spin" : ""}`}
+                            />
+                            Download
+                          </Button>
+                        )}
+
                         <input
                           id="tin-file-input"
                           type="file"
@@ -959,7 +1072,7 @@ export default function OrganizationPage() {
                           className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-input bg-card px-3 text-xs font-medium shadow-xs hover:bg-muted cursor-pointer transition-colors"
                         >
                           <HugeiconsIcon icon={Upload01Icon} className="size-3" />
-                          {tinFile ? "Replace" : "Select File"}
+                          {tinFile ? "Replace Selection" : org?.has_tin_certificate ? "Upload Replacement" : "Select File"}
                         </Label>
                       </div>
                     </div>
@@ -996,24 +1109,90 @@ export default function OrganizationPage() {
                   </p>
                 </div>
 
-                <div className={`p-4 rounded-xl border ${
-                  isVerified
-                    ? "border-lime-500/40 bg-lime-500/10 text-lime-700 dark:text-lime-300"
-                    : "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-                } space-y-1.5`}>
-                  <div className="flex items-center gap-2 font-bold text-sm">
-                    <HugeiconsIcon
-                      icon={isVerified ? CheckmarkBadge01Icon : AlertCircleIcon}
-                      className="size-4.5 shrink-0"
-                    />
-                    <span>{isVerified ? "Verified Organization" : "Pending / Unverified"}</span>
-                  </div>
-                  <p className="text-xs leading-relaxed opacity-90">
-                    {isVerified
-                      ? "Your organization is verified and in good standing. You can publish live events and request payouts."
-                      : "Complete the requirements checklist below and submit your documents for compliance review."}
-                  </p>
-                </div>
+                {/* Status Banners */}
+                {(() => {
+                  const vStatus = org?.verification_status || (org?.verified ? "approved" : "draft")
+                  const vFeedback = org?.verification_feedback as Record<string, any> | null
+                  const feedbackMsg = vFeedback?.message || vFeedback?.reason || vFeedback?.feedback || (typeof vFeedback === "string" ? vFeedback : null)
+
+                  if (vStatus === "approved" || isVerified) {
+                    return (
+                      <div className="p-4 rounded-xl border border-lime-500/40 bg-lime-500/10 text-lime-700 dark:text-lime-300 space-y-1.5">
+                        <div className="flex items-center gap-2 font-bold text-sm">
+                          <HugeiconsIcon icon={CheckmarkBadge01Icon} className="size-4.5 shrink-0" />
+                          <span>Verified Organization</span>
+                        </div>
+                        <p className="text-xs leading-relaxed opacity-90">
+                          Your organization is verified and in full compliance. You can publish live events, process ticket sales, and request financial settlements.
+                        </p>
+                      </div>
+                    )
+                  }
+
+                  if (vStatus === "pending") {
+                    return (
+                      <div className="p-4 rounded-xl border border-sky-500/40 bg-sky-500/10 text-sky-800 dark:text-sky-300 space-y-1.5">
+                        <div className="flex items-center gap-2 font-bold text-sm">
+                          <HugeiconsIcon icon={Clock01Icon} className="size-4.5 shrink-0" />
+                          <span>Review In Progress</span>
+                        </div>
+                        <p className="text-xs leading-relaxed opacity-90">
+                          Your verification submission is actively queued for review by our compliance team. Verification is typically completed within 24-48 business hours.
+                        </p>
+                      </div>
+                    )
+                  }
+
+                  if (vStatus === "modify") {
+                    return (
+                      <div className="p-4 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-300 space-y-2">
+                        <div className="flex items-center gap-2 font-bold text-sm">
+                          <HugeiconsIcon icon={AlertCircleIcon} className="size-4.5 shrink-0" />
+                          <span>Action Required: Modifications Requested</span>
+                        </div>
+                        <p className="text-xs leading-relaxed opacity-90">
+                          Our compliance team reviewed your submission and requested adjustments before approval can be granted.
+                        </p>
+                        {feedbackMsg && (
+                          <div className="rounded-lg bg-background/80 p-2.5 text-xs text-foreground font-medium border border-amber-500/30">
+                            <strong>Compliance Note:</strong> {feedbackMsg}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  }
+
+                  if (vStatus === "rejected") {
+                    return (
+                      <div className="p-4 rounded-xl border border-rose-500/40 bg-rose-500/10 text-rose-800 dark:text-rose-300 space-y-2">
+                        <div className="flex items-center gap-2 font-bold text-sm">
+                          <HugeiconsIcon icon={AlertCircleIcon} className="size-4.5 shrink-0" />
+                          <span>Verification Rejected</span>
+                        </div>
+                        <p className="text-xs leading-relaxed opacity-90">
+                          Your verification attempt was rejected. Please review the feedback, update your documents, and resubmit for reconsideration.
+                        </p>
+                        {feedbackMsg && (
+                          <div className="rounded-lg bg-background/80 p-2.5 text-xs text-foreground font-medium border border-rose-500/30">
+                            <strong>Reason:</strong> {feedbackMsg}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div className="p-4 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 space-y-1.5">
+                      <div className="flex items-center gap-2 font-bold text-sm">
+                        <HugeiconsIcon icon={AlertCircleIcon} className="size-4.5 shrink-0" />
+                        <span>Unverified Organization</span>
+                      </div>
+                      <p className="text-xs leading-relaxed opacity-90">
+                        Complete the checklist below and submit your documents for compliance review to unlock live event sales and payouts.
+                      </p>
+                    </div>
+                  )
+                })()}
 
                 {/* Checklist */}
                 <div className="space-y-2.5 pt-2">
@@ -1052,23 +1231,73 @@ export default function OrganizationPage() {
                       />
                       <span>Profile Logo & Banner</span>
                     </div>
+
+                    <div className="flex items-center gap-2">
+                      <HugeiconsIcon
+                        icon={(org?.has_business_license || licenseFile) ? CheckmarkCircle01Icon : AlertCircleIcon}
+                        className={`size-4 ${(org?.has_business_license || licenseFile) ? "text-lime-600 dark:text-lime-400" : "text-muted-foreground"}`}
+                      />
+                      <span>Business License Document</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <HugeiconsIcon
+                        icon={(org?.has_tin_certificate || tinFile) ? CheckmarkCircle01Icon : AlertCircleIcon}
+                        className={`size-4 ${(org?.has_tin_certificate || tinFile) ? "text-lime-600 dark:text-lime-400" : "text-muted-foreground"}`}
+                      />
+                      <span>TIN Certificate Document</span>
+                    </div>
                   </div>
                 </div>
 
                 {!isVerified && (
                   <div className="pt-3">
-                    <Button
-                      onClick={handleSubmitVerification}
-                      disabled={isSubmittingVerification}
-                      className="w-full gap-1.5 shadow-xs"
-                    >
-                      {isSubmittingVerification ? (
-                        <HugeiconsIcon icon={Loading01Icon} className="size-4 animate-spin" />
-                      ) : (
-                        <HugeiconsIcon icon={CheckmarkBadge01Icon} className="size-4" />
-                      )}
-                      Submit for Verification
-                    </Button>
+                    {(() => {
+                      const vStatus = org?.verification_status || "draft"
+                      const isPending = vStatus === "pending"
+                      const isResubmission = vStatus === "rejected" || vStatus === "modify"
+
+                      if (isPending) {
+                        return (
+                          <Button disabled className="w-full gap-1.5 shadow-xs opacity-75">
+                            <HugeiconsIcon icon={Clock01Icon} className="size-4" />
+                            Submitted — Review Pending
+                          </Button>
+                        )
+                      }
+
+                      if (isResubmission) {
+                        return (
+                          <Button
+                            onClick={handleResubmitVerification}
+                            disabled={isResubmittingVerification}
+                            className="w-full gap-1.5 shadow-xs bg-amber-600 hover:bg-amber-700 text-white"
+                          >
+                            {isResubmittingVerification ? (
+                              <HugeiconsIcon icon={Loading01Icon} className="size-4 animate-spin" />
+                            ) : (
+                              <HugeiconsIcon icon={CheckmarkBadge01Icon} className="size-4" />
+                            )}
+                            Resubmit for Verification
+                          </Button>
+                        )
+                      }
+
+                      return (
+                        <Button
+                          onClick={handleSubmitVerification}
+                          disabled={isSubmittingVerification}
+                          className="w-full gap-1.5 shadow-xs"
+                        >
+                          {isSubmittingVerification ? (
+                            <HugeiconsIcon icon={Loading01Icon} className="size-4 animate-spin" />
+                          ) : (
+                            <HugeiconsIcon icon={CheckmarkBadge01Icon} className="size-4" />
+                          )}
+                          Submit for Verification
+                        </Button>
+                      )
+                    })()}
                   </div>
                 )}
               </div>
@@ -1168,6 +1397,11 @@ export default function OrganizationPage() {
               </Button>
             </div>
           </form>
+        </TabsContent>
+
+        {/* ─── TAB 6: COMMERCIAL TERMS ─── */}
+        <TabsContent value="commercial" className="space-y-6">
+          {activeOrgId && <CommercialTermsCard organizationId={activeOrgId} />}
         </TabsContent>
       </PageTabs>
     </div>
