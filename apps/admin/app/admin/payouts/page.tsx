@@ -4,20 +4,30 @@ import { useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   BankIcon,
-  WalletIcon,
   MoneyReceive01Icon,
   Clock01Icon,
   LockIcon,
   BookmarkIcon,
+  CheckmarkCircle01Icon,
+  Cancel01Icon,
+  PlayIcon,
+  RefreshIcon,
 } from "@hugeicons/core-free-icons"
 import { cn } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Button } from "@/components/ui/button"
+import { SearchableSelect } from "@/components/ui/searchable-select"
+import { toastSuccess, toastError } from "@/lib/toast"
 import { useListOrganizationsQuery } from "@/store/reducers/organizationsApi"
 import {
   useGetBalanceQuery,
   useListPayoutsQuery,
   useListPayoutAccountsQuery,
   useListLedgerEntriesQuery,
+  useDispatchPayoutMutation,
+  useReconcilePayoutMutation,
+  useVerifyPayoutAccountMutation,
+  useSuspendPayoutAccountMutation,
 } from "@/store/reducers/financeApi"
 
 type Tab = "balance" | "accounts" | "payouts" | "ledger"
@@ -59,8 +69,13 @@ export default function PayoutsPage() {
   const [tab, setTab] = useState<Tab>("balance")
 
   const { data: orgData, isLoading: orgLoading } = useListOrganizationsQuery({ per_page: 100 })
-
   const organizations = orgData?.data ?? []
+
+  const orgOptions = organizations.map((o) => ({
+    value: o.id,
+    label: o.name,
+    description: o.city ? `${o.city}, ${o.country ?? ""}` : undefined,
+  }))
 
   const { data: balanceData, isLoading: balanceLoading } = useGetBalanceQuery(
     organizationId ? { organizationId, currency: "ETB" } : { organizationId: "", currency: "ETB" },
@@ -78,6 +93,55 @@ export default function PayoutsPage() {
     organizationId ? { organizationId } : { organizationId: "" },
     { skip: !organizationId }
   )
+
+  const [dispatchPayout] = useDispatchPayoutMutation()
+  const [reconcilePayout] = useReconcilePayoutMutation()
+  const [verifyAccount] = useVerifyPayoutAccountMutation()
+  const [suspendAccount] = useSuspendPayoutAccountMutation()
+
+  const handleDispatch = async (payoutId: string) => {
+    try {
+      await dispatchPayout({ organizationId, id: payoutId }).unwrap()
+      toastSuccess("Payout dispatched.")
+    } catch (err) {
+      toastError(err, "Failed to dispatch payout.")
+    }
+  }
+
+  const handleReconcile = async (payoutId: string) => {
+    try {
+      await reconcilePayout({ organizationId, id: payoutId }).unwrap()
+      toastSuccess("Payout reconciled.")
+    } catch (err) {
+      toastError(err, "Failed to reconcile payout.")
+    }
+  }
+
+  const handleVerifyAccount = async (accountId: string) => {
+    try {
+      await verifyAccount({
+        organizationId,
+        id: accountId,
+        body: { reason: "Admin verified", evidence_reference: "Admin review" },
+      }).unwrap()
+      toastSuccess("Payout account verified.")
+    } catch (err) {
+      toastError(err, "Failed to verify payout account.")
+    }
+  }
+
+  const handleSuspendAccount = async (accountId: string) => {
+    try {
+      await suspendAccount({
+        organizationId,
+        id: accountId,
+        body: { reason: "Admin suspended" },
+      }).unwrap()
+      toastSuccess("Payout account suspended.")
+    } catch (err) {
+      toastError(err, "Failed to suspend payout account.")
+    }
+  }
 
   const balance = Array.isArray(balanceData?.data) ? balanceData.data[0] : balanceData?.data
 
@@ -97,19 +161,16 @@ export default function PayoutsPage() {
             Organization treasury, balance, and payout destinations
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <select
+        <div className="w-72">
+          <SearchableSelect
+            options={orgOptions}
             value={organizationId}
-            onChange={(e) => setOrganizationId(e.target.value)}
-            className="w-72 rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/50"
-          >
-            <option value="">Select an organization…</option>
-            {organizations.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
-            ))}
-          </select>
+            onChange={setOrganizationId}
+            placeholder="Select an organization..."
+            searchPlaceholder="Search organizations..."
+            loading={orgLoading}
+            emptyMessage="No organizations found."
+          />
         </div>
       </div>
 
@@ -169,9 +230,8 @@ export default function PayoutsPage() {
                   />
                   <BalanceCard
                     title="Total"
-                    icon={BankIcon}
+                    icon={BookmarkIcon}
                     value={fmtMinor(balance?.total_minor, balance?.currency)}
-                    className="text-lime-600"
                   />
                 </>
               )}
@@ -183,17 +243,18 @@ export default function PayoutsPage() {
               {accountsLoading ? (
                 <Skeleton className="h-40 rounded-xl" />
               ) : (accountsData?.data ?? []).length === 0 ? (
-                <EmptyState icon={WalletIcon} text="No payout accounts found" />
+                <EmptyState icon={BankIcon} text="No payout accounts configured" />
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border/50 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        <th className="px-6 py-3">Label</th>
+                        <th className="px-6 py-3">Account</th>
                         <th className="px-6 py-3">Provider</th>
                         <th className="px-6 py-3">Type</th>
                         <th className="px-6 py-3">Status</th>
                         <th className="px-6 py-3">Created</th>
+                        <th className="px-6 py-3 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -209,6 +270,32 @@ export default function PayoutsPage() {
                           </td>
                           <td className="px-6 py-3 text-muted-foreground">
                             {a.created_at ? new Date(a.created_at).toLocaleDateString() : "—"}
+                          </td>
+                          <td className="px-6 py-3 text-right">
+                            <div className="flex justify-end gap-1">
+                              {a.status !== "verified" && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-xs text-emerald-600 hover:text-emerald-700"
+                                  onClick={() => handleVerifyAccount(a.id)}
+                                >
+                                  <HugeiconsIcon icon={CheckmarkCircle01Icon} className="mr-1 size-3.5" />
+                                  Verify
+                                </Button>
+                              )}
+                              {a.status !== "suspended" && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-xs text-destructive hover:text-destructive"
+                                  onClick={() => handleSuspendAccount(a.id)}
+                                >
+                                  <HugeiconsIcon icon={Cancel01Icon} className="mr-1 size-3.5" />
+                                  Suspend
+                                </Button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -235,6 +322,7 @@ export default function PayoutsPage() {
                         <th className="px-6 py-3">Status</th>
                         <th className="px-6 py-3">Provider</th>
                         <th className="px-6 py-3">Requested</th>
+                        <th className="px-6 py-3 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -250,6 +338,30 @@ export default function PayoutsPage() {
                           <td className="px-6 py-3">{p.provider ?? "—"}</td>
                           <td className="px-6 py-3 text-muted-foreground">
                             {p.requested_at ? new Date(p.requested_at).toLocaleDateString() : "—"}
+                          </td>
+                          <td className="px-6 py-3 text-right">
+                            <div className="flex justify-end gap-1">
+                              {p.status === "pending" && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-xs text-primary hover:text-primary/80"
+                                  onClick={() => handleDispatch(p.id)}
+                                >
+                                  <HugeiconsIcon icon={PlayIcon} className="mr-1 size-3.5" />
+                                  Dispatch
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs text-muted-foreground hover:text-foreground"
+                                onClick={() => handleReconcile(p.id)}
+                              >
+                                <HugeiconsIcon icon={RefreshIcon} className="mr-1 size-3.5" />
+                                Reconcile
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))}

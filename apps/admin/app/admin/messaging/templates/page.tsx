@@ -41,9 +41,11 @@ export default function AdminTemplatesPage() {
       campaign_template: {
         name,
         channel,
-        content,
-        subject: channel === "email" ? subject : undefined,
-        active: true,
+        status: "active",
+        metadata: {
+          content,
+          subject: channel === "email" ? subject : undefined,
+        },
       },
     }).unwrap()
     setOpenCreate(false)

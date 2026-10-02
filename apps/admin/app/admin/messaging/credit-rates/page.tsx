@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
-  ReceiptDollarIcon,
   Add01Icon,
   CheckmarkCircle01Icon,
   Cancel01Icon,
@@ -27,6 +26,8 @@ import {
   type CreditRate,
 } from "@workspace/store/reducers/adminMessagingApi"
 
+const channelOptions = ["sms", "email", "whatsapp"] as const
+
 export default function CreditRatesPage() {
   const { data, isLoading, refetch } = useListCreditRatesQuery()
   const [createRate, { isLoading: isCreating }] = useCreateCreditRateMutation()
@@ -35,6 +36,7 @@ export default function CreditRatesPage() {
 
   const [openCreate, setOpenCreate] = useState(false)
   const [currency, setCurrency] = useState("ETB")
+  const [channel, setChannel] = useState<"sms" | "email" | "whatsapp">("sms")
   const [rateMinor, setRateMinor] = useState(100)
 
   const rates: CreditRate[] = data?.data ?? []
@@ -42,9 +44,10 @@ export default function CreditRatesPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     await createRate({
-      credit_rate: {
+      credit_rate_version: {
         currency,
-        rate_per_unit_minor: Number(rateMinor),
+        channel,
+        unit_price_minor: Number(rateMinor),
         status: "draft",
       },
     }).unwrap()
@@ -91,6 +94,7 @@ export default function CreditRatesPage() {
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-border/50 text-xs font-medium text-muted-foreground">
+                    <th className="pb-3 font-medium">Channel</th>
                     <th className="pb-3 font-medium">Currency</th>
                     <th className="pb-3 font-medium">Rate per Credit (Minor)</th>
                     <th className="pb-3 font-medium">Status</th>
@@ -99,54 +103,58 @@ export default function CreditRatesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/25">
-                  {rates.map((r) => (
-                    <tr key={r.id} className="hover:bg-muted/30">
-                      <td className="py-3 font-medium">{r.currency}</td>
-                      <td className="py-3 tabular-nums">{r.rate_per_unit_minor} ({ (r.rate_per_unit_minor / 100).toFixed(2) } {r.currency})</td>
-                      <td className="py-3">
-                        <span
-                          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                            r.status === "active"
-                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
-                              : r.status === "retired"
-                              ? "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400"
-                              : "bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400"
-                          }`}
-                        >
-                          {r.status}
-                        </span>
-                      </td>
-                      <td className="py-3 text-xs text-muted-foreground">
-                        {r.effective_at ? new Date(r.effective_at).toLocaleDateString() : "Immediate"}
-                      </td>
-                      <td className="py-3 text-right">
-                        <div className="flex justify-end gap-1">
-                          {r.status !== "active" && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-xs text-emerald-600 hover:text-emerald-700"
-                              onClick={() => activateRate(r.id)}
-                            >
-                              <HugeiconsIcon icon={CheckmarkCircle01Icon} className="mr-1 size-3.5" />
-                              Activate
-                            </Button>
-                          )}
-                          {r.status !== "retired" && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-xs text-destructive hover:text-destructive"
-                              onClick={() => retireRate(r.id)}
-                            >
-                              <HugeiconsIcon icon={Cancel01Icon} className="mr-1 size-3.5" />
-                              Retire
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {rates.map((r) => {
+                    const price = r.unit_price_minor ?? r.rate_per_unit_minor ?? 0
+                    return (
+                      <tr key={r.id} className="hover:bg-muted/30">
+                        <td className="py-3 font-medium uppercase text-xs tracking-wider">{r.channel ?? "sms"}</td>
+                        <td className="py-3 font-medium">{r.currency}</td>
+                        <td className="py-3 tabular-nums">{price} ({ (price / 100).toFixed(2) } {r.currency})</td>
+                        <td className="py-3">
+                          <span
+                            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                              r.status === "active"
+                                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
+                                : r.status === "retired"
+                                ? "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400"
+                                : "bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400"
+                            }`}
+                          >
+                            {r.status}
+                          </span>
+                        </td>
+                        <td className="py-3 text-xs text-muted-foreground">
+                          {r.effective_from ? new Date(r.effective_from).toLocaleDateString() : r.effective_at ? new Date(r.effective_at).toLocaleDateString() : "Immediate"}
+                        </td>
+                        <td className="py-3 text-right">
+                          <div className="flex justify-end gap-1">
+                            {r.status !== "active" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs text-emerald-600 hover:text-emerald-700"
+                                onClick={() => activateRate(r.id)}
+                              >
+                                <HugeiconsIcon icon={CheckmarkCircle01Icon} className="mr-1 size-3.5" />
+                                Activate
+                              </Button>
+                            )}
+                            {r.status !== "retired" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs text-destructive hover:text-destructive"
+                                onClick={() => retireRate(r.id)}
+                              >
+                                <HugeiconsIcon icon={Cancel01Icon} className="mr-1 size-3.5" />
+                                Retire
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -162,6 +170,25 @@ export default function CreditRatesPage() {
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
+                <Label>Channel</Label>
+                <div className="flex gap-2">
+                  {channelOptions.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setChannel(c)}
+                      className={`flex-1 rounded-md border px-3 py-1.5 text-xs font-medium uppercase transition-colors ${
+                        channel === c
+                          ? "border-lime-500 bg-lime-50 text-lime-700 dark:bg-lime-950/20 dark:text-lime-400"
+                          : "border-border text-muted-foreground hover:border-foreground/20 hover:text-foreground"
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="currency">Currency Code</Label>
                 <Input
                   id="currency"
@@ -172,7 +199,7 @@ export default function CreditRatesPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="rateMinor">Rate Per Credit (Minor Units / Cents)</Label>
+                <Label htmlFor="rateMinor">Unit Price (Minor Units / Cents)</Label>
                 <Input
                   id="rateMinor"
                   type="number"

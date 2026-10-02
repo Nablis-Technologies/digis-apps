@@ -11,13 +11,16 @@ import {
   Edit01Icon,
 } from "@hugeicons/core-free-icons"
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 import { DataTable, type Column, type SortConfig } from "@/components/ui/data-table"
 import { StatsCard } from "@/components/dashboard/stats-card"
 import { RetentionPolicyDialog } from "@/components/forms/retention-policy-dialog"
 import { RetentionHoldDialog } from "@/components/forms/retention-hold-dialog"
+import { toastSuccess, toastError } from "@/lib/toast"
 import {
   useListRetentionPoliciesQuery,
   useListRetentionHoldsQuery,
+  useReleaseRetentionHoldMutation,
   type DataRetentionPolicy,
   type DataRetentionHold,
 } from "@/store/reducers/dataRetentionApi"
@@ -48,6 +51,16 @@ export default function DataRetentionPage() {
     order_by: "created_at",
     order_direction: "desc",
   })
+  const [releaseHold] = useReleaseRetentionHoldMutation()
+
+  const handleRelease = async (id: string) => {
+    try {
+      await releaseHold(id).unwrap()
+      toastSuccess("Retention hold released.")
+    } catch (err) {
+      toastError(err, "Failed to release retention hold.")
+    }
+  }
 
   const [policyDialogOpen, setPolicyDialogOpen] = useState(false)
   const [editingPolicy, setEditingPolicy] = useState<DataRetentionPolicy | null>(null)
@@ -169,6 +182,18 @@ export default function DataRetentionPage() {
           isLoading={holdsLoading || holdsFetching}
           pagination={{ page: holdPage, perPage: holdsPagination?.per_page ?? 10, total: holdsPagination?.total_count ?? 0, totalPages: holdsPagination?.total_pages ?? 1 }}
           onPageChange={setHoldPage}
+          renderActions={(row) =>
+            !row.released_at ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs text-destructive hover:text-destructive"
+                onClick={() => handleRelease(row.id)}
+              >
+                Release
+              </Button>
+            ) : null
+          }
         />
       )}
 

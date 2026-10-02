@@ -148,59 +148,6 @@ export default function EventDetailPage() {
         <StatsCard title="Version" value={event.version} icon={Clock01Icon} sparklineData={[1, 1, 2, 2, 2, 3, 3]} sparklineColor="var(--chart-4)" />
       </div>
 
-      <div className="rounded-xl border border-border/50 bg-card p-6 shadow-xs">
-        <h3 className="font-semibold mb-1">Event Profile</h3>
-        <p className="text-sm text-muted-foreground mb-4">Core information about this event</p>
-        <div className="grid gap-x-8 gap-y-5 md:grid-cols-2">
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5 shrink-0"><HugeiconsIcon icon={Building01Icon} strokeWidth={2} className="size-4 text-muted-foreground" /></div>
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">Organization</p>
-              <p className="text-sm font-medium">{event.organization?.name ?? "—"}</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5 shrink-0"><HugeiconsIcon icon={Globe02Icon} strokeWidth={2} className="size-4 text-muted-foreground" /></div>
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">Timezone</p>
-              <p className="text-sm font-medium">{event.timezone}</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5 shrink-0"><HugeiconsIcon icon={Clock01Icon} strokeWidth={2} className="size-4 text-muted-foreground" /></div>
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">Slug</p>
-              <p className="text-sm font-medium">/{event.slug}</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5 shrink-0"><HugeiconsIcon icon={Calendar01Icon} strokeWidth={2} className="size-4 text-muted-foreground" /></div>
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">Published</p>
-              <p className="text-sm font-medium">{event.published_at ? new Date(event.published_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Not published"}</p>
-            </div>
-          </div>
-        </div>
-        {event.categories && event.categories.length > 0 && (
-          <div className="mt-5">
-            <p className="text-xs text-muted-foreground mb-1.5">Categories</p>
-            <div className="flex flex-wrap gap-2">
-              {event.categories.map((c) => (
-                <span key={c.id} className="rounded-full border border-border px-2.5 py-0.5 text-xs font-medium">
-                  {c.name}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-        {event.description && (
-          <div className="mt-5">
-            <p className="text-xs text-muted-foreground mb-1.5">Description</p>
-            <p className="text-sm text-muted-foreground leading-relaxed">{event.description}</p>
-          </div>
-        )}
-      </div>
-
       <div className="flex gap-1 border-b border-border/50">
         {(["overview", "tickets", "schedule", "team", "forms"] as const).map((t) => (
           <button
@@ -215,6 +162,61 @@ export default function EventDetailPage() {
           </button>
         ))}
       </div>
+
+      {tab === "overview" && (
+        <div className="rounded-xl border border-border/50 bg-card p-6 shadow-xs">
+          <h3 className="font-semibold mb-1">Event Profile</h3>
+          <p className="text-sm text-muted-foreground mb-4">Core information about this event</p>
+          <div className="grid gap-x-8 gap-y-5 md:grid-cols-2">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 shrink-0"><HugeiconsIcon icon={Building01Icon} strokeWidth={2} className="size-4 text-muted-foreground" /></div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Organization</p>
+                <p className="text-sm font-medium">{event.organization?.name ?? "—"}</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 shrink-0"><HugeiconsIcon icon={Globe02Icon} strokeWidth={2} className="size-4 text-muted-foreground" /></div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Timezone</p>
+                <p className="text-sm font-medium">{event.timezone}</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 shrink-0"><HugeiconsIcon icon={Clock01Icon} strokeWidth={2} className="size-4 text-muted-foreground" /></div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Slug</p>
+                <p className="text-sm font-medium">/{event.slug}</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 shrink-0"><HugeiconsIcon icon={Calendar01Icon} strokeWidth={2} className="size-4 text-muted-foreground" /></div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Published</p>
+                <p className="text-sm font-medium">{event.published_at ? new Date(event.published_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Not published"}</p>
+              </div>
+            </div>
+          </div>
+          {event.categories && event.categories.length > 0 && (
+            <div className="mt-5">
+              <p className="text-xs text-muted-foreground mb-1.5">Categories</p>
+              <div className="flex flex-wrap gap-2">
+                {event.categories.map((c) => (
+                  <span key={c.id} className="rounded-full border border-border px-2.5 py-0.5 text-xs font-medium">
+                    {c.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          {event.description && (
+            <div className="mt-5">
+              <p className="text-xs text-muted-foreground mb-1.5">Description</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">{event.description}</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {tab === "tickets" && <TicketsTab eventId={event.id} />}
       {tab === "schedule" && <ScheduleTab eventId={event.id} />}
