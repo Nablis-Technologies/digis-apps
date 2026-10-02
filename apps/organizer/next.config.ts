@@ -25,6 +25,11 @@ const nextConfig: NextConfig = {
         hostname: "*.amazonaws.com",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "*.onrender.com",
+        pathname: "/**",
+      },
     ],
     // Allow localhost images in development
     unoptimized: process.env.NODE_ENV === "development",

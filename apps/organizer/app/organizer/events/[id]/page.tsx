@@ -21,7 +21,6 @@ import {
   Ticket01Icon,
   Share01Icon,
   GlobeIcon,
-  Store01Icon,
   LayoutTopIcon,
   Image01Icon,
   ArrowLeft01Icon,
@@ -115,15 +114,6 @@ interface EventDetailPageProps {
 
 // ─── Analytics configuration ────────────────────────────────────────────────
 
-const SALE_CHANNELS: {
-  name: string
-  icon: HugeiconsIconProps["icon"]
-  weight: number
-}[] = [
-  { name: "Online", icon: GlobeIcon, weight: 0.62 },
-  { name: "At Gate", icon: Ticket01Icon, weight: 0.23 },
-  { name: "Resellers", icon: Store01Icon, weight: 0.15 },
-]
 
 /** Percentage of total sales/revenue per day (last 7 days). */
 const SALES_WEIGHTS = [6, 10, 14, 18, 22, 16, 14]
@@ -408,14 +398,16 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     }
   })
 
-  // Sales Channels
-  const saleChannelRows: ChannelRow[] = SALE_CHANNELS.map((channel) => ({
-    name: channel.name,
-    icon: channel.icon,
-    tickets: Math.round(soldTickets * channel.weight),
-    share: Math.round(channel.weight * 100),
-    revenue: Math.round(totalRevenue * channel.weight),
-  }))
+  // Sales Channels (real platform sales data)
+  const saleChannelRows: ChannelRow[] = [
+    {
+      name: "Online",
+      icon: GlobeIcon,
+      tickets: soldTickets,
+      share: soldTickets > 0 ? 100 : 0,
+      revenue: totalRevenue,
+    },
+  ]
 
   const channelColumns: Column<ChannelRow>[] = [
     {
@@ -424,8 +416,8 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       cell: (row) => {
         const IconComponent = row.icon
         return (
-          <div className="flex items-center gap-3">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-muted">
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-7 items-center justify-center rounded-lg bg-muted text-foreground">
               <HugeiconsIcon icon={IconComponent} strokeWidth={2} className="size-4" />
             </div>
             <p className="font-semibold text-xs text-foreground">{row.name}</p>
@@ -437,29 +429,24 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     {
       header: "Tickets Sold",
       accessorKey: "tickets",
-      cell: (row) => <p className="font-medium text-xs">{formatNumber(row.tickets)}</p>,
+      cell: (row) => <p className="font-medium text-xs text-foreground">{formatNumber(row.tickets)}</p>,
       sortable: true,
     },
     {
       header: "Share",
       accessorKey: "share",
       cell: (row) => (
-        <div className="flex items-center gap-2">
-          <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full rounded-full bg-primary"
-              style={{ width: `${row.share}%` }}
-            />
-          </div>
-          <span className="text-[11px] font-medium tabular-nums text-muted-foreground">
-            {row.share}%
-          </span>
-        </div>
+        <span className="text-xs font-semibold tabular-nums text-foreground">
+          {row.share}%
+        </span>
       ),
+      sortable: true,
     },
     {
       header: "Revenue",
-      cell: (row) => <p className="font-semibold text-xs">{formatCurrency(row.revenue)}</p>,
+      accessorKey: "revenue",
+      cell: (row) => <p className="font-semibold text-xs text-foreground">{formatCurrency(row.revenue)}</p>,
+      sortable: true,
     },
   ]
 
@@ -794,7 +781,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                     columns={channelColumns}
                     data={saleChannelRows}
                     keyExtractor={(row) => row.name}
-                    emptyMessage="No sales channels found."
+                    emptyMessage="No ticket sales recorded yet."
                   />
                 </CardContent>
               </Card>
