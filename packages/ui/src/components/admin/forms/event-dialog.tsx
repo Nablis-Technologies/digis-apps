@@ -12,7 +12,7 @@ import {
 import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
 import { Label } from "@workspace/ui/components/label"
-import { cn } from "@workspace/ui/lib/utils"
+import { SearchableSelect } from "@workspace/ui/components/searchable-select"
 import {
   useCreateEventMutation,
   useUpdateEventMutation,
@@ -60,16 +60,27 @@ export function EventDialog({
   const [createEvent, { isLoading: isCreating }] = useCreateEventMutation()
   const [updateEvent, { isLoading: isUpdating }] = useUpdateEventMutation()
   const { data: orgsData, isLoading: orgsLoading } = useListOrganizationsQuery(
-    { page: 1, per_page: 50 },
-    { skip: !open }
+    { per_page: 100 },
+    { skip: !open || isEdit }
   )
   const { data: catsData, isLoading: catsLoading } = useListCategoriesQuery(
-    { page: 1, per_page: 50 },
+    { per_page: 100 },
     { skip: !open }
   )
   const submitting = isCreating || isUpdating
   const organizations = orgsData?.data ?? []
   const categories = catsData?.data ?? []
+
+  const orgOptions = organizations.map((o) => ({
+    value: o.id,
+    label: o.name,
+    description: o.city ? `${o.city}, ${o.country ?? ""}` : undefined,
+  }))
+
+  const catOptions = categories.map((c) => ({
+    value: c.id,
+    label: c.name,
+  }))
 
   useEffect(() => {
     if (open) {
@@ -92,13 +103,6 @@ export function EventDialog({
 
   function update<K extends keyof FormData>(key: K, value: FormData[K]) {
     setForm((p) => ({ ...p, [key]: value }))
-  }
-
-  function toggleCategory(id: string) {
-    setForm((p) => ({
-      ...p,
-      categoryIds: p.categoryIds.includes(id) ? p.categoryIds.filter((c) => c !== id) : [...p.categoryIds, id],
-    }))
   }
 
   function isValid() {
@@ -182,31 +186,15 @@ export function EventDialog({
               <Label>
                 Organization <span className="text-destructive">*</span>
               </Label>
-              {orgsLoading ? (
-                <p className="text-sm text-muted-foreground">Loading organizations...</p>
-              ) : (
-                <div className="max-h-40 space-y-1.5 overflow-y-auto rounded-lg border border-border/50 p-2">
-                  {organizations.length === 0 ? (
-                    <p className="px-2 py-1.5 text-sm text-muted-foreground">No organizations found.</p>
-                  ) : (
-                    organizations.map((o) => (
-                      <button
-                        key={o.id}
-                        type="button"
-                        onClick={() => update("organizationId", o.id)}
-                        className={cn(
-                          "w-full rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors",
-                          form.organizationId === o.id
-                            ? "border-lime-500 bg-lime-50 text-lime-700 dark:bg-lime-950/20 dark:text-lime-400"
-                            : "border-border text-muted-foreground hover:border-foreground/20 hover:text-foreground"
-                        )}
-                      >
-                        {o.name}
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
+              <SearchableSelect
+                options={orgOptions}
+                value={form.organizationId}
+                onChange={(val) => update("organizationId", val)}
+                placeholder="Select organizer..."
+                searchPlaceholder="Search organizations..."
+                loading={orgsLoading}
+                emptyMessage="No organizations found."
+              />
             </div>
           )}
 
@@ -245,27 +233,16 @@ export function EventDialog({
 
           <div className="space-y-2">
             <Label>Categories</Label>
-            {catsLoading ? (
-              <p className="text-sm text-muted-foreground">Loading categories...</p>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {categories.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => toggleCategory(c.id)}
-                    className={cn(
-                      "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                      form.categoryIds.includes(c.id)
-                        ? "border-lime-500 bg-lime-50 text-lime-700 dark:bg-lime-950/20 dark:text-lime-400"
-                        : "border-border text-muted-foreground hover:border-foreground/20 hover:text-foreground"
-                    )}
-                  >
-                    {c.name}
-                  </button>
-                ))}
-              </div>
-            )}
+            <SearchableSelect
+              options={catOptions}
+              value={form.categoryIds}
+              onChange={(val) => update("categoryIds", val)}
+              placeholder="Select categories..."
+              searchPlaceholder="Search categories..."
+              loading={catsLoading}
+              multiple
+              emptyMessage="No categories found."
+            />
           </div>
 
           {errorMsg && <p className="text-sm text-destructive">{errorMsg}</p>}

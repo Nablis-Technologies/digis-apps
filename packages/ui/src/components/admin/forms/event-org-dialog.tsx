@@ -11,6 +11,7 @@ import {
 } from "@workspace/ui/components/dialog"
 import { Button } from "@workspace/ui/components/button"
 import { Label } from "@workspace/ui/components/label"
+import { SearchableSelect } from "@workspace/ui/components/searchable-select"
 import { cn } from "@workspace/ui/lib/utils"
 import { toastSuccess, toastError } from "@workspace/ui/lib/toast"
 import {
@@ -49,11 +50,17 @@ export function EventOrgDialog({
   const [createOrg, { isLoading: isCreating }] = useCreateEventOrganizationMutation()
   const [updateOrg, { isLoading: isUpdating }] = useUpdateEventOrganizationMutation()
   const { data: orgsData, isLoading: orgsLoading } = useListOrganizationsQuery(
-    { page: 1, per_page: 50 },
+    { per_page: 100 },
     { skip: !open || !!org }
   )
   const submitting = isCreating || isUpdating
   const organizations = orgsData?.data ?? []
+
+  const orgOptions = organizations.map((o) => ({
+    value: o.id,
+    label: o.name,
+    description: o.city ? `${o.city}, ${o.country ?? ""}` : undefined,
+  }))
 
   useEffect(() => {
     if (open) {
@@ -114,8 +121,10 @@ export function EventOrgDialog({
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit Event Organization" : "Add Event Organization"}</DialogTitle>
-          <DialogDescription>Link an organization to this event as a collaborator.</DialogDescription>
+          <DialogTitle>{isEdit ? "Edit Organization" : "Add Organization"}</DialogTitle>
+          <DialogDescription>
+            {isEdit ? "Update organization role and type." : "Associate an organization with this event."}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-5">
           {!isEdit && (
@@ -123,61 +132,55 @@ export function EventOrgDialog({
               <Label>
                 Organization <span className="text-destructive">*</span>
               </Label>
-              {orgsLoading ? (
-                <p className="text-sm text-muted-foreground">Loading organizations...</p>
-              ) : (
-                <div className="max-h-40 space-y-1.5 overflow-y-auto rounded-lg border border-border/50 p-2">
-                  {organizations.length === 0 ? (
-                    <p className="px-2 py-1.5 text-sm text-muted-foreground">No organizations found.</p>
-                  ) : (
-                    organizations.map((o) => (
-                      <button
-                        key={o.id}
-                        type="button"
-                        onClick={() => update("organizationId", o.id)}
-                        className={cn(
-                          "w-full rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors",
-                          form.organizationId === o.id
-                            ? "border-lime-500 bg-lime-50 text-lime-700 dark:bg-lime-950/20 dark:text-lime-400"
-                            : "border-border text-muted-foreground hover:border-foreground/20 hover:text-foreground"
-                        )}
-                      >
-                        {o.name}
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
+              <SearchableSelect
+                options={orgOptions}
+                value={form.organizationId}
+                onChange={(val) => update("organizationId", val)}
+                placeholder="Select organization..."
+                searchPlaceholder="Search organizations..."
+                loading={orgsLoading}
+                emptyMessage="No organizations found."
+              />
             </div>
           )}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Type</Label>
-              <select
-                value={form.type}
-                onChange={(e) => update("type", e.target.value)}
-                className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/50"
-              >
-                {typeOptions.map((t) => (
-                  <option key={t} value={t} className="capitalize">
-                    {t}
-                  </option>
-                ))}
-              </select>
+          <div className="space-y-2">
+            <Label>Type</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {typeOptions.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => update("type", t)}
+                  className={cn(
+                    "rounded-md border px-2.5 py-1.5 text-xs font-medium capitalize transition-colors",
+                    form.type === t
+                      ? "border-lime-500 bg-lime-50 text-lime-700 dark:bg-lime-950/20 dark:text-lime-400"
+                      : "border-border text-muted-foreground hover:border-foreground/20 hover:text-foreground"
+                  )}
+                >
+                  {t}
+                </button>
+              ))}
             </div>
-            <div className="space-y-2">
-              <Label>Role</Label>
-              <select
-                value={form.role}
-                onChange={(e) => update("role", e.target.value)}
-                className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/50"
-              >
-                {roleOptions.map((r) => (
-                  <option key={r} value={r} className="capitalize">
-                    {r}
-                  </option>
-                ))}
-              </select>
+          </div>
+          <div className="space-y-2">
+            <Label>Role</Label>
+            <div className="grid grid-cols-3 gap-2">
+              {roleOptions.map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => update("role", r)}
+                  className={cn(
+                    "rounded-md border px-2.5 py-1.5 text-xs font-medium capitalize transition-colors",
+                    form.role === r
+                      ? "border-lime-500 bg-lime-50 text-lime-700 dark:bg-lime-950/20 dark:text-lime-400"
+                      : "border-border text-muted-foreground hover:border-foreground/20 hover:text-foreground"
+                  )}
+                >
+                  {r.replace("_", " ")}
+                </button>
+              ))}
             </div>
           </div>
           {errorMsg && <p className="text-sm text-destructive">{errorMsg}</p>}
