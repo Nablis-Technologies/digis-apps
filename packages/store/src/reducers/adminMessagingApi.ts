@@ -3,11 +3,19 @@ import { baseQueryWithReauth } from "../api"
 
 export interface CreditRate {
   id: string
+  organization_id?: string | null
+  channel: "sms" | "email" | "whatsapp"
+  version?: number
   currency: string
-  rate_per_unit_minor: number
-  status: "active" | "retired" | "draft"
+  rate_per_unit_minor?: number
+  unit_price_minor?: number
+  provider_cost_minor?: number
+  country_code?: string
+  effective_from?: string
+  effective_until?: string
   effective_at?: string
   retired_at?: string
+  status: "active" | "retired" | "draft"
   created_at: string
   updated_at: string
 }
@@ -27,12 +35,15 @@ export interface AdminCampaign {
 
 export interface AdminCampaignTemplate {
   id: string
+  organization_id?: string | null
   name: string
   channel: "sms" | "email" | "whatsapp"
-  content: string
+  status?: string
+  content?: string
   subject?: string
   variables?: string[]
-  active: boolean
+  metadata?: Record<string, unknown>
+  active?: boolean
   created_at: string
   updated_at: string
 }
@@ -90,6 +101,14 @@ export const adminMessagingApi = createApi({
         url: "/admin/messaging/credit_rates",
         params: params ?? undefined,
       }),
+      transformResponse: (response: PaginatedResponse<CreditRate>) => ({
+        ...response,
+        data: (response.data || []).map((rate) => ({
+          ...rate,
+          unit_price_minor: rate.unit_price_minor ?? rate.rate_per_unit_minor ?? 0,
+          rate_per_unit_minor: rate.rate_per_unit_minor ?? rate.unit_price_minor ?? 0,
+        })),
+      }),
       providesTags: (result) =>
         result
           ? [
@@ -103,17 +122,41 @@ export const adminMessagingApi = createApi({
     }),
     getCreditRate: builder.query<SingleResponse<CreditRate>, string>({
       query: (id) => `/admin/messaging/credit_rates/${id}`,
+      transformResponse: (response: SingleResponse<CreditRate>) => ({
+        ...response,
+        data: {
+          ...response.data,
+          unit_price_minor:
+            response.data.unit_price_minor ?? response.data.rate_per_unit_minor ?? 0,
+          rate_per_unit_minor:
+            response.data.rate_per_unit_minor ?? response.data.unit_price_minor ?? 0,
+        },
+      }),
       providesTags: (_result, _error, id) => [{ type: "CreditRates", id }],
     }),
     createCreditRate: builder.mutation<
       SingleResponse<CreditRate>,
-      { credit_rate: Partial<CreditRate> }
+      | { credit_rate_version: Partial<CreditRate> }
+      | { credit_rate: Partial<CreditRate> }
     >({
-      query: (body) => ({
-        url: "/admin/messaging/credit_rates",
-        method: "POST",
-        body,
-      }),
+      query: (body) => {
+        const payload =
+          "credit_rate_version" in body
+            ? body
+            : {
+                credit_rate_version: {
+                  ...body.credit_rate,
+                  unit_price_minor:
+                    body.credit_rate.unit_price_minor ??
+                    body.credit_rate.rate_per_unit_minor,
+                },
+              }
+        return {
+          url: "/admin/messaging/credit_rates",
+          method: "POST",
+          body: payload,
+        }
+      },
       invalidatesTags: [{ type: "CreditRates", id: "LIST" }],
     }),
     activateCreditRate: builder.mutation<SingleResponse<CreditRate>, string>({
