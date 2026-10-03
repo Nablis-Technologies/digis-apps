@@ -5,19 +5,50 @@ import { baseQueryWithReauth } from "../api"
 // Type Definitions
 // ─────────────────────────────────────────────────────────────────────────────
 
+export interface EventDateVenue {
+  id: string
+  name: string
+  city?: string | null
+}
+
+export interface EventDateCapacity {
+  limit?: number | null
+  held?: number | null
+  issued?: number | null
+  available?: number | null
+}
+
 export interface Event {
   id: string
   title: string
+  slug?: string
   description: string | null
   visibility: "public" | "private"
   timezone: string
   currency: string
-  organization_id: string
+  // Top-level id is returned once the backend deploys it in the index/show
+  // projection; the nested summary is always rendered, so treat both as the
+  // source of truth.
+  organization_id?: string
+  organization?: { id: string; name: string; slug: string }
   category_ids: string[]
   status: "draft" | "published" | "cancelled" | "completed"
   published_at?: string | null
   created_at: string
   updated_at: string
+  event_media?: EventMedia[]
+  categories?: Array<{ id: string; name: string; slug: string }>
+  event_dates?: Array<{
+    id: string
+    name?: string | null
+    doors_at?: string | null
+    starts_at: string
+    ends_at?: string | null
+    timezone?: string
+    status?: string
+    venue?: EventDateVenue | null
+    capacity?: EventDateCapacity | null
+  }>
   [key: string]: unknown
 }
 
@@ -25,6 +56,7 @@ export interface EventDate {
   id: string
   event_id: string
   venue_id?: string | null
+  venue?: EventDateVenue | null
   name?: string | null
   doors_at?: string | null
   starts_at: string
@@ -32,19 +64,20 @@ export interface EventDate {
   timezone: string
   status?: string
   venue_capacity?: number | null
+  capacity?: EventDateCapacity | null
   created_at?: string
   updated_at?: string
 }
 
 export interface TicketTypeAttributes {
   approval_mode?: "automatic" | "manual"
-  audience?: "public" | "invite_only" | "passcode"
-  date_selection?: "fixed" | "flexible"
+  audience?: "public" | "invite_only" | "passcode" | "access_code" | "invitation" | "code_or_invitation" | string
+  date_selection?: "fixed" | "flexible" | "all_dates" | "attendee_choice" | string
   admissions_per_unit?: number
   waitlist_enabled?: boolean
   transferable?: boolean
   delegation_enabled?: boolean
-  entry_validation_mode?: "qr" | "manual"
+  entry_validation_mode?: "qr" | "manual" | string
   resale_enabled?: boolean
   max_packages_per_user?: number
 }
@@ -192,9 +225,83 @@ export interface EventMedia {
   position: number
   alt_text?: string | null
   caption?: string | null
+  file?: {
+    filename: string
+    content_type: string
+    byte_size: number
+    url: string
+    thumbnail: string
+    medium: string
+  } | null
   file_url?: string | null
   created_at?: string
   updated_at?: string
+}
+
+export interface EventParticipant {
+  id: string
+  event_id: string
+  event_date_id?: string | null
+  artist_id?: string | null
+  name: string
+  type: string
+  description?: string | null
+  display_order?: number | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface CreateEventParticipantPayload {
+  event_date_id?: string
+  artist_id?: string
+  name: string
+  type?: string
+  description?: string
+  display_order?: number
+}
+
+export interface EventVideoLink {
+  id: string
+  event_id: string
+  title: string
+  url: string
+  provider?: string | null
+  caption?: string | null
+  position?: number | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface CreateEventVideoLinkPayload {
+  title: string
+  url: string
+  provider?: string
+  caption?: string
+  position?: number
+}
+
+export interface EventOrganization {
+  id: string
+  type: string
+  role: string
+  status: string
+  organization_id: string
+  event_id: string
+  organization?: {
+    id: string
+    name: string
+    slug?: string
+    logo_url?: string | null
+    verified?: boolean
+  }
+  created_at?: string
+  updated_at?: string
+}
+
+export interface CreateEventOrgPayload {
+  organization_id: string
+  type: string
+  role: string
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -225,12 +332,15 @@ interface ListEventsParams {
   order_direction?: "asc" | "desc"
   "q[status_eq]"?: string
   "q[visibility_eq]"?: string
+  "q[organization_id_eq]"?: string
+  "q[organization_id_in]"?: string | string[]
 }
 
 export interface CreateEventPayload {
   event: {
     title: string
     description?: string
+    slug?: string
     visibility: "public" | "private"
     timezone?: string
     currency?: string
@@ -259,6 +369,9 @@ export const organizerEventsApi = createApi({
     "RegistrationForms",
     "RegistrationFormVersions",
     "EventMedia",
+    "EventParticipants",
+    "EventVideoLinks",
+    "EventOrganizations",
   ],
   endpoints: (builder) => ({
     // ─── Event Core Operations ───────────────────────────────────────────────
@@ -664,7 +777,11 @@ export const organizerEventsApi = createApi({
         method: "POST",
         body: formData,
       }),
-      invalidatesTags: (_result, _error, { eventId }) => [{ type: "EventMedia", id: eventId }],
+      invalidatesTags: (_result, _error, { eventId }) => [
+        { type: "EventMedia", id: eventId },
+        { type: "Events", id: eventId },
+        { type: "Events", id: "LIST" },
+      ],
     }),
 
     updateEventMedia: builder.mutation<
@@ -679,6 +796,8 @@ export const organizerEventsApi = createApi({
       invalidatesTags: (_result, _error, { mediaId, eventId }) => [
         { type: "EventMedia", id: mediaId },
         { type: "EventMedia", id: eventId },
+        { type: "Events", id: eventId },
+        { type: "Events", id: "LIST" },
       ],
     }),
 
@@ -687,7 +806,11 @@ export const organizerEventsApi = createApi({
         url: `/events/${eventId}/event_media/${mediaId}`,
         method: "DELETE",
       }),
-      invalidatesTags: (_result, _error, { eventId }) => [{ type: "EventMedia", id: eventId }],
+      invalidatesTags: (_result, _error, { eventId }) => [
+        { type: "EventMedia", id: eventId },
+        { type: "Events", id: eventId },
+        { type: "Events", id: "LIST" },
+      ],
     }),
 
     reorderEventMedia: builder.mutation<SingleResponse<EventMedia[]>, { eventId: string; orderedIds: string[] }>({
@@ -697,6 +820,204 @@ export const organizerEventsApi = createApi({
         body: { ordered_ids: orderedIds },
       }),
       invalidatesTags: (_result, _error, { eventId }) => [{ type: "EventMedia", id: eventId }],
+    }),
+
+    // ─── Lifecycle & Operations ──────────────────────────────────────────────
+    completeEvent: builder.mutation<SingleResponse<Event>, string>({
+      query: (eventId) => ({
+        url: `/events/${eventId}/complete`,
+        method: "POST",
+        headers: {
+          "Idempotency-Key": crypto.randomUUID(),
+        },
+      }),
+      invalidatesTags: (_result, _error, eventId) => [
+        { type: "Events", id: eventId },
+        { type: "Events", id: "LIST" },
+      ],
+    }),
+
+    createEventScheduleChange: builder.mutation<
+      SingleResponse<unknown>,
+      {
+        eventId: string
+        payload: {
+          changes: Array<{
+            event_date_id: string
+            new_start_at: string
+            new_end_at?: string
+            change_type: "rescheduled" | "time_adjusted" | string
+          }>
+        }
+      }
+    >({
+      query: ({ eventId, payload }) => ({
+        url: `/events/${eventId}/event_schedule_changes`,
+        method: "POST",
+        headers: {
+          "Idempotency-Key": crypto.randomUUID(),
+        },
+        body: { schedule_change: payload },
+      }),
+      invalidatesTags: (_result, _error, { eventId }) => [
+        { type: "Events", id: eventId },
+        { type: "EventDates", id: eventId },
+      ],
+    }),
+
+    createEventCancellation: builder.mutation<
+      SingleResponse<unknown>,
+      {
+        eventId: string
+        payload: {
+          internal_note?: string
+          attendee_reason: string
+        }
+      }
+    >({
+      query: ({ eventId, payload }) => ({
+        url: `/events/${eventId}/event_cancellations`,
+        method: "POST",
+        headers: {
+          "Idempotency-Key": crypto.randomUUID(),
+        },
+        body: { cancellation: payload },
+      }),
+      invalidatesTags: (_result, _error, { eventId }) => [
+        { type: "Events", id: eventId },
+        { type: "Events", id: "LIST" },
+      ],
+    }),
+
+    // ─── Event Participants ──────────────────────────────────────────────────
+    listEventParticipants: builder.query<
+      PaginatedResponse<EventParticipant>,
+      { eventId: string; params?: { page?: number; per_page?: number } }
+    >({
+      query: ({ eventId, params }) => ({
+        url: `/events/${eventId}/event_participants`,
+        params,
+      }),
+      providesTags: (result, _error, { eventId }) =>
+        Array.isArray(result?.data)
+          ? [
+              ...result.data.map(({ id }) => ({ type: "EventParticipants" as const, id })),
+              { type: "EventParticipants", id: `LIST-${eventId}` },
+            ]
+          : [{ type: "EventParticipants", id: `LIST-${eventId}` }],
+    }),
+
+    createEventParticipant: builder.mutation<
+      SingleResponse<EventParticipant>,
+      { eventId: string; participant: CreateEventParticipantPayload }
+    >({
+      query: ({ eventId, participant }) => ({
+        url: `/events/${eventId}/event_participants`,
+        method: "POST",
+        body: { event_participant: participant },
+      }),
+      invalidatesTags: (_result, _error, { eventId }) => [
+        { type: "EventParticipants", id: `LIST-${eventId}` },
+      ],
+    }),
+
+    deleteEventParticipant: builder.mutation<void, { eventId: string; participantId: string }>({
+      query: ({ eventId, participantId }) => ({
+        url: `/events/${eventId}/event_participants/${participantId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, { eventId }) => [
+        { type: "EventParticipants", id: `LIST-${eventId}` },
+      ],
+    }),
+
+    // ─── Event Video Links ───────────────────────────────────────────────────
+    listEventVideoLinks: builder.query<
+      PaginatedResponse<EventVideoLink>,
+      { eventId: string; params?: { page?: number; per_page?: number } }
+    >({
+      query: ({ eventId, params }) => ({
+        url: `/events/${eventId}/event_video_links`,
+        params,
+      }),
+      providesTags: (result, _error, { eventId }) =>
+        Array.isArray(result?.data)
+          ? [
+              ...result.data.map(({ id }) => ({ type: "EventVideoLinks" as const, id })),
+              { type: "EventVideoLinks", id: `LIST-${eventId}` },
+            ]
+          : [{ type: "EventVideoLinks", id: `LIST-${eventId}` }],
+    }),
+
+    createEventVideoLink: builder.mutation<
+      SingleResponse<EventVideoLink>,
+      { eventId: string; videoLink: CreateEventVideoLinkPayload }
+    >({
+      query: ({ eventId, videoLink }) => ({
+        url: `/events/${eventId}/event_video_links`,
+        method: "POST",
+        body: { event_video_link: videoLink },
+      }),
+      invalidatesTags: (_result, _error, { eventId }) => [
+        { type: "EventVideoLinks", id: `LIST-${eventId}` },
+      ],
+    }),
+
+    deleteEventVideoLink: builder.mutation<void, { eventId: string; videoLinkId: string }>({
+      query: ({ eventId, videoLinkId }) => ({
+        url: `/events/${eventId}/event_video_links/${videoLinkId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, { eventId }) => [
+        { type: "EventVideoLinks", id: `LIST-${eventId}` },
+      ],
+    }),
+
+    // ─── Event Organizations (Collaborators) ──────────────────────────────────
+    listEventOrganizations: builder.query<
+      PaginatedResponse<EventOrganization>,
+      { eventId: string; params?: { page?: number; per_page?: number } }
+    >({
+      query: ({ eventId, params }) => ({
+        url: `/events/${eventId}/event_organizations`,
+        params,
+      }),
+      providesTags: (result, _error, { eventId }) => {
+        const raw = result?.data as any
+        const items: any[] = Array.isArray(raw?.collaborators)
+          ? raw.collaborators
+          : Array.isArray(raw)
+          ? raw
+          : []
+        return [
+          ...items.map(({ id }) => ({ type: "EventOrganizations" as const, id })),
+          { type: "EventOrganizations", id: `LIST-${eventId}` },
+        ]
+      },
+    }),
+
+    createEventOrganization: builder.mutation<
+      SingleResponse<EventOrganization>,
+      { eventId: string; organization: CreateEventOrgPayload }
+    >({
+      query: ({ eventId, organization }) => ({
+        url: `/events/${eventId}/event_organizations`,
+        method: "POST",
+        body: { event_organization: organization },
+      }),
+      invalidatesTags: (_result, _error, { eventId }) => [
+        { type: "EventOrganizations", id: `LIST-${eventId}` },
+      ],
+    }),
+
+    deleteEventOrganization: builder.mutation<void, { eventId: string; orgId: string }>({
+      query: ({ eventId, orgId }) => ({
+        url: `/events/${eventId}/event_organizations/${orgId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, { eventId }) => [
+        { type: "EventOrganizations", id: `LIST-${eventId}` },
+      ],
     }),
   }),
 })
@@ -712,6 +1033,9 @@ export const {
   useCreateEventMutation,
   useUpdateEventMutation,
   usePublishEventMutation,
+  useCompleteEventMutation,
+  useCreateEventScheduleChangeMutation,
+  useCreateEventCancellationMutation,
 
   // Event Dates
   useListEventDatesQuery,
@@ -766,4 +1090,19 @@ export const {
   useUpdateEventMediaMutation,
   useDeleteEventMediaMutation,
   useReorderEventMediaMutation,
+
+  // Event Participants
+  useListEventParticipantsQuery,
+  useCreateEventParticipantMutation,
+  useDeleteEventParticipantMutation,
+
+  // Event Video Links
+  useListEventVideoLinksQuery,
+  useCreateEventVideoLinkMutation,
+  useDeleteEventVideoLinkMutation,
+
+  // Event Organizations
+  useListEventOrganizationsQuery,
+  useCreateEventOrganizationMutation,
+  useDeleteEventOrganizationMutation,
 } = organizerEventsApi

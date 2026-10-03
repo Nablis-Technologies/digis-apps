@@ -20,15 +20,33 @@ export type FeeComponentTier = {
   maximum_minor?: number
 }
 
+export interface FeeAmount {
+  currency: string
+  fixed_amount_minor: number
+  minimum_minor: number | null
+  maximum_minor: number | null
+}
+
+export interface FeeTier {
+  position: number
+  metric_type: string
+  window_type: string
+  currency: string
+  starts_at_value: number
+  rate_bps: number
+}
+
 export type FeeComponent = {
   id?: string
-  component_type?: string
-  calculation_type?: string
-  charged_to?: string
+  fee_component_id?: string
+  label?: string
+  component_type: string
+  calculation_type: string
+  charged_to: "buyer" | "organizer"
   organizer_payer_choice?: string
   funded_by?: string
   basis_type?: string
-  rate_bps?: number
+  rate_bps: number
   refund_policy?: string
   event_product_id?: string
   product_type?: string
@@ -36,9 +54,8 @@ export type FeeComponent = {
   provider?: string
   sales_channel?: string
   currency?: string
-  label?: string
-  amounts?: FeeComponentAmount[]
-  tiers?: FeeComponentTier[]
+  amounts?: FeeComponentAmount[] | FeeAmount[]
+  tiers?: FeeComponentTier[] | FeeTier[]
 }
 
 export interface FeeScheduleVersion {
@@ -52,8 +69,51 @@ export interface FeeScheduleVersion {
   effective_until?: string | null
   legal_document_version_id?: string | null
   fee_components?: FeeComponent[]
+  components?: FeeComponent[]
   created_at: string
   updated_at: string
+}
+
+export interface CommercialTermsVersion {
+  id: string
+  status: string
+  effective_from: string | null
+  effective_until: string | null
+  acceptance_policy: string
+  legal_document_version_id: string | null
+  components: FeeComponent[]
+}
+
+export interface OrganizationTermsData {
+  organization_id: string
+  current_terms: CommercialTermsVersion | null
+  scheduled_terms: CommercialTermsVersion | null
+  acceptance_history?: unknown[]
+  event_exceptions?: unknown[]
+}
+
+export interface EventPayerSelection {
+  id: string
+  event_id: string
+  fee_component_id: string
+  charged_to: "buyer" | "organizer"
+  selected_at?: string
+  selected_by_id?: string
+  created_at?: string
+  updated_at?: string
+  fee_component?: {
+    id: string
+    label: string
+    component_type: string
+    calculation_type: string
+    rate_bps: number
+    charged_to: "buyer" | "organizer" | string
+  }
+}
+
+export interface SetEventPayerSelectionPayload {
+  fee_component_id: string
+  charged_to: "buyer" | "organizer"
 }
 
 export interface FeeSchedule {
@@ -128,6 +188,13 @@ interface PaginatedResponse<T> {
 interface SingleResponse<T> {
   success: boolean
   data: T
+  message?: string
+}
+
+interface ArrayResponse<T> {
+  success: boolean
+  message?: string
+  data: T[]
 }
 
 interface ListParams {
@@ -147,9 +214,78 @@ export const commercialApi = createApi({
     "Assignments",
     "SubsidyBudgets",
     "Simulations",
+    "CommercialTerms",
+    "EventPayerSelections",
   ],
   endpoints: (builder) => ({
-    // ── Fee Schedules ─────────────────────────────────────────────────────
+    // ── Organizer Commercial Endpoints ────────────────────────────────────
+    getOrganizationTerms: builder.query<
+      SingleResponse<OrganizationTermsData>,
+      { organizationId: string }
+    >({
+      query: ({ organizationId }) => ({
+        url: `/commercial/organizations/${organizationId}/terms`,
+      }),
+      providesTags: (_res, _err, { organizationId }) => [
+        { type: "CommercialTerms", id: organizationId },
+      ],
+    }),
+
+    listEventPayerSelections: builder.query<
+      ArrayResponse<EventPayerSelection>,
+      { eventId: string }
+    >({
+      query: ({ eventId }) => ({
+        url: `/commercial/events/${eventId}/event_payer_selections`,
+      }),
+      providesTags: (_res, _err, { eventId }) => [
+        { type: "EventPayerSelections", id: `LIST-${eventId}` },
+      ],
+    }),
+
+    getEventPayerSelection: builder.query<
+      SingleResponse<EventPayerSelection>,
+      { eventId: string; selectionId: string }
+    >({
+      query: ({ eventId, selectionId }) => ({
+        url: `/commercial/events/${eventId}/event_payer_selections/${selectionId}`,
+      }),
+      providesTags: (_res, _err, { selectionId }) => [
+        { type: "EventPayerSelections", id: selectionId },
+      ],
+    }),
+
+    setEventPayerSelection: builder.mutation<
+      SingleResponse<EventPayerSelection>,
+      {
+        eventId: string
+        selection: SetEventPayerSelectionPayload
+        idempotencyKey?: string
+      }
+    >({
+      query: ({ eventId, selection, idempotencyKey }) => {
+        const key =
+          idempotencyKey ||
+          (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+            ? crypto.randomUUID()
+            : `idemp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`)
+        return {
+          url: `/commercial/events/${eventId}/event_payer_selections`,
+          method: "POST",
+          headers: {
+            "Idempotency-Key": key,
+          },
+          body: {
+            event_payer_selection: selection,
+          },
+        }
+      },
+      invalidatesTags: (_res, _err, { eventId }) => [
+        { type: "EventPayerSelections", id: `LIST-${eventId}` },
+      ],
+    }),
+
+    // ── Admin Fee Schedules ────────────────────────────────────────────────
     listFeeSchedules: builder.query<PaginatedResponse<FeeSchedule>, ListParams | void>({
       query: (params) => ({
         url: "/admin/commercial/fee_schedules",
@@ -192,7 +328,7 @@ export const commercialApi = createApi({
       invalidatesTags: (_result, _error, { id }) => [{ type: "FeeSchedules", id }],
     }),
 
-    // ── Fee Schedule Versions ─────────────────────────────────────────────
+    // ── Admin Fee Schedule Versions ────────────────────────────────────────
     listFeeScheduleVersions: builder.query<PaginatedResponse<FeeScheduleVersion>, { feeScheduleId?: string } | void>({
       query: (params) => ({
         url: "/admin/commercial/fee_schedule_versions",
@@ -317,7 +453,7 @@ export const commercialApi = createApi({
       invalidatesTags: (_result, _error, { id }) => [{ type: "FeeScheduleVersions", id }],
     }),
 
-    // ── Programs ──────────────────────────────────────────────────────────
+    // ── Admin Programs ─────────────────────────────────────────────────────
     listPrograms: builder.query<PaginatedResponse<CommercialProgram>, ListParams | void>({
       query: (params) => ({
         url: "/admin/commercial/programs",
@@ -369,7 +505,7 @@ export const commercialApi = createApi({
       invalidatesTags: (_result, _error, { id }) => [{ type: "Programs", id }],
     }),
 
-    // ── Assignments ───────────────────────────────────────────────────────
+    // ── Admin Assignments ──────────────────────────────────────────────────
     listAssignments: builder.query<PaginatedResponse<CommercialAssignment>, ListParams | void>({
       query: (params) => ({
         url: "/admin/commercial/assignments",
@@ -463,18 +599,18 @@ export const commercialApi = createApi({
     }),
     terminateAssignment: builder.mutation<
       SingleResponse<CommercialAssignment>,
-      { id: string; reason?: string; idempotencyKey?: string }
+      { id: string; reason?: string; breakGlass?: boolean; idempotencyKey?: string }
     >({
-      query: ({ id, reason, idempotencyKey }) => ({
+      query: ({ id, reason, breakGlass, idempotencyKey }) => ({
         url: `/admin/commercial/assignments/${id}/terminate`,
         method: "POST",
-        params: reason ? { reason } : undefined,
+        params: { reason: reason ?? undefined, break_glass: breakGlass ?? undefined },
         headers: idempotencyKey ? { "Idempotency-Key": idempotencyKey } : undefined,
       }),
       invalidatesTags: (_result, _error, { id }) => [{ type: "Assignments", id }],
     }),
 
-    // ── Subsidy Budgets ───────────────────────────────────────────────────
+    // ── Admin Subsidy Budgets ──────────────────────────────────────────────
     listSubsidyBudgets: builder.query<PaginatedResponse<SubsidyBudget>, ListParams | void>({
       query: (params) => ({
         url: "/admin/commercial/subsidy_budgets",
@@ -524,7 +660,7 @@ export const commercialApi = createApi({
       invalidatesTags: (_result, _error, { id }) => [{ type: "SubsidyBudgets", id }],
     }),
 
-    // ── Simulations ───────────────────────────────────────────────────────
+    // ── Admin Simulations ──────────────────────────────────────────────────
     listSimulations: builder.query<PaginatedResponse<Simulation>, ListParams | void>({
       query: (params) => ({
         url: "/admin/commercial/simulations",
@@ -563,6 +699,13 @@ export const commercialApi = createApi({
 })
 
 export const {
+  // Organizer hooks
+  useGetOrganizationTermsQuery,
+  useListEventPayerSelectionsQuery,
+  useGetEventPayerSelectionQuery,
+  useSetEventPayerSelectionMutation,
+
+  // Admin hooks
   useListFeeSchedulesQuery,
   useCreateFeeScheduleMutation,
   useUpdateFeeScheduleMutation,

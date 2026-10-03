@@ -1,18 +1,28 @@
 import { createApi } from "@reduxjs/toolkit/query/react"
-import { baseQueryWithReauth } from "../api"
+import { baseQueryWithReauth, generateIdempotencyKey } from "../api"
+
+export interface NotificationDelivery {
+  id: string
+  channel: "in_app" | "email" | "sms" | string
+  status: "pending" | "sent" | "failed" | string
+  sent_at?: string | null
+  failed_at?: string | null
+}
 
 export interface NotificationItem {
   id: string
   user_id?: string
-  title: string
-  message: string
-  category?: string
-  notification_type?: string
-  read: boolean
-  read_at: string | null
+  notification_type: string
+  category: string
+  title?: string
+  message?: string
+  description?: string
+  read?: boolean
+  read_at?: string | null
   available_at?: string | null
   data?: Record<string, unknown>
   metadata?: Record<string, unknown>
+  deliveries?: NotificationDelivery[]
   created_at: string
   updated_at?: string
 }
@@ -20,30 +30,37 @@ export interface NotificationItem {
 export interface NotificationPreferenceRecord {
   id?: string
   category: string
-  channel: string
+  channel: "in_app" | "email" | "sms" | string
   enabled: boolean
 }
 
-export interface NotificationPreferences {
+export type NotificationPreference = NotificationPreferenceRecord
+
+export type NotificationPreferencesData = NotificationPreference[] & {
   email_enabled?: boolean
   sms_enabled?: boolean
   push_enabled?: boolean
   marketing_emails?: boolean
   transactional_sms?: boolean
   security_alerts?: boolean
-  preferences?: NotificationPreferenceRecord[]
+  preferences?: NotificationPreference[]
   [key: string]: unknown
 }
 
-interface ListNotificationsParams {
+export type NotificationPreferences = NotificationPreferencesData
+
+export interface ListNotificationsParams {
   page?: number
   per_page?: number
+  "q[read_at_null]"?: boolean
+  order_by?: string
+  order_direction?: "asc" | "desc"
 }
 
-interface PaginatedResponse<T> {
+export interface PaginatedNotificationsResponse {
   success: boolean
-  data: T[]
-  pagination: {
+  data: NotificationItem[]
+  pagination?: {
     current_page: number
     per_page: number
     total_count: number
@@ -51,9 +68,16 @@ interface PaginatedResponse<T> {
   }
 }
 
-interface SingleResponse<T> {
+export interface SingleNotificationResponse {
   success: boolean
-  data: T
+  data: NotificationItem
+  message?: string
+}
+
+export interface PreferencesResponse {
+  success: boolean
+  data: NotificationPreferencesData
+  message?: string
 }
 
 export const notificationsApi = createApi({
@@ -62,32 +86,46 @@ export const notificationsApi = createApi({
   tagTypes: ["Notifications", "NotificationPreferences"],
   endpoints: (builder) => ({
     listNotifications: builder.query<
-      PaginatedResponse<NotificationItem>,
+      PaginatedNotificationsResponse,
       ListNotificationsParams | void
     >({
       query: (params) => ({
         url: "/notifications",
-        params: params ?? undefined,
+        params: params || { page: 1, per_page: 25 },
       }),
       transformResponse: (response: any) => {
         const rawList = Array.isArray(response?.data) ? response.data : []
-        const data: NotificationItem[] = rawList.map((item: any) => ({
-          ...item,
-          title:
+        const data: NotificationItem[] = rawList.map((item: any) => {
+          const payload = (item.data || {}) as Record<string, any>
+          const derivedTitle =
             item.title ??
-            item.data?.title ??
+            payload?.title ??
+            payload?.subject ??
             item.notification_type?.replace(/_/g, " ") ??
-            "Notification",
-          message: item.message ?? item.data?.message ?? item.data?.text ?? "",
-          read: item.read ?? Boolean(item.read_at),
-        }))
+            "Notification"
+          const derivedMessage =
+            item.message ??
+            payload?.message ??
+            payload?.body ??
+            payload?.description ??
+            payload?.text ??
+            item.category ??
+            ""
+          return {
+            ...item,
+            title: derivedTitle,
+            message: derivedMessage,
+            description: item.description ?? derivedMessage,
+            read: item.read ?? Boolean(item.read_at),
+          }
+        })
         return {
           ...response,
           data,
         }
       },
       providesTags: (result) =>
-        result
+        result?.data
           ? [
               ...result.data.map(({ id }) => ({
                 type: "Notifications" as const,
@@ -97,75 +135,98 @@ export const notificationsApi = createApi({
             ]
           : [{ type: "Notifications", id: "LIST" }],
     }),
-    getNotification: builder.query<SingleResponse<NotificationItem>, string>({
+
+    getNotification: builder.query<SingleNotificationResponse, string>({
       query: (id) => `/notifications/${id}`,
       transformResponse: (response: any) => {
         const item = response.data || {}
+        const payload = (item.data || {}) as Record<string, any>
+        const derivedTitle =
+          item.title ??
+          payload?.title ??
+          payload?.subject ??
+          item.notification_type?.replace(/_/g, " ") ??
+          "Notification"
+        const derivedMessage =
+          item.message ??
+          payload?.message ??
+          payload?.body ??
+          payload?.description ??
+          payload?.text ??
+          ""
         return {
           ...response,
           data: {
             ...item,
-            title:
-              item.title ??
-              item.data?.title ??
-              item.notification_type?.replace(/_/g, " ") ??
-              "Notification",
-            message: item.message ?? item.data?.message ?? item.data?.text ?? "",
+            title: derivedTitle,
+            message: derivedMessage,
+            description: item.description ?? derivedMessage,
             read: item.read ?? Boolean(item.read_at),
           },
         }
       },
-      providesTags: (_result, _error, id) => [{ type: "Notifications", id }],
+      providesTags: (_res, _err, id) => [{ type: "Notifications", id }],
     }),
-    markNotificationAsRead: builder.mutation<
-      SingleResponse<NotificationItem>,
-      string
-    >({
+
+    markNotificationRead: builder.mutation<SingleNotificationResponse, string>({
       query: (id) => ({
         url: `/notifications/${id}/read`,
         method: "POST",
       }),
-      invalidatesTags: (_result, _error, id) => [
+      invalidatesTags: (_res, _err, id) => [
         { type: "Notifications", id },
         { type: "Notifications", id: "LIST" },
       ],
     }),
-    getNotificationPreferences: builder.query<
-      SingleResponse<NotificationPreferences>,
-      void
-    >({
+
+    markNotificationAsRead: builder.mutation<SingleNotificationResponse, string>({
+      query: (id) => ({
+        url: `/notifications/${id}/read`,
+        method: "POST",
+      }),
+      invalidatesTags: (_res, _err, id) => [
+        { type: "Notifications", id },
+        { type: "Notifications", id: "LIST" },
+      ],
+    }),
+
+    getNotificationPreferences: builder.query<PreferencesResponse, void>({
       query: () => "/notification_preferences",
       transformResponse: (response: any) => {
-        const raw = response.data
-        if (Array.isArray(raw)) {
-          const prefsMap: NotificationPreferences = {
-            preferences: raw,
-            email_enabled: !raw.some((p) => p.channel === "email" && p.enabled === false),
-            sms_enabled: !raw.some((p) => p.channel === "sms" && p.enabled === false),
-            push_enabled: !raw.some((p) => p.channel === "push" && p.enabled === false),
-            security_alerts: !raw.some(
-              (p) => p.category === "security" && p.enabled === false
-            ),
-            transactional_sms: !raw.some(
-              (p) => p.category === "transactional" && p.channel === "sms" && p.enabled === false
-            ),
-          }
-          return {
-            ...response,
-            data: prefsMap,
-          }
+        const raw: NotificationPreference[] = Array.isArray(response?.data)
+          ? response.data
+          : []
+        const prefsMap = {
+          email_enabled: !raw.some((p) => p.channel === "email" && p.enabled === false),
+          sms_enabled: !raw.some((p) => p.channel === "sms" && p.enabled === false),
+          push_enabled: !raw.some((p) => p.channel === "push" && p.enabled === false),
+          security_alerts: !raw.some(
+            (p) => p.category === "security" && p.enabled === false
+          ),
+          transactional_sms: !raw.some(
+            (p) => p.category === "transactional" && p.channel === "sms" && p.enabled === false
+          ),
+          preferences: raw,
         }
-        return response
+        const dataWithHelpers = Object.assign([...raw], prefsMap) as NotificationPreferencesData
+        return {
+          ...response,
+          data: dataWithHelpers,
+        }
       },
-      providesTags: [{ type: "NotificationPreferences", id: "CURRENT" }],
+      providesTags: [
+        { type: "NotificationPreferences", id: "CURRENT" },
+        "NotificationPreferences",
+      ],
     }),
+
     updateNotificationPreferences: builder.mutation<
-      SingleResponse<NotificationPreferences>,
+      PreferencesResponse,
       | Partial<NotificationPreferences>
-      | { preferences: NotificationPreferenceRecord[] }
+      | { preferences: NotificationPreference[] }
     >({
       query: (body) => {
-        let preferences: NotificationPreferenceRecord[] = []
+        let preferences: NotificationPreference[] = []
         if ("preferences" in body && Array.isArray(body.preferences)) {
           preferences = body.preferences
         } else {
@@ -188,10 +249,16 @@ export const notificationsApi = createApi({
         return {
           url: "/notification_preferences",
           method: "PATCH",
+          headers: {
+            "Idempotency-Key": generateIdempotencyKey(),
+          },
           body: { preferences },
         }
       },
-      invalidatesTags: [{ type: "NotificationPreferences", id: "CURRENT" }],
+      invalidatesTags: [
+        { type: "NotificationPreferences", id: "CURRENT" },
+        "NotificationPreferences",
+      ],
     }),
   }),
 })
@@ -199,6 +266,7 @@ export const notificationsApi = createApi({
 export const {
   useListNotificationsQuery,
   useGetNotificationQuery,
+  useMarkNotificationReadMutation,
   useMarkNotificationAsReadMutation,
   useGetNotificationPreferencesQuery,
   useUpdateNotificationPreferencesMutation,

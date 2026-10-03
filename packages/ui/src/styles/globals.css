@@ -23,7 +23,9 @@
     --color-chart-3: var(--chart-3);
     --color-chart-2: var(--chart-2);
     --color-chart-1: var(--chart-1);
+    --color-event-ticketed: var(--event-ticketed);
     --color-event-rsvp: var(--event-rsvp);
+    --color-event-free: var(--event-free);
     --color-event-invite: var(--event-invite);
     --color-ring: var(--ring);
     --color-input: var(--input);
@@ -76,7 +78,9 @@
     --chart-3: oklch(0.648 0.2 131.684);
     --chart-4: oklch(0.532 0.157 131.589);
     --chart-5: oklch(0.453 0.124 130.933);
+    --event-ticketed: oklch(0.897 0.196 126.665);
     --event-rsvp: oklch(0.7 0.15 240);
+    --event-free: oklch(0.648 0.2 131.684);
     --event-invite: oklch(0.75 0.15 50);
     --radius: 0.45rem;
     --sidebar: oklch(0.988 0.003 106.5);
@@ -113,7 +117,9 @@
     --chart-3: oklch(0.648 0.2 131.684);
     --chart-4: oklch(0.532 0.157 131.589);
     --chart-5: oklch(0.453 0.124 130.933);
+    --event-ticketed: oklch(0.897 0.196 126.665);
     --event-rsvp: oklch(0.65 0.18 240);
+    --event-free: oklch(0.648 0.2 131.684);
     --event-invite: oklch(0.7 0.18 50);
     --sidebar: oklch(0.228 0.013 107.4);
     --sidebar-foreground: oklch(0.988 0.003 106.5);
@@ -163,16 +169,45 @@
 
 @layer utilities {
   /* Event type color utilities - ensures Tailwind generates all event type bg/text/border classes */
+  .bg-event-ticketed { background-color: var(--event-ticketed); }
   .bg-event-rsvp { background-color: var(--event-rsvp); }
+  .bg-event-free { background-color: var(--event-free); }
   .bg-event-invite { background-color: var(--event-invite); }
+  .text-event-ticketed { color: var(--event-ticketed); }
   .text-event-rsvp { color: var(--event-rsvp); }
+  .text-event-free { color: var(--event-free); }
   .text-event-invite { color: var(--event-invite); }
+  .border-event-ticketed { border-color: var(--event-ticketed); }
   .border-event-rsvp { border-color: var(--event-rsvp); }
+  .border-event-free { border-color: var(--event-free); }
   .border-event-invite { border-color: var(--event-invite); }
   
   /* Opacity variants for event colors */
+  .bg-event-ticketed\/10 { background-color: color-mix(in oklab, var(--event-ticketed) 10%, transparent); }
+  .bg-event-ticketed\/15 { background-color: color-mix(in oklab, var(--event-ticketed) 15%, transparent); }
+  .bg-event-ticketed\/20 { background-color: color-mix(in oklab, var(--event-ticketed) 20%, transparent); }
   .bg-event-rsvp\/10 { background-color: color-mix(in oklab, var(--event-rsvp) 10%, transparent); }
+  .bg-event-rsvp\/15 { background-color: color-mix(in oklab, var(--event-rsvp) 15%, transparent); }
+  .bg-event-rsvp\/20 { background-color: color-mix(in oklab, var(--event-rsvp) 20%, transparent); }
+  .bg-event-free\/10 { background-color: color-mix(in oklab, var(--event-free) 10%, transparent); }
+  .bg-event-free\/15 { background-color: color-mix(in oklab, var(--event-free) 15%, transparent); }
+  .bg-event-free\/20 { background-color: color-mix(in oklab, var(--event-free) 20%, transparent); }
   .bg-event-invite\/10 { background-color: color-mix(in oklab, var(--event-invite) 10%, transparent); }
+  .bg-event-invite\/15 { background-color: color-mix(in oklab, var(--event-invite) 15%, transparent); }
+  .bg-event-invite\/20 { background-color: color-mix(in oklab, var(--event-invite) 20%, transparent); }
   .bg-chart-3\/10 { background-color: color-mix(in oklab, var(--chart-3) 10%, transparent); }
   .bg-chart-1\/10 { background-color: color-mix(in oklab, var(--chart-1) 10%, transparent); }
+
+  .border-event-ticketed\/20 { border-color: color-mix(in oklab, var(--event-ticketed) 20%, transparent); }
+  .border-event-ticketed\/30 { border-color: color-mix(in oklab, var(--event-ticketed) 30%, transparent); }
+  .border-event-ticketed\/40 { border-color: color-mix(in oklab, var(--event-ticketed) 40%, transparent); }
+  .border-event-rsvp\/20 { border-color: color-mix(in oklab, var(--event-rsvp) 20%, transparent); }
+  .border-event-rsvp\/30 { border-color: color-mix(in oklab, var(--event-rsvp) 30%, transparent); }
+  .border-event-rsvp\/40 { border-color: color-mix(in oklab, var(--event-rsvp) 40%, transparent); }
+  .border-event-free\/20 { border-color: color-mix(in oklab, var(--event-free) 20%, transparent); }
+  .border-event-free\/30 { border-color: color-mix(in oklab, var(--event-free) 30%, transparent); }
+  .border-event-free\/40 { border-color: color-mix(in oklab, var(--event-free) 40%, transparent); }
+  .border-event-invite\/20 { border-color: color-mix(in oklab, var(--event-invite) 20%, transparent); }
+  .border-event-invite\/30 { border-color: color-mix(in oklab, var(--event-invite) 30%, transparent); }
+  .border-event-invite\/40 { border-color: color-mix(in oklab, var(--event-invite) 40%, transparent); }
 }

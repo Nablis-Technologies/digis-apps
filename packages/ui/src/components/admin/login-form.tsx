@@ -8,6 +8,8 @@ import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { useLoginMutation } from "@workspace/store/reducers/authApi"
 import { toastSuccess, toastError } from "@workspace/ui/lib/toast"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { EyeIcon, EyeOffIcon } from "@hugeicons/core-free-icons"
 
 type LoginFormProps = React.ComponentProps<"form"> & { redirectTo?: string }
 
@@ -19,6 +21,7 @@ export function LoginForm({
   const router = useRouter()
   const [identifier, setIdentifier] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [login, { isLoading, error }] = useLoginMutation()
 
   async function handleSubmit(e: React.FormEvent) {
@@ -67,14 +70,28 @@ export function LoginForm({
               Forgot your password?
             </a>
           </div>
-          <Input
-            id="password"
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="bg-background"
-          />
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="bg-background pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            >
+              <HugeiconsIcon
+                icon={showPassword ? EyeOffIcon : EyeIcon}
+                strokeWidth={2}
+                className="size-4"
+              />
+            </button>
+          </div>
         </Field>
         {error && "status" in error && (
           <p className="text-sm text-destructive">

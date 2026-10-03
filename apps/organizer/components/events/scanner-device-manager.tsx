@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { PhoneInput, normalizeEthiopianPhone } from "@/components/ui/phone-input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -63,7 +64,7 @@ export function ScannerDeviceManager({ eventId }: ScannerDeviceManagerProps) {
     const newDevice: ScannerDevice = {
       id: `scanner-${devices.length + 1}`,
       label: deviceLabel,
-      phone: devicePhone,
+      phone: normalizeEthiopianPhone(devicePhone),
       inviteCode,
       status: "invited",
     }
@@ -121,9 +122,9 @@ export function ScannerDeviceManager({ eventId }: ScannerDeviceManagerProps) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="device-phone">Phone number</Label>
-              <Input
+              <PhoneInput
                 id="device-phone"
-                placeholder="+251 900 000 000"
+                placeholder="90 000 0000"
                 value={devicePhone}
                 onChange={(e) => setDevicePhone(e.target.value)}
               />

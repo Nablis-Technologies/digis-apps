@@ -65,11 +65,13 @@ export type RowAction<T> = {
   /** Click handler */
   onClick: (row: T) => void
   /** Variant for styling */
-  variant?: "default" | "destructive"
+  variant?: "default" | "destructive" | "success"
   /** Whether to show in primary actions (max 3) */
   primary?: boolean
   /** Show only icon without label (for primary actions) */
   iconOnly?: boolean
+  /** Whether this action is hidden for this row */
+  hidden?: boolean | ((row: T) => boolean)
 }
 
 export type PaginationState = {
@@ -105,11 +107,16 @@ type DataTableProps<T> = {
 // ─── Action Buttons ─────────────────────────────────────────────────────────
 
 function ActionButtons<T>({ row, actions }: { row: T; actions: RowAction<T>[] }) {
-  const primaryActions = actions.filter((a) => a.primary).slice(0, 3)
-  const secondaryActions = actions.filter((a) => !a.primary)
-  const hasMore = secondaryActions.length > 0 || actions.filter((a) => a.primary).length > 3
+  const visibleActions = actions.filter((a) => {
+    if (typeof a.hidden === "function") return !a.hidden(row)
+    return !a.hidden
+  })
+
+  const primaryActions = visibleActions.filter((a) => a.primary).slice(0, 3)
+  const secondaryActions = visibleActions.filter((a) => !a.primary)
+  const hasMore = secondaryActions.length > 0 || visibleActions.filter((a) => a.primary).length > 3
   const moreActions = [
-    ...actions.filter((a) => a.primary).slice(3),
+    ...visibleActions.filter((a) => a.primary).slice(3),
     ...secondaryActions,
   ]
 
@@ -126,6 +133,7 @@ function ActionButtons<T>({ row, actions }: { row: T; actions: RowAction<T>[] })
           }}
           className={cn(
             "h-8 text-muted-foreground hover:text-foreground",
+            action.variant === "success" && "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-500/20",
             action.iconOnly ? "w-8 p-0" : "px-2"
           )}
           title={action.label}
@@ -156,7 +164,7 @@ function ActionButtons<T>({ row, actions }: { row: T; actions: RowAction<T>[] })
             {moreActions.map((action, index) => (
               <DropdownMenuItem
                 key={index}
-                variant={action.variant}
+                variant={action.variant === "destructive" ? "destructive" : "default"}
                 onClick={(e) => {
                   e.stopPropagation()
                   action.onClick(row)

@@ -105,6 +105,7 @@ export function EventDialog({
     setForm((p) => ({ ...p, [key]: value }))
   }
 
+
   function isValid() {
     return form.title.trim() && (isEdit || !!form.organizationId)
   }
@@ -122,7 +123,7 @@ export function EventDialog({
         timezone: form.timezone,
         currency: form.currency,
         organization_id: form.organizationId,
-        category_ids: form.categoryIds,
+        category_ids: form.categoryIds.slice(0, 3),
       },
     }
 

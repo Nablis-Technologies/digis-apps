@@ -11,6 +11,7 @@ import {
 } from "@workspace/ui/components/dialog"
 import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
+import { PhoneInput, normalizeEthiopianPhone } from "@workspace/ui/components/phone-input"
 import { Label } from "@workspace/ui/components/label"
 import { toastSuccess, toastError } from "@workspace/ui/lib/toast"
 import { useCreateInvitationMutation } from "@workspace/store/reducers/ticketingApi"
@@ -73,7 +74,7 @@ export function InvitationDialog({
           name: form.name || undefined,
           allowed_quantity: form.allowed_quantity ? Number(form.allowed_quantity) : undefined,
           expires_at: form.expires_at ? new Date(form.expires_at).toISOString() : undefined,
-          phone: form.phone || undefined,
+          phone: normalizeEthiopianPhone(form.phone) || undefined,
         },
       }).unwrap()
       onOpenChange(false)
@@ -112,7 +113,7 @@ export function InvitationDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Phone</Label>
-              <Input id="phone" placeholder="+251911234567" value={form.phone} onChange={(e) => update("phone", e.target.value)} />
+              <PhoneInput id="phone" placeholder="91 123 4567" value={form.phone} onChange={(e) => update("phone", e.target.value)} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">

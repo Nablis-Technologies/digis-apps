@@ -9,8 +9,12 @@ import Cookies from "js-cookie"
 const ACCESS_TOKEN_KEY = "accessToken"
 const REFRESH_TOKEN_KEY = "refreshToken"
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "https://digis-backend-preview.onrender.com"
+const BASE_URL = (
+  process.env.NEXT_PUBLIC_API_URL || "https://digis-backend-preview.onrender.com"
+)
+  .trim()
+  .replace(/\/+$/, "")
+
 
 export function getAccessToken() {
   return Cookies.get(ACCESS_TOKEN_KEY) ?? null

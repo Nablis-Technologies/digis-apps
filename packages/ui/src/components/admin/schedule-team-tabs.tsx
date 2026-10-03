@@ -116,7 +116,7 @@ export function ScheduleTab({ eventId }: { eventId: string }) {
                 <div>
                   <p className="text-sm font-medium">{d.name || "Unnamed date"}</p>
                   <p className="text-xs text-muted-foreground">
-                    {fmt(d.starts_at)} — {fmt(d.ends_at)} · {statusBadge(d.status)}
+                    {fmt(d.starts_at)} — {fmt(d.ends_at)} · {d.venue ? `${d.venue.name}${d.venue.city ? `, ${d.venue.city}` : ""} · ` : ""}{statusBadge(d.status)}
                   </p>
                 </div>
                 <div className="flex items-center gap-1">

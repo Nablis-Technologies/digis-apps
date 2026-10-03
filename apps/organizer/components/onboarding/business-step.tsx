@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Button } from "@/components/ui/button"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import {
@@ -13,11 +12,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { businessSchema, type BusinessFormData } from "@/lib/schemas"
-import { ETHIOPIAN_BANKS } from "@/lib/constants"
+import { businessSchema, ORGANIZER_TYPES, type BusinessFormData } from "@/lib/schemas"
+import { ETHIOPIAN_BANKS, BANK_LOGOS } from "@/lib/constants"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Upload02Icon, FileAttachmentIcon, IdIcon, BankIcon, Location01Icon } from "@hugeicons/core-free-icons"
-import { toast } from "sonner"
+import { BankIcon, Location01Icon, Building02Icon, IdIcon } from "@hugeicons/core-free-icons"
 import Image from "next/image"
 
 interface BusinessStepProps {
@@ -25,24 +23,13 @@ interface BusinessStepProps {
   initialData?: Partial<BusinessFormData>
 }
 
-// Bank logos mapping to actual image files
-const BANK_LOGOS: Record<string, string> = {
-  cbe: "/assets/CBE.jpeg",
-  awash: "/assets/AWASH.jpeg",
-  dashen: "/assets/DASHEN.png",
-  boa: "/assets/BOA.png",
-  wegagen: "/assets/WEGAGEN.png",
-  nib: "/assets/NIB.png",
-  coop: "/assets/COOP.png",
-  lion: "/assets/LION.jpeg",
-  oib: "/assets/OROMIA.png",
-  zemen: "/assets/ZEMEN.png",
-  bunna: "/assets/BUNNA.jpeg",
-}
-
 export function BusinessStep({ onNext, initialData }: BusinessStepProps) {
-  const [fileName, setFileName] = useState<string>("")
   const [selectedBank, setSelectedBank] = useState<string>(initialData?.bankName || "")
+  const [selectedOrgType, setSelectedOrgType] = useState<string>(initialData?.organizer_type || "individual")
+
+  const selectedBankObj = ETHIOPIAN_BANKS.find(
+    (b) => b.value.toLowerCase() === selectedBank?.toLowerCase()
+  )
 
   const {
     register,
@@ -52,26 +39,11 @@ export function BusinessStep({ onNext, initialData }: BusinessStepProps) {
   } = useForm<BusinessFormData>({
     resolver: zodResolver(businessSchema as any),
     mode: "onChange",
-    defaultValues: initialData,
+    defaultValues: { organizer_type: "individual", ...initialData } as BusinessFormData,
   })
 
   const onSubmit = (data: BusinessFormData) => {
     onNext(data)
-  }
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      // Check file size (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error("File too large", {
-          description: "Please upload a file smaller than 10MB",
-        })
-        return
-      }
-      setFileName(file.name)
-      setValue("licenseFile", file, { shouldValidate: true })
-    }
   }
 
   const handleBankSelect = (value: string) => {
@@ -79,43 +51,56 @@ export function BusinessStep({ onNext, initialData }: BusinessStepProps) {
     setValue("bankName", value, { shouldValidate: true })
   }
 
+  const handleOrgTypeSelect = (value: string) => {
+    setSelectedOrgType(value)
+    setValue("organizer_type", value as BusinessFormData["organizer_type"], { shouldValidate: true })
+  }
+
   return (
     <form id="onboarding-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <FieldGroup>
         <Field>
-          <FieldLabel htmlFor="licenseFile" className="text-sm font-semibold">
-            Business License <span className="text-muted-foreground font-normal">(Optional)</span>
+          <FieldLabel htmlFor="businessName" className="text-sm font-semibold">
+            Organization Name <span className="text-destructive">*</span>
           </FieldLabel>
-          <div className="flex flex-col gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              onClick={() => document.getElementById("licenseFile")?.click()}
-              className="w-full h-24 border-2 border-dashed border-border/60 hover:border-primary/50 hover:bg-accent/30 transition-all"
-            >
-              <div className="flex flex-col items-center gap-2">
-                <HugeiconsIcon icon={fileName ? FileAttachmentIcon : Upload02Icon} strokeWidth={2} className="size-8 text-muted-foreground" />
-                <div>
-                  <p className="font-semibold text-sm">{fileName || "Choose File"}</p>
-                  <p className="text-xs text-muted-foreground">PDF, JPG, or PNG (max 10MB)</p>
-                </div>
-              </div>
-            </Button>
-            {fileName && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
-                <HugeiconsIcon icon={FileAttachmentIcon} strokeWidth={2} className="size-4 text-primary" />
-                <span className="text-sm font-medium text-foreground flex-1">{fileName}</span>
-              </div>
-            )}
+          <div className="relative">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+              <HugeiconsIcon icon={Building02Icon} strokeWidth={2} className="size-4" />
+            </div>
+            <Input
+              id="businessName"
+              placeholder="e.g. Addis Music Fest"
+              {...register("businessName")}
+              className="pl-10 h-12 bg-background/50 border-border/60 focus:border-primary transition-colors"
+            />
           </div>
-          <input
-            id="licenseFile"
-            type="file"
-            accept=".pdf,.jpg,.jpeg,.png"
-            className="hidden"
-            onChange={handleFileChange}
-          />
+          {errors.businessName && (
+            <p className="text-sm text-destructive mt-1.5">{errors.businessName.message}</p>
+          )}
+        </Field>
+
+        <Field>
+          <FieldLabel htmlFor="organizer_type" className="text-sm font-semibold">
+            Organization Type <span className="text-destructive">*</span>
+          </FieldLabel>
+          <Select value={selectedOrgType} onValueChange={handleOrgTypeSelect}>
+            <SelectTrigger
+              id="organizer_type"
+              className="w-full h-12 justify-between bg-background/50 border-border/60 hover:border-primary transition-colors"
+            >
+              <SelectValue placeholder="Select organization type" />
+            </SelectTrigger>
+            <SelectContent>
+              {ORGANIZER_TYPES.map((type) => (
+                <SelectItem key={type} value={type} className="capitalize">
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {errors.organizer_type && (
+            <p className="text-sm text-destructive mt-1.5">{errors.organizer_type.message}</p>
+          )}
         </Field>
 
         <Field>
@@ -148,17 +133,36 @@ export function BusinessStep({ onNext, initialData }: BusinessStepProps) {
                 id="bankName"
                 className="w-full h-12 justify-between bg-background/50 border-border/60 hover:border-primary transition-colors"
               >
-                <SelectValue placeholder="Select your bank" />
+                <SelectValue placeholder="Select your bank">
+                  {selectedBankObj ? (
+                    <div className="flex items-center gap-2.5 overflow-hidden">
+                      <div className="size-6 relative rounded bg-white p-0.5 border border-border/40 shrink-0 overflow-hidden">
+                        <Image
+                          src={BANK_LOGOS[selectedBankObj.value] || "/assets/CBE.jpeg"}
+                          alt={selectedBankObj.label}
+                          fill
+                          className="object-contain"
+                        />
+                      </div>
+                      <span className="font-medium text-foreground truncate">{selectedBankObj.label}</span>
+                    </div>
+                  ) : undefined}
+                </SelectValue>
               </SelectTrigger>
-              <SelectContent className="w-[--radix-select-trigger-width] min-w-72">
-                <div className="grid grid-cols-3 gap-2 p-1">
+              <SelectContent
+                className="z-[9999] w-[--radix-select-trigger-width] max-h-[340px] overflow-y-auto p-2"
+                position="popper"
+                align="start"
+              >
+                <div className="grid grid-cols-2 gap-2 p-1">
                   {ETHIOPIAN_BANKS.map((bank) => (
                     <SelectItem
                       key={bank.value}
                       value={bank.value}
-                      className="flex flex-col items-center justify-center gap-1.5 border border-border/60 rounded-lg p-2 cursor-pointer focus:bg-primary/5 data-[state=checked]:border-primary data-[state=checked]:bg-primary/5 [&>span:first-child]:hidden"
+                      title={bank.label}
+                      className="relative flex items-center gap-2.5 py-2 px-2.5 rounded-lg border border-border/50 bg-card/40 hover:bg-muted/70 hover:border-primary/50 data-[state=checked]:border-primary data-[state=checked]:bg-primary/10 data-[state=checked]:ring-1 data-[state=checked]:ring-primary cursor-pointer transition-all duration-150 group pr-6 [&>span:first-child]:top-2 [&>span:first-child]:right-2 [&>span:first-child]:size-3.5 [&>span:first-child]:text-primary *:[span]:last:w-full *:[span]:last:min-w-0 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2.5"
                     >
-                      <div className="size-10 relative rounded-lg bg-white p-1 flex items-center justify-center overflow-hidden">
+                      <div className="size-8 relative rounded-md bg-white p-0.5 border border-border/40 shrink-0 flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform overflow-hidden">
                         <Image
                           src={BANK_LOGOS[bank.value] || "/assets/CBE.jpeg"}
                           alt={bank.label}
@@ -166,9 +170,14 @@ export function BusinessStep({ onNext, initialData }: BusinessStepProps) {
                           className="object-contain p-0.5"
                         />
                       </div>
-                      <span className="text-[11px] font-medium text-center leading-tight">
-                        {bank.label}
-                      </span>
+                      <div className="flex flex-col min-w-0 text-left overflow-hidden">
+                        <span className="text-xs font-semibold text-foreground truncate">
+                          {bank.shortName || bank.label}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground truncate leading-none mt-0.5">
+                          {bank.label}
+                        </span>
+                      </div>
                     </SelectItem>
                   ))}
                 </div>
@@ -200,25 +209,47 @@ export function BusinessStep({ onNext, initialData }: BusinessStepProps) {
           </Field>
         </div>
 
-        <Field>
-          <FieldLabel htmlFor="address" className="text-sm font-semibold">
-            Business Address
-          </FieldLabel>
-          <div className="relative">
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-              <HugeiconsIcon icon={Location01Icon} strokeWidth={2} className="size-4" />
+        <div className="grid gap-6 sm:grid-cols-2">
+          <Field>
+            <FieldLabel htmlFor="address" className="text-sm font-semibold">
+              Business Address
+            </FieldLabel>
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                <HugeiconsIcon icon={Location01Icon} strokeWidth={2} className="size-4" />
+              </div>
+              <Input
+                id="address"
+                placeholder="Street address"
+                {...register("address")}
+                className="pl-10 h-12 bg-background/50 border-border/60 focus:border-primary transition-colors"
+              />
             </div>
-            <Input
-              id="address"
-              placeholder="Street, City, Region"
-              {...register("address")}
-              className="pl-10 h-12 bg-background/50 border-border/60 focus:border-primary transition-colors"
-            />
-          </div>
-          {errors.address && (
-            <p className="text-sm text-destructive mt-1.5">{errors.address.message}</p>
-          )}
-        </Field>
+            {errors.address && (
+              <p className="text-sm text-destructive mt-1.5">{errors.address.message}</p>
+            )}
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor="city" className="text-sm font-semibold">
+              City <span className="text-destructive">*</span>
+            </FieldLabel>
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                <HugeiconsIcon icon={Location01Icon} strokeWidth={2} className="size-4" />
+              </div>
+              <Input
+                id="city"
+                placeholder="Addis Ababa"
+                {...register("city")}
+                className="pl-10 h-12 bg-background/50 border-border/60 focus:border-primary transition-colors"
+              />
+            </div>
+            {errors.city && (
+              <p className="text-sm text-destructive mt-1.5">{errors.city.message}</p>
+            )}
+          </Field>
+        </div>
 
       </FieldGroup>
     </form>

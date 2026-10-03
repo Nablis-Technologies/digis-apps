@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   NotificationIcon,
@@ -18,11 +19,12 @@ import {
 } from "@workspace/ui/components/popover"
 import {
   useListNotificationsQuery,
-  useMarkNotificationAsReadMutation,
+  useMarkNotificationReadMutation,
   type NotificationItem,
 } from "@workspace/store/reducers/notificationsApi"
 
-function formatRelativeTime(dateString: string) {
+function formatRelativeTime(dateString?: string | null) {
+  if (!dateString) return "just now"
   try {
     const date = new Date(dateString)
     const now = new Date()
@@ -53,12 +55,28 @@ function getCategoryConfig(category?: string) {
   }
 }
 
-export function NotificationsPopover() {
-  const { data, isLoading } = useListNotificationsQuery({ per_page: 5 })
-  const [markAsRead] = useMarkNotificationAsReadMutation()
+interface NotificationsPopoverProps {
+  viewAllHref?: string
+}
+
+export function NotificationsPopover({ viewAllHref }: NotificationsPopoverProps) {
+  const pathname = usePathname()
+  const resolvedHref =
+    viewAllHref ??
+    (pathname?.startsWith("/organizer") ? "/organizer/notifications" : "/admin/notifications")
+
+  const { data, isLoading } = useListNotificationsQuery({ per_page: 10 })
+  const [markRead] = useMarkNotificationReadMutation()
 
   const notifications: NotificationItem[] = data?.data ?? []
   const unreadCount = notifications.filter((n) => !n.read).length
+  const recent = notifications.slice(0, 5)
+
+  const handleItemClick = (id: string, isRead?: boolean) => {
+    if (!isRead) {
+      markRead(id).catch(() => {})
+    }
+  }
 
   return (
     <Popover>
@@ -84,22 +102,20 @@ export function NotificationsPopover() {
         <div className="max-h-[320px] overflow-y-auto">
           {isLoading ? (
             <div className="py-8 text-center text-xs text-muted-foreground">Loading...</div>
-          ) : notifications.length === 0 ? (
+          ) : recent.length === 0 ? (
             <div className="py-8 text-center text-xs text-muted-foreground">No notifications</div>
           ) : (
-            notifications.map((n, i) => {
+            recent.map((n, i) => {
               const cfg = getCategoryConfig(n.category)
-              return (
+              const link = (n.data?.url || n.data?.link) as string | undefined
+
+              const content = (
                 <div
                   key={n.id}
-                  onClick={() => {
-                    if (!n.read) {
-                      markAsRead(n.id)
-                    }
-                  }}
+                  onClick={() => handleItemClick(n.id, n.read)}
                   className={cn(
                     "flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors hover:bg-muted/50",
-                    i < notifications.length - 1 && "border-b border-border/25",
+                    i < recent.length - 1 && "border-b border-border/25",
                     !n.read && "bg-lime-50/50 dark:bg-lime-950/10"
                   )}
                 >
@@ -118,7 +134,7 @@ export function NotificationsPopover() {
                   <div className="min-w-0 flex-1">
                     <p className="text-sm leading-snug font-medium">{n.title}</p>
                     <p className="truncate text-xs text-muted-foreground">
-                      {n.message}
+                      {n.message || n.description}
                     </p>
                     <p className="mt-0.5 text-xs text-muted-foreground/60">
                       {formatRelativeTime(n.created_at)}
@@ -129,12 +145,21 @@ export function NotificationsPopover() {
                   )}
                 </div>
               )
+
+              if (link) {
+                return (
+                  <Link key={n.id} href={link} className="block">
+                    {content}
+                  </Link>
+                )
+              }
+              return content
             })
           )}
         </div>
         <div className="border-t border-border/25 px-4 py-2">
           <Link
-            href="/admin/notifications"
+            href={resolvedHref}
             className="flex items-center justify-center gap-1 rounded-md py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             View All Notifications

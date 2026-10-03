@@ -4,30 +4,49 @@ import { baseQueryWithReauth } from "../api"
 export interface Organization {
   id: string
   name: string
+  slug?: string
   description: string | null
-  owner_id: string
-  organizer_type: "individual" | "company"
+  owner_id?: string
+  organizer_type: "individual" | "company" | "ngo" | "government" | "collective"
   category: string | null
   contact_phone: string | null
   contact_email: string | null
   city: string | null
   region: string | null
-  country: string | null
+  country?: string | null
+  address_line1?: string | null
+  address_line2?: string | null
   website_url: string | null
   verified: boolean
   active: boolean
   tin_number?: string | null
   estimated_audience?: string | null
   event_frequency?: string | null
+  profile_url?: string | null
+  banner_url?: string | null
+  social_links?: Record<string, string> | null
+  follower_count?: number
+  memberships_count?: number
+  events_count?: number
+  membership_status?: "active" | "suspended" | "removed" | string
+  membership_role?: "owner" | "admin" | "staff" | string
+  archived?: boolean
+  verification_status?: "draft" | "pending" | "approved" | "rejected" | "modify" | string
+  verification_feedback?: Record<string, any> | null
+  has_business_license?: boolean
+  has_tin_certificate?: boolean
+  status?: string
   created_at?: string
   updated_at?: string
 }
 
-interface ListOrgsParams {
+export interface ListOrgsParams {
   page?: number
   per_page?: number
   order_by?: string
   order_direction?: "asc" | "desc"
+  search?: string
+  q?: Record<string, string | number | boolean>
 }
 
 interface PaginatedResponse<T> {
@@ -50,15 +69,64 @@ interface CreateOrgPayload {
   organization: {
     name: string
     description?: string
-    owner_id: string
+    organizer_type?: "individual" | "company" | "ngo" | "government" | "collective"
+    category?: string
+    contact_phone?: string
+    contact_email?: string
+    website_url?: string
+    tin_number?: string
+    address_line1?: string
+    address_line2?: string
+    city?: string
+    region?: string
+    estimated_audience?: string
+    event_frequency?: string
+    social_links?: Record<string, string>
+    // NOTE: the backend (admin + owner create) does not permit owner_id —
+    // ownership is derived from the auth token. Kept as optional so existing
+    // callers still compile; it is ignored server-side.
+    owner_id?: string
   }
 }
 
-interface UpdateOrgPayload {
+export interface UpdateOrgPayload {
   organization: {
     name?: string
     description?: string
+    organizer_type?: "individual" | "company" | "ngo" | "government" | "collective"
+    category?: string
+    contact_phone?: string
+    contact_email?: string
+    website_url?: string
+    tin_number?: string
+    address_line1?: string
+    address_line2?: string
+    city?: string
+    region?: string
+    estimated_audience?: string
+    event_frequency?: string
+    social_links?: Record<string, string>
   }
+}
+
+function formatOrgQueryParams(params?: ListOrgsParams | void) {
+  if (!params) return undefined
+  const queryParams: Record<string, string | number | boolean> = {}
+  if (params.page !== undefined) queryParams.page = params.page
+  if (params.per_page !== undefined) queryParams.per_page = params.per_page
+  if (params.order_by !== undefined) queryParams.order_by = params.order_by
+  if (params.order_direction !== undefined) queryParams.order_direction = params.order_direction
+  if (params.search) {
+    queryParams["q[name_cont]"] = params.search
+  }
+  if (params.q) {
+    Object.entries(params.q).forEach(([k, v]) => {
+      if (v !== undefined && v !== "") {
+        queryParams[`q[${k}]`] = v
+      }
+    })
+  }
+  return Object.keys(queryParams).length > 0 ? queryParams : undefined
 }
 
 export const organizationsApi = createApi({
@@ -73,7 +141,7 @@ export const organizationsApi = createApi({
     >({
       query: (params) => ({
         url: "/admin/organizations",
-        params: params ?? undefined,
+        params: formatOrgQueryParams(params),
       }),
       providesTags: (result) =>
         result
@@ -162,7 +230,7 @@ export const organizationsApi = createApi({
     listOwnerOrganizations: builder.query<PaginatedResponse<Organization>, ListOrgsParams | void>({
       query: (params) => ({
         url: "/organizations/owner",
-        params: params ?? undefined,
+        params: formatOrgQueryParams(params),
       }),
       providesTags: (result) =>
         result
@@ -201,6 +269,23 @@ export const organizationsApi = createApi({
         method: "DELETE",
       }),
       invalidatesTags: [{ type: "OwnerOrganizations", id: "LIST" }],
+    }),
+    // Owner document upload (multipart/form-data). Keys per contract:
+    // profile, banner, business_license, tin_certificate. All four must be
+    // attached before POST .../verification/submit accepts the organization.
+    uploadOwnerOrganizationDocuments: builder.mutation<
+      SingleResponse<Organization>,
+      { id: string; formData: FormData }
+    >({
+      query: ({ id, formData }) => ({
+        url: `/organizations/owner/${id}/documents`,
+        method: "PATCH",
+        body: formData,
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: "OwnerOrganizations", id },
+        { type: "OwnerOrganizations", id: "LIST" },
+      ],
     }),
 
     // Verification
@@ -274,6 +359,7 @@ export const {
   useCreateOwnerOrganizationMutation,
   useUpdateOwnerOrganizationMutation,
   useDeleteOwnerOrganizationMutation,
+  useUploadOwnerOrganizationDocumentsMutation,
   useSubmitVerificationMutation,
   useResubmitVerificationMutation,
   useDownloadAdminDocumentQuery,

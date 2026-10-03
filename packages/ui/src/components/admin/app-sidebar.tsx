@@ -41,10 +41,12 @@ export type NavSecondaryItem = {
 export function AppSidebar({
   sections,
   secondaryItems,
+  header,
   ...props
 }: {
   sections: NavSection[]
   secondaryItems: NavSecondaryItem[]
+  header?: React.ReactNode
 } & React.ComponentProps<typeof Sidebar>) {
   const { data } = useGetMeQuery()
   const me = data?.data?.user
@@ -55,27 +57,29 @@ export function AppSidebar({
       className="top-(--header-height) h-[calc(100svh-var(--header-height))]!"
     >
       <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <Link href="/admin">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-lime-500 text-sidebar-primary-foreground">
-                  <HugeiconsIcon
-                    icon={CommandIcon}
-                    strokeWidth={2}
-                    className="size-4"
-                  />
-                </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">Digis Events</span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    Admin Dashboard
-                  </span>
-                </div>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        {header ?? (
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton size="lg" asChild>
+                <Link href="/admin">
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-lime-500 text-sidebar-primary-foreground">
+                    <HugeiconsIcon
+                      icon={CommandIcon}
+                      strokeWidth={2}
+                      className="size-4"
+                    />
+                  </div>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-medium">Digis Events</span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      Admin Dashboard
+                    </span>
+                  </div>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        )}
       </SidebarHeader>
       <SidebarContent>
         <NavMain sections={sections} />
