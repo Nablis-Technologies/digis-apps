@@ -28,6 +28,7 @@ import {
   Loading03Icon,
 } from "@hugeicons/core-free-icons"
 import { useCreateEventScheduleChangeMutation } from "@workspace/store/reducers/organizerEventsApi"
+import { formatApiErrorMessage } from "@/lib/utils"
 
 interface EventDateItem {
   id: string
@@ -147,7 +148,7 @@ export function RescheduleEventDialog({
       onOpenChange(false)
     } catch (err: any) {
       toast.error("Failed to reschedule event", {
-        description: err?.data?.message || err?.data?.error || err?.message || "An unexpected error occurred",
+        description: formatApiErrorMessage(err),
       })
     }
   }

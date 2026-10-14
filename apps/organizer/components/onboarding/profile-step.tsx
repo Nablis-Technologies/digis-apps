@@ -45,25 +45,49 @@ export function ProfileStep({ onNext, initialData }: ProfileStepProps) {
   return (
     <form id="onboarding-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <FieldGroup>
-        <Field>
-          <FieldLabel htmlFor="fullName" className="text-sm font-semibold">
-            Full Name
-          </FieldLabel>
-          <div className="relative">
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-              <HugeiconsIcon icon={UserIcon} strokeWidth={2} className="size-4" />
+        <div className="grid gap-6 sm:grid-cols-2">
+          <Field>
+            <FieldLabel htmlFor="first_name" className="text-sm font-semibold">
+              First Name
+            </FieldLabel>
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                <HugeiconsIcon icon={UserIcon} strokeWidth={2} className="size-4" />
+              </div>
+              <Input
+                id="first_name"
+                placeholder="Abebe / አበበ"
+                maxLength={100}
+                {...register("first_name")}
+                className="pl-10 h-12 bg-background/50 border-border/60 focus:border-primary transition-colors"
+              />
             </div>
-            <Input
-              id="fullName"
-              placeholder="John Doe"
-              {...register("fullName")}
-              className="pl-10 h-12 bg-background/50 border-border/60 focus:border-primary transition-colors"
-            />
-          </div>
-          {errors.fullName && (
-            <p className="text-sm text-destructive mt-1.5">{errors.fullName.message}</p>
-          )}
-        </Field>
+            {errors.first_name && (
+              <p className="text-sm text-destructive mt-1.5">{errors.first_name.message}</p>
+            )}
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor="last_name" className="text-sm font-semibold">
+              Last Name
+            </FieldLabel>
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                <HugeiconsIcon icon={UserIcon} strokeWidth={2} className="size-4" />
+              </div>
+              <Input
+                id="last_name"
+                placeholder="Bikila / ቢቂላ"
+                maxLength={100}
+                {...register("last_name")}
+                className="pl-10 h-12 bg-background/50 border-border/60 focus:border-primary transition-colors"
+              />
+            </div>
+            {errors.last_name && (
+              <p className="text-sm text-destructive mt-1.5">{errors.last_name.message}</p>
+            )}
+          </Field>
+        </div>
 
         <div className="grid gap-6 sm:grid-cols-2">
           <Field>

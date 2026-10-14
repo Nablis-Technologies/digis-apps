@@ -1,12 +1,22 @@
 "use client"
 
 import * as React from "react"
-import { useGetMeQuery, useLogoutMutation } from "@workspace/store/reducers/authApi"
+import {
+  useGetMeQuery,
+  useUpdateProfileMutation,
+  useUploadAvatarMutation,
+  useRemoveAvatarMutation,
+  useLogoutMutation,
+  type AuthUser,
+} from "@workspace/store/reducers/authApi"
 import { useListOwnerOrganizationsQuery } from "@workspace/store/reducers/organizationsApi"
 import { useActiveOrganization } from "../../../providers/organization-provider"
 import { CreateOrgDialog } from "../../../components/organizations/create-org-dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { UserAvatar } from "@workspace/ui/components/admin/user-avatar"
+import { generateIdempotencyKey } from "@workspace/store/api"
 import { toast } from "sonner"
 import { cn } from "@workspace/ui/lib/utils"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -26,20 +36,45 @@ import {
   Key01Icon,
   RefreshIcon,
   Exchange01Icon,
+  AlertCircleIcon,
+  Camera01Icon,
+  Delete02Icon,
+  UserIcon,
 } from "@hugeicons/core-free-icons"
 import Link from "next/link"
 
 export default function ProfilePage() {
   const { data: meData, isLoading: meLoading, refetch: refetchMe } = useGetMeQuery()
+  const [updateProfile, { isLoading: isUpdatingProfile }] = useUpdateProfileMutation()
+  const [uploadAvatar, { isLoading: isUploadingAvatar }] = useUploadAvatarMutation()
+  const [removeAvatar, { isLoading: isRemovingAvatar }] = useRemoveAvatarMutation()
   const [logout, { isLoading: isLoggingOut }] = useLogoutMutation()
+
   const { activeOrg, activeOrgId, setActiveOrgId } = useActiveOrganization()
   const { data: orgsData, isLoading: orgsLoading } = useListOwnerOrganizationsQuery({ per_page: 50 })
 
   const [copiedId, setCopiedId] = React.useState(false)
   const [createDialogOpen, setCreateDialogOpen] = React.useState(false)
 
-  const user = meData?.data?.user
+  // Profile names editing state
+  const [firstName, setFirstName] = React.useState("")
+  const [lastName, setLastName] = React.useState("")
+  const [nameErrors, setNameErrors] = React.useState<{ first_name?: string; last_name?: string } | null>(null)
+
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
+
+  const user: AuthUser | undefined = meData?.data?.user
   const organizations = orgsData?.data ?? []
+
+  // Initialize form when user profile is loaded
+  React.useEffect(() => {
+    if (user?.profile) {
+      setFirstName(user.profile.first_name || "")
+      setLastName(user.profile.last_name || "")
+    }
+  }, [user?.profile?.first_name, user?.profile?.last_name])
+
+  const hasCompletedProfile = Boolean(user?.profile?.first_name && user?.profile?.last_name)
 
   const handleCopyId = () => {
     if (!user?.id) return
@@ -49,6 +84,115 @@ export default function ProfilePage() {
       description: "You can share this ID with other organizations to be invited as a team member.",
     })
     setTimeout(() => setCopiedId(false), 2000)
+  }
+
+  const handleSaveNames = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setNameErrors(null)
+
+    const trimmedFirst = firstName.trim()
+    const trimmedLast = lastName.trim()
+
+    const errors: { first_name?: string; last_name?: string } = {}
+    if (!trimmedFirst) {
+      errors.first_name = "First name is required (supports Unicode/Amharic)"
+    } else if (trimmedFirst.length > 100) {
+      errors.first_name = "First name must be 100 characters or fewer"
+    }
+
+    if (!trimmedLast) {
+      errors.last_name = "Last name is required (supports Unicode/Amharic)"
+    } else if (trimmedLast.length > 100) {
+      errors.last_name = "Last name must be 100 characters or fewer"
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setNameErrors(errors)
+      return
+    }
+
+    try {
+      const res = await updateProfile({
+        profile: {
+          first_name: trimmedFirst,
+          last_name: trimmedLast,
+        },
+        idempotencyKey: generateIdempotencyKey(),
+      }).unwrap()
+
+      toast.success("Profile names updated successfully", {
+        description: res.data?.profile?.full_name
+          ? `Display name updated to "${res.data.profile.full_name}"`
+          : undefined,
+      })
+    } catch (err: any) {
+      const errorMsg =
+        err?.data?.message ||
+        err?.data?.error ||
+        "Failed to update profile names. Please check your connection."
+      toast.error("Profile update failed", { description: errorMsg })
+    }
+  }
+
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Clear input so selecting the same file again triggers change
+    e.target.value = ""
+
+    if (!hasCompletedProfile) {
+      toast.error("Profile required", {
+        description: "Please complete your first and last name before uploading an avatar.",
+      })
+      return
+    }
+
+    // Validate size (max 5 MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Avatar file too large", {
+        description: "Avatar image must be smaller than 5 MB.",
+      })
+      return
+    }
+
+    // Validate MIME type (JPEG, PNG, WebP)
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"]
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Invalid avatar format", {
+        description: "Supported formats are JPEG, PNG, or WebP.",
+      })
+      return
+    }
+
+    try {
+      await uploadAvatar({
+        file,
+        idempotencyKey: generateIdempotencyKey(),
+      }).unwrap()
+      toast.success("Avatar updated successfully")
+    } catch (err: any) {
+      const errorMsg =
+        err?.data?.message ||
+        err?.data?.error ||
+        "Failed to upload avatar image."
+      toast.error("Avatar upload failed", { description: errorMsg })
+    }
+  }
+
+  const handleRemoveAvatar = async () => {
+    try {
+      await removeAvatar({
+        idempotencyKey: generateIdempotencyKey(),
+      }).unwrap()
+      toast.success("Avatar removed successfully")
+    } catch (err: any) {
+      const errorMsg =
+        err?.data?.message ||
+        err?.data?.error ||
+        "Failed to remove avatar."
+      toast.error("Avatar removal failed", { description: errorMsg })
+    }
   }
 
   const handleLogout = async () => {
@@ -69,9 +213,12 @@ export default function ProfilePage() {
     )
   }
 
-  const initials = user?.email
-    ? user.email.slice(0, 2).toUpperCase()
-    : "ME"
+  const computedDisplayName =
+    user?.profile?.full_name ||
+    (firstName && lastName ? `${firstName} ${lastName}`.trim() : null) ||
+    user?.name ||
+    user?.email?.split("@")[0] ||
+    "Organizer"
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-8 pb-12">
@@ -83,19 +230,64 @@ export default function ProfilePage() {
         </p>
       </div>
 
+      {/* Legacy / Incomplete Profile Warning Callout */}
+      {!hasCompletedProfile && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 shadow-xs">
+          <div className="flex items-start gap-3.5">
+            <div className="size-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <HugeiconsIcon icon={AlertCircleIcon} className="size-5" />
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-sm font-bold text-amber-700 dark:text-amber-300">
+                Complete Your Profile
+              </h2>
+              <p className="text-xs text-amber-900/80 dark:text-amber-200/80 leading-relaxed max-w-2xl">
+                Your account is missing a verified first and last name. Setting your names is required
+                to personalize your event credentials and enable avatar uploads.
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              const input = document.getElementById("firstName")
+              input?.focus()
+            }}
+            className="border-amber-500/40 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 text-xs shrink-0"
+          >
+            Complete Names Below
+          </Button>
+        </div>
+      )}
+
       {/* User Identity Card */}
       <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs">
         <div className="h-28 bg-gradient-to-r from-lime-500/20 via-emerald-500/15 to-teal-500/20" />
         <div className="relative px-6 pb-6 pt-0">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between -mt-12">
             <div className="flex items-end gap-4">
-              <div className="flex size-24 shrink-0 items-center justify-center rounded-2xl border-4 border-card bg-muted text-2xl font-bold text-foreground shadow-md">
-                {initials}
+              <div className="relative group">
+                <UserAvatar
+                  user={user}
+                  className="size-24 shrink-0 rounded-2xl border-4 border-card bg-muted text-2xl font-bold text-foreground shadow-md"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploadingAvatar || !hasCompletedProfile}
+                  title={hasCompletedProfile ? "Change Avatar" : "Complete profile names first to upload avatar"}
+                  className="absolute inset-0 rounded-2xl bg-black/40 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer disabled:cursor-not-allowed"
+                >
+                  <HugeiconsIcon icon={Camera01Icon} className="size-5" />
+                  <span className="text-[10px] font-medium mt-0.5">Change</span>
+                </button>
               </div>
+
               <div className="space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-xl font-bold text-foreground">
-                    {user?.name || user?.email?.split("@")[0] || "Organizer"}
+                    {computedDisplayName}
                   </h2>
                   {user?.verified_at ? (
                     <Badge variant="outline" className="border-lime-500/30 bg-lime-500/10 text-lime-600 dark:text-lime-400 gap-1 font-medium">
@@ -146,8 +338,170 @@ export default function ProfilePage() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Left 2 Cols: Details & Organizations */}
+        {/* Left 2 Cols: Details, Profile Editing & Organizations */}
         <div className="space-y-6 lg:col-span-2">
+          {/* Profile Name & Identity Editing (PATCH /user) */}
+          <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-xs space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
+                  <HugeiconsIcon icon={UserIcon} className="size-4.5 text-lime-600 dark:text-lime-400" />
+                  Personal Information & Names
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Update your legal or organizer names. Full Unicode and Ethiopian Ge&apos;ez script (e.g. አበበ ቢቂላ) are supported.
+                </p>
+              </div>
+              {user?.profile?.full_name && (
+                <Badge variant="secondary" className="text-xs font-mono">
+                  {user.profile.full_name}
+                </Badge>
+              )}
+            </div>
+
+            <form onSubmit={handleSaveNames} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="firstName" className="text-xs font-semibold text-foreground">
+                    First Name <span className="text-destructive">*</span>
+                  </label>
+                  <Input
+                    id="firstName"
+                    value={firstName}
+                    onChange={(e) => {
+                      setFirstName(e.target.value)
+                      if (nameErrors?.first_name) setNameErrors((prev) => ({ ...prev, first_name: undefined }))
+                    }}
+                    placeholder="Abebe / አበበ"
+                    maxLength={100}
+                    className="h-10 bg-background"
+                  />
+                  {nameErrors?.first_name && (
+                    <p className="text-xs text-destructive">{nameErrors.first_name}</p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="lastName" className="text-xs font-semibold text-foreground">
+                    Last Name <span className="text-destructive">*</span>
+                  </label>
+                  <Input
+                    id="lastName"
+                    value={lastName}
+                    onChange={(e) => {
+                      setLastName(e.target.value)
+                      if (nameErrors?.last_name) setNameErrors((prev) => ({ ...prev, last_name: undefined }))
+                    }}
+                    placeholder="Bikila / ቢቂላ"
+                    maxLength={100}
+                    className="h-10 bg-background"
+                  />
+                  {nameErrors?.last_name && (
+                    <p className="text-xs text-destructive">{nameErrors.last_name}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-border/40">
+                <span className="text-xs text-muted-foreground">
+                  Computed display name:{" "}
+                  <strong className="text-foreground">
+                    {firstName || lastName ? `${firstName} ${lastName}`.trim() : "—"}
+                  </strong>
+                </span>
+
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={isUpdatingProfile}
+                  className="gap-2 shadow-xs"
+                >
+                  <HugeiconsIcon
+                    icon={isUpdatingProfile ? Loading01Icon : CheckmarkCircle01Icon}
+                    className={cn("size-4", isUpdatingProfile && "animate-spin")}
+                  />
+                  {isUpdatingProfile ? "Saving Names..." : "Save Names"}
+                </Button>
+              </div>
+            </form>
+          </div>
+
+          {/* Dedicated Avatar Management Card */}
+          <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
+                  <HugeiconsIcon icon={Camera01Icon} className="size-4.5 text-lime-600 dark:text-lime-400" />
+                  Profile Avatar
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Upload a personal picture (JPEG, PNG, or WebP; up to 5 MB). Avatars are stored privately and delivered with authenticated access.
+                </p>
+              </div>
+            </div>
+
+            {/* Hidden File Input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleAvatarFileChange}
+              className="hidden"
+            />
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-border/50 bg-muted/20">
+              <div className="flex items-center gap-4">
+                <UserAvatar user={user} className="size-16 rounded-xl border border-border/60 shadow-xs" />
+                <div className="space-y-1">
+                  <h4 className="text-sm font-semibold text-foreground">
+                    {user?.profile?.avatar_url ? "Custom Avatar Active" : "Default Initials"}
+                  </h4>
+                  <p className="text-xs text-muted-foreground">
+                    {user?.profile?.avatar_url
+                      ? "Your photo is visible to team members across your organizations."
+                      : hasCompletedProfile
+                      ? "No avatar uploaded yet. Click upload to set one."
+                      : "Complete your profile first to unlock avatar uploads."}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 self-start sm:self-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={isUploadingAvatar || !hasCompletedProfile}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="gap-1.5 text-xs h-9"
+                >
+                  <HugeiconsIcon
+                    icon={isUploadingAvatar ? Loading01Icon : Camera01Icon}
+                    className={cn("size-3.5", isUploadingAvatar && "animate-spin")}
+                  />
+                  {isUploadingAvatar ? "Uploading..." : user?.profile?.avatar_url ? "Replace Avatar" : "Upload Avatar"}
+                </Button>
+
+                {user?.profile?.avatar_url && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={isRemovingAvatar}
+                    onClick={handleRemoveAvatar}
+                    className="gap-1.5 text-xs h-9 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <HugeiconsIcon
+                      icon={isRemovingAvatar ? Loading01Icon : Delete02Icon}
+                      className={cn("size-3.5", isRemovingAvatar && "animate-spin")}
+                    />
+                    {isRemovingAvatar ? "Removing..." : "Remove"}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Account Details */}
           <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-xs space-y-4">
             <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
@@ -209,10 +563,10 @@ export default function ProfilePage() {
                 <p className="text-sm font-semibold text-foreground">
                   {user?.created_at
                     ? new Date(user.created_at).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })
                     : "—"}
                 </p>
               </div>
@@ -252,7 +606,7 @@ export default function ProfilePage() {
                 </div>
                 <p className="text-sm font-medium">No organizations linked yet</p>
                 <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                  Create a new organization to start hosting events or ask an organization owner to invite you using your User ID.
+                  Create a new organization to start hosting events or ask an organization owner to invite you using your phone number.
                 </p>
                 <Button
                   size="sm"
@@ -270,10 +624,11 @@ export default function ProfilePage() {
                   return (
                     <div
                       key={org.id}
-                      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border transition-colors ${isActive
+                      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border transition-colors ${
+                        isActive
                           ? "border-primary/40 bg-primary/5"
                           : "border-border/60 bg-muted/10 hover:bg-muted/30"
-                        }`}
+                      }`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="size-10 rounded-lg bg-card border border-border/70 flex items-center justify-center font-bold text-sm text-foreground shrink-0 overflow-hidden">

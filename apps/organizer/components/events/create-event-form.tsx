@@ -261,6 +261,14 @@ function isDoorsAfterStart(dTime: string, sTime: string): boolean {
   return dh * 60 + dm > sh * 60 + sm
 }
 
+function isEndsBeforeOrEqualStarts(sDate: string, sTime: string, eDate: string, eTime: string): boolean {
+  if (!sDate || !sTime || !eDate || !eTime) return false
+  const start = new Date(`${sDate}T${sTime}:00`).getTime()
+  const end = new Date(`${eDate}T${eTime}:00`).getTime()
+  if (isNaN(start) || isNaN(end)) return false
+  return end <= start
+}
+
 function generateCode(length = 8) {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
   return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join("")
@@ -763,7 +771,11 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
     const errors: { title?: string; date?: string; endDate?: string; doorsTime?: string; location?: string } = {}
     if (!title.trim()) errors.title = "Event title is required"
     if (!dateTime) errors.date = "Event date and time are required"
-    if (!endDateTimeInput) errors.endDate = "Event end date and time are required"
+    if (!endDateTimeInput) {
+      errors.endDate = "Event end date and time are required"
+    } else if (date && time && endDate && endTime && isEndsBeforeOrEqualStarts(date, time, endDate, endTime)) {
+      errors.endDate = "Event end date and time must be after start date and time"
+    }
     if (!venueId) errors.location = "Please select a venue"
     if (doorsTime && time && isDoorsAfterStart(doorsTime, time)) {
       errors.doorsTime = `Doors open time must be before or at event start time (${time})`
@@ -771,8 +783,8 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
     
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors)
-      setError(errors.doorsTime || "Please fill in all required fields.")
-      if (errors.doorsTime && step !== 1) {
+      setError(errors.endDate || errors.doorsTime || errors.date || errors.title || errors.location || "Please fill in all required fields.")
+      if ((errors.doorsTime || errors.endDate || errors.date || errors.title || errors.location) && step !== 1) {
         setStep(1)
       }
       return
@@ -1368,16 +1380,30 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
       if (isPublishForbidden) {
         errorMessage = "Event saved as a draft — you cannot publish until your organization is verified. Submit your organization for verification, then publish again after approval."
       } else if (err?.data?.errors) {
+        let hasDateError = false
         if (err.data.errors.doors_at) {
           const doorsMsg = Array.isArray(err.data.errors.doors_at) ? err.data.errors.doors_at[0] : String(err.data.errors.doors_at)
           setFieldErrors((p) => ({ ...p, doorsTime: doorsMsg }))
-          errorMessage = doorsMsg
+          hasDateError = true
+        }
+        if (err.data.errors.ends_at) {
+          const endsMsg = Array.isArray(err.data.errors.ends_at) ? err.data.errors.ends_at[0] : String(err.data.errors.ends_at)
+          setFieldErrors((p) => ({ ...p, endDate: endsMsg }))
+          hasDateError = true
+        }
+        if (err.data.errors.starts_at) {
+          const startsMsg = Array.isArray(err.data.errors.starts_at) ? err.data.errors.starts_at[0] : String(err.data.errors.starts_at)
+          setFieldErrors((p) => ({ ...p, date: startsMsg }))
+          hasDateError = true
+        }
+
+        const errorEntries = Object.entries(err.data.errors)
+        errorMessage = errorEntries
+          .map(([key, msgs]) => `${key.replace(/_/g, " ")}: ${Array.isArray(msgs) ? msgs.join(", ") : msgs}`)
+          .join(" | ") || "Validation failed"
+
+        if (hasDateError) {
           setStep(1)
-        } else {
-          const errorEntries = Object.entries(err.data.errors)
-          errorMessage = errorEntries
-            .map(([key, msgs]) => `${key.replace(/_/g, " ")}: ${Array.isArray(msgs) ? msgs.join(", ") : msgs}`)
-            .join(" | ") || "Validation failed"
         }
       } else {
         errorMessage = err?.data?.error || err?.data?.message || err?.message || "Failed to create event. Please try again."
@@ -1725,7 +1751,30 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Start Date <span className="text-destructive">*</span></Label>
-                  <Input type="date" value={date} onChange={(e) => { setDate(e.target.value); if (!endDate) setEndDate(e.target.value); if (!endTime && time) { const [h, m] = time.split(":").map(Number); setEndTime(`${String((h + 4) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`); } if (fieldErrors.date) setFieldErrors((p) => ({ ...p, date: undefined })) }} className={`h-10 ${fieldErrors.date ? "border-destructive focus-visible:border-destructive" : ""}`} />
+                  <Input
+                    type="date"
+                    value={date}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      setDate(v)
+                      if (!endDate || endDate < v) {
+                        setEndDate(v)
+                      }
+                      if (!endTime && time) {
+                        const [h, m] = time.split(":").map(Number)
+                        const nextH = h + 4
+                        if (nextH >= 24) {
+                          const d = new Date(v)
+                          d.setDate(d.getDate() + 1)
+                          setEndDate(d.toISOString().split("T")[0])
+                        }
+                        setEndTime(`${String(nextH % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`)
+                      }
+                      if (fieldErrors.date) setFieldErrors((p) => ({ ...p, date: undefined }))
+                      if (fieldErrors.endDate) setFieldErrors((p) => ({ ...p, endDate: undefined }))
+                    }}
+                    className={`h-10 ${fieldErrors.date ? "border-destructive focus-visible:border-destructive" : ""}`}
+                  />
                   {fieldErrors.date && <p className="text-destructive text-xs">{fieldErrors.date}</p>}
                 </div>
                 <div className="space-y-1.5">
@@ -1738,13 +1787,20 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                       setTime(v)
                       if (!endTime && v) {
                         const [h, m] = v.split(":").map(Number)
-                        setEndTime(`${String((h + 4) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`)
+                        const nextH = h + 4
+                        if (nextH >= 24 && date) {
+                          const d = new Date(date)
+                          d.setDate(d.getDate() + 1)
+                          setEndDate(d.toISOString().split("T")[0])
+                        }
+                        setEndTime(`${String(nextH % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`)
                       }
                       if (doorsTime && v && isDoorsAfterStart(doorsTime, v)) {
                         setFieldErrors((p) => ({ ...p, doorsTime: `Doors open time must be before or at event start time (${v})` }))
                       } else if (doorsTime) {
                         setFieldErrors((p) => ({ ...p, doorsTime: undefined }))
                       }
+                      if (fieldErrors.endDate) setFieldErrors((p) => ({ ...p, endDate: undefined }))
                     }}
                     className="h-10"
                   />
@@ -1755,12 +1811,30 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">End Date <span className="text-destructive">*</span></Label>
-                  <Input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); if (fieldErrors.endDate) setFieldErrors((p) => ({ ...p, endDate: undefined })) }} className={`h-10 ${fieldErrors.endDate ? "border-destructive focus-visible:border-destructive" : ""}`} />
+                  <Input
+                    type="date"
+                    value={endDate}
+                    min={date || undefined}
+                    onChange={(e) => {
+                      setEndDate(e.target.value)
+                      if (fieldErrors.endDate) setFieldErrors((p) => ({ ...p, endDate: undefined }))
+                    }}
+                    className={`h-10 ${fieldErrors.endDate ? "border-destructive focus-visible:border-destructive" : ""}`}
+                  />
                   {fieldErrors.endDate && <p className="text-destructive text-xs">{fieldErrors.endDate}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">End Time <span className="text-destructive">*</span></Label>
-                  <Input type="time" value={endTime} onChange={(e) => { setEndTime(e.target.value); if (fieldErrors.endDate) setFieldErrors((p) => ({ ...p, endDate: undefined })) }} className={`h-10 ${fieldErrors.endDate ? "border-destructive focus-visible:border-destructive" : ""}`} />
+                  <Input
+                    type="time"
+                    value={endTime}
+                    min={endDate === date ? time : undefined}
+                    onChange={(e) => {
+                      setEndTime(e.target.value)
+                      if (fieldErrors.endDate) setFieldErrors((p) => ({ ...p, endDate: undefined }))
+                    }}
+                    className={`h-10 ${fieldErrors.endDate ? "border-destructive focus-visible:border-destructive" : ""}`}
+                  />
                 </div>
               </div>
 
@@ -4009,6 +4083,20 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                       )}
                     </div>
                   )}
+                  {endDate && (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-muted/40 border border-border/60 text-foreground font-medium shadow-2xs">
+                      <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className="size-3.5 text-muted-foreground shrink-0" />
+                      <span>
+                        Ends:{" "}
+                        {new Date(`${endDate}T${endTime || "00:00"}`).toLocaleDateString("en-US", {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </span>
+                      {endTime && <span className="font-semibold text-muted-foreground">· {endTime}</span>}
+                    </div>
+                  )}
                   {doorsTime && (
                     <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-muted/40 border border-border/60 text-muted-foreground font-medium shadow-2xs">
                       <Clock className="size-3 text-muted-foreground shrink-0" />
@@ -4528,7 +4616,11 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                 const errors: { title?: string; date?: string; endDate?: string; doorsTime?: string; location?: string; banner?: string; category?: string } = {}
                 if (!title) errors.title = "Event name is required"
                 if (!date) errors.date = "Date is required"
-                if (!endDate || !endTime) errors.endDate = "End date and time are required"
+                if (!endDate || !endTime) {
+                  errors.endDate = "End date and time are required"
+                } else if (date && time && endDate && endTime && isEndsBeforeOrEqualStarts(date, time, endDate, endTime)) {
+                  errors.endDate = "End date and time must be after start date and time"
+                }
                 if (!venueId) errors.location = "Please select a venue"
                 if (!bannerFile) errors.banner = "Banner image is required"
                 if (doorsTime && time && isDoorsAfterStart(doorsTime, time)) {
@@ -4543,6 +4635,10 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                 if (Object.keys(errors).length > 0) {
                   if (errors.category) {
                     toast.error(errors.category)
+                  } else if (errors.endDate) {
+                    toast.error(errors.endDate)
+                  } else if (errors.doorsTime) {
+                    toast.error(errors.doorsTime)
                   }
                   return
                 }

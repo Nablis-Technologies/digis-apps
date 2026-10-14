@@ -17,6 +17,7 @@ import {
   useGetNotificationPreferencesQuery,
   useUpdateNotificationPreferencesMutation,
 } from "@workspace/store/reducers/notificationsApi"
+import { UserAvatar } from "@workspace/ui/components/admin/user-avatar"
 
 type Section = "general" | "profile" | "password" | "notifications"
 
@@ -175,14 +176,14 @@ function ProfileSection() {
     return <div className="p-4 text-sm text-muted-foreground">Loading profile...</div>
   }
 
+  const displayName = user?.profile?.full_name || form.email || "Administrator"
+
   return (
     <div className="p-2">
       <div className="mb-6 flex items-center gap-4">
-        <div className="flex size-16 items-center justify-center rounded-full bg-lime-500 text-2xl font-bold text-white">
-          {(form.email[0] ?? "A").toUpperCase()}
-        </div>
+        <UserAvatar user={user} className="size-16 rounded-full text-2xl font-bold" />
         <div>
-          <p className="font-medium">{form.email || "Administrator"}</p>
+          <p className="font-medium text-base">{displayName}</p>
           <p className="text-sm text-muted-foreground">{form.role}</p>
         </div>
       </div>

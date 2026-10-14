@@ -49,7 +49,7 @@ export function TeamTab({ eventId, organizationId, primaryOrganization }: TeamTa
 
       {/* External Collaborating Organizations */}
       <div className="pt-2">
-        <CollaboratorsSection eventId={eventId} />
+        <CollaboratorsSection eventId={eventId} hidePrimarySpotlight={!!primaryOrganization} />
       </div>
     </div>
   )

@@ -225,10 +225,25 @@ export const STATUS_BADGE_DICTIONARY: Record<string, StatusBadgeConfig> = {
     dotClass: "bg-red-500",
     label: "Suspended",
   },
+  revoked: {
+    variant: "destructive",
+    dotClass: "bg-red-500",
+    label: "Revoked",
+  },
+  expired: {
+    variant: "destructive",
+    dotClass: "bg-red-500",
+    label: "Expired",
+  },
+  rejected: {
+    variant: "destructive",
+    dotClass: "bg-red-500",
+    label: "Rejected",
+  },
   removed: {
     variant: "destructive",
     dotClass: "bg-red-500",
-    label: "Suspended",
+    label: "Removed",
   },
   active: {
     variant: "success",

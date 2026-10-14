@@ -284,3 +284,19 @@ export const mapDateSelection = (ds?: string): "fixed" | "choose_one" => {
   return "fixed"
 }
 
+/**
+ * Unpacks backend API error responses, including Rails validation hash { errors: { field: [msgs] } }
+ */
+export const formatApiErrorMessage = (err: any, fallback = "An unexpected error occurred"): string => {
+  if (!err) return fallback
+  if (err?.data?.errors && typeof err.data.errors === "object") {
+    const errorMessages = Object.entries(err.data.errors).map(([, messages]) => {
+      const msgStr = Array.isArray(messages) ? messages.join(", ") : String(messages)
+      return msgStr
+    })
+    if (errorMessages.length > 0) return errorMessages.join(". ")
+  }
+  return err?.data?.message || err?.data?.error || err?.message || fallback
+}
+
+

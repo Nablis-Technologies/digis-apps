@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter, usePathname } from "next/navigation"
 import { toast } from "sonner"
 import {
   Popover,
@@ -30,6 +31,8 @@ import {
 } from "@hugeicons/core-free-icons"
 
 export function OrgSidebarSwitcher() {
+  const router = useRouter()
+  const pathname = usePathname()
   const {
     activeOrg,
     activeOrgId,
@@ -68,6 +71,13 @@ export function OrgSidebarSwitcher() {
     setActiveOrgId(org.id)
     setOpen(false)
     setSearchQuery("")
+
+    // If currently on an event detail page, route back to the events list of the selected organization
+    const isEventDetailsPage =
+      pathname.startsWith("/organizer/events/") && pathname !== "/organizer/events/new"
+    if (isEventDetailsPage) {
+      router.push("/organizer/events")
+    }
 
     if (isSuspended) {
       toast.warning(`Selected ${org.name} (Suspended)`, {

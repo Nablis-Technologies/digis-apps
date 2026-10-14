@@ -229,7 +229,9 @@ export default function OnboardingPage() {
       )
     } catch (error: any) {
       const orgName =
-        (formData as any).businessName || (formData as any).fullName || "My Organization"
+        (formData as any).businessName ||
+        `${(formData as any).first_name || ""} ${(formData as any).last_name || ""}`.trim() ||
+        "My Organization"
       setOutcome({ status: "failed", orgName, message: error?.message })
       toast.error("Verification failed", { description: error?.message })
     } finally {
@@ -253,6 +255,8 @@ export default function OnboardingPage() {
             user: {
               email: data.email,
               phone: data.phone || undefined,
+              first_name: data.first_name,
+              last_name: data.last_name,
               password: data.password,
               password_confirmation: data.password,
             },
@@ -296,7 +300,10 @@ export default function OnboardingPage() {
               // the backend enums exactly (category, audience, frequency).
               const orgPayload = {
                 organization: {
-                  name: data.businessName || data.fullName || "My Organization",
+                  name:
+                    data.businessName ||
+                    `${data.first_name || ""} ${data.last_name || ""}`.trim() ||
+                    "My Organization",
                   description: data.description || undefined,
                   organizer_type: (data.organizer_type || "individual") as
                     | "individual"

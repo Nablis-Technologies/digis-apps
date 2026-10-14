@@ -6,7 +6,14 @@ import { z } from "zod"
 
 // Step 1: Profile Information
 export const profileSchema = z.object({
-  fullName: z.string().min(2, "Full name must be at least 2 characters"),
+  first_name: z
+    .string()
+    .min(1, "First name is required")
+    .max(100, "First name must be 100 characters or fewer"),
+  last_name: z
+    .string()
+    .min(1, "Last name is required")
+    .max(100, "Last name must be 100 characters or fewer"),
   phone: z.string().regex(/^(?:\+251|251|0)?[97]\d{8}$/, "Invalid Ethiopian phone number"),
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),

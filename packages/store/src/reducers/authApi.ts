@@ -24,6 +24,13 @@ export interface AuthUserRole {
   active?: boolean
 }
 
+export interface UserProfile {
+  first_name?: string
+  last_name?: string
+  full_name?: string
+  avatar_url?: string | null
+}
+
 export interface AuthUser {
   id: string
   email?: string
@@ -35,7 +42,13 @@ export interface AuthUser {
   updated_at?: string
   permissions?: string[]
   roles?: AuthUserRole[]
+  profile?: UserProfile | null
   [key: string]: unknown
+}
+
+export interface UserResponse {
+  success: boolean
+  data: AuthUser
 }
 
 interface LoginRequest {
@@ -52,13 +65,16 @@ interface LoginResponse {
   }
 }
 
-interface SignupRequest {
+export interface SignupRequest {
   user: {
     email?: string
     phone?: string
+    first_name?: string
+    last_name?: string
     password: string
     password_confirmation?: string
   }
+  verification_token?: string
 }
 
 interface SignupResponse {
@@ -66,6 +82,8 @@ interface SignupResponse {
   message?: string
   data: {
     user: AuthUser
+    access_token?: string
+    refresh_token?: string
   }
 }
 
@@ -82,11 +100,20 @@ interface ReauthenticateResponse {
   }
 }
 
-interface MeResponse {
+export interface MeResponse {
   success: boolean
   data: {
     user: AuthUser
+    [key: string]: unknown
   }
+}
+
+export interface UpdateProfilePayload {
+  profile: {
+    first_name?: string
+    last_name?: string
+  }
+  idempotencyKey?: string
 }
 
 // RTK Query caches are keyed by endpoint + args only — identical for every
@@ -120,6 +147,7 @@ function resetAllApiState(dispatch: AppDispatch) {
 export const authApi = createApi({
   reducerPath: "authApi",
   baseQuery: baseQueryWithReauth,
+  tagTypes: ["CurrentUser"],
   endpoints: (builder) => ({
     login: builder.mutation<LoginResponse, LoginRequest>({
       query: (body) => ({
@@ -143,6 +171,17 @@ export const authApi = createApi({
         method: "POST",
         body,
       }),
+      async onQueryStarted(_, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled
+          if (data.data.access_token && data.data.refresh_token) {
+            setTokens(data.data.access_token, data.data.refresh_token)
+            resetAllApiState(dispatch)
+          }
+        } catch {
+          // credentials invalid — tokens not set
+        }
+      },
     }),
     reauthenticate: builder.mutation<ReauthenticateResponse, ReauthenticateRequest>({
       query: (body) => ({
@@ -161,8 +200,53 @@ export const authApi = createApi({
         body,
       }),
     }),
+    getUser: builder.query<UserResponse, void>({
+      query: () => "/user",
+      providesTags: ["CurrentUser"],
+    }),
     getMe: builder.query<MeResponse, void>({
-      query: () => "/auth/me",
+      query: () => "/user",
+      transformResponse: (response: UserResponse): MeResponse => ({
+        success: response.success,
+        data: {
+          ...response.data,
+          user: response.data,
+        },
+      }),
+      providesTags: ["CurrentUser"],
+    }),
+    updateProfile: builder.mutation<UserResponse, UpdateProfilePayload>({
+      query: ({ profile, idempotencyKey }) => ({
+        url: "/user",
+        method: "PATCH",
+        headers: idempotencyKey ? { "Idempotency-Key": idempotencyKey } : undefined,
+        body: { profile },
+      }),
+      invalidatesTags: ["CurrentUser"],
+    }),
+    uploadAvatar: builder.mutation<
+      UserResponse,
+      { file: File; idempotencyKey?: string }
+    >({
+      query: ({ file, idempotencyKey }) => {
+        const formData = new FormData()
+        formData.append("avatar", file)
+        return {
+          url: "/user/avatar",
+          method: "PUT",
+          headers: idempotencyKey ? { "Idempotency-Key": idempotencyKey } : undefined,
+          body: formData,
+        }
+      },
+      invalidatesTags: ["CurrentUser"],
+    }),
+    removeAvatar: builder.mutation<UserResponse, { idempotencyKey?: string } | void>({
+      query: (arg) => ({
+        url: "/user/avatar",
+        method: "DELETE",
+        headers: arg?.idempotencyKey ? { "Idempotency-Key": arg.idempotencyKey } : undefined,
+      }),
+      invalidatesTags: ["CurrentUser"],
     }),
     logout: builder.mutation<void, void>({
       query: () => {
@@ -192,8 +276,14 @@ export const {
   useSignupMutation,
   useReauthenticateMutation,
   useCreatePhoneVerificationMutation,
+  useGetUserQuery,
+  useLazyGetUserQuery,
   useGetMeQuery,
   useLazyGetMeQuery,
+  useUpdateProfileMutation,
+  useUploadAvatarMutation,
+  useRemoveAvatarMutation,
   useLogoutMutation,
 } = authApi
+
 
