@@ -63,7 +63,7 @@ export function RegistrationFormsTab({ eventId }: { eventId: string }) {
           <Button variant="outline" size="sm" onClick={() => refetch()}>
             <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} className="size-4" />Refresh
           </Button>
-          <Button size="sm" className="bg-lime-500 text-white hover:bg-lime-600" onClick={() => { setEditingForm(null); setFormDialogOpen(true) }}>
+          <Button size="sm" onClick={() => { setEditingForm(null); setFormDialogOpen(true) }}>
             <HugeiconsIcon icon={PlusSignCircleIcon} strokeWidth={2} className="size-4" />Create Form
           </Button>
         </div>

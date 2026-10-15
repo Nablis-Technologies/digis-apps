@@ -214,7 +214,7 @@ export default function OnboardingOrgPage() {
             <HugeiconsIcon icon={Building02Icon} strokeWidth={2} className="size-8" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-            Welcome to DEGES Organizer
+            Welcome to Digis Organizer
           </h1>
           <p className="text-sm text-muted-foreground max-w-md mx-auto">
             Set up your organization workspace to publish events, manage ticket sales, and track revenue.

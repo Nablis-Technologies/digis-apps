@@ -241,7 +241,7 @@ export default function CampaignsPage() {
             </Button>
           </div>
           <div className="mt-2 text-2xl font-bold font-mono">
-            {isLoadingCredits ? (
+            {isLoadingCredits && !creditsData ? (
               <Skeleton className="h-7 w-20" />
             ) : (
               formatNumber(smsCredit?.available ?? 0)
@@ -272,7 +272,7 @@ export default function CampaignsPage() {
             </Button>
           </div>
           <div className="mt-2 text-2xl font-bold font-mono">
-            {isLoadingCredits ? (
+            {isLoadingCredits && !creditsData ? (
               <Skeleton className="h-7 w-20" />
             ) : (
               formatNumber(emailCredit?.available ?? 0)
@@ -408,7 +408,7 @@ export default function CampaignsPage() {
           {/* Campaigns Roster Table */}
           <Card>
             <CardContent className="p-0">
-              {isLoadingCampaigns ? (
+              {isLoadingCampaigns && !campaignsData ? (
                 <div className="space-y-3 p-6">
                   {[...Array(3)].map((_, i) => (
                     <Skeleton key={i} className="h-14 w-full" />
@@ -696,42 +696,52 @@ export default function CampaignsPage() {
         {/* ─── TAB 3: TEMPLATES & GUIDE ────────────────────────────────────────── */}
         <TabsContent value="templates" className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            {/* Merge Tags Documentation */}
+            {/* Personalization Tags Documentation */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Personalization Variables</CardTitle>
+                <CardTitle className="text-sm">Personalize Messages (Attendee Tags)</CardTitle>
                 <CardDescription className="text-xs">
-                  Include dynamic merge tags in your SMS and email bodies.
+                  Automatically insert each recipient&apos;s real details into SMS and email blasts.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2.5 text-xs">
                 <div className="rounded-lg border bg-muted/20 p-2.5">
                   <div className="flex items-center justify-between font-mono font-bold text-foreground">
-                    <span>&#123;first_name&#125;</span>
-                    <span className="text-[11px] font-normal text-muted-foreground">Recipient Name</span>
+                    <span>&#123;&#123;first_name&#125;&#125;</span>
+                    <span className="text-[11px] font-normal text-muted-foreground">Attendee Name</span>
                   </div>
                   <p className="mt-1 text-[11px] text-muted-foreground">
-                    Replaced with the attendee&apos;s registered first name or &quot;there&quot; if absent.
+                    Replaced with the attendee&apos;s registered first name (e.g. &quot;Hey Sarah!&quot;).
                   </p>
                 </div>
 
                 <div className="rounded-lg border bg-muted/20 p-2.5">
                   <div className="flex items-center justify-between font-mono font-bold text-foreground">
-                    <span>&#123;event_title&#125;</span>
-                    <span className="text-[11px] font-normal text-muted-foreground">Target Event</span>
+                    <span>&#123;&#123;event_title&#125;&#125;</span>
+                    <span className="text-[11px] font-normal text-muted-foreground">Event Title</span>
                   </div>
                   <p className="mt-1 text-[11px] text-muted-foreground">
-                    Automatically inserts the official event title.
+                    Automatically inserts the official event name (e.g. &quot;Gize Concert Night&quot;).
                   </p>
                 </div>
 
                 <div className="rounded-lg border bg-muted/20 p-2.5">
                   <div className="flex items-center justify-between font-mono font-bold text-foreground">
-                    <span>&#123;ticket_link&#125;</span>
-                    <span className="text-[11px] font-normal text-muted-foreground">Short Link</span>
+                    <span>&#123;&#123;event_link&#125;&#125;</span>
+                    <span className="text-[11px] font-normal text-muted-foreground">Event Page</span>
                   </div>
                   <p className="mt-1 text-[11px] text-muted-foreground">
-                    Generates a branded <code className="text-[10px]">dig.is/...</code> link with live click tracking (CTR).
+                    Generates a branded short link directly to your event landing page.
+                  </p>
+                </div>
+
+                <div className="rounded-lg border bg-muted/20 p-2.5">
+                  <div className="flex items-center justify-between font-mono font-bold text-foreground">
+                    <span>&#123;&#123;ticket_link&#125;&#125;</span>
+                    <span className="text-[11px] font-normal text-muted-foreground">Mobile Ticket Pass</span>
+                  </div>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Generates a direct personalized <code className="text-[10px]">dig.is/t/...</code> ticket link with live click tracking.
                   </p>
                 </div>
               </CardContent>

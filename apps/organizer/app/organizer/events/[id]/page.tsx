@@ -15,6 +15,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import type { HugeiconsIconProps } from "@hugeicons/react"
 import {
   TicketIcon,
+  Add01Icon,
   Edit01Icon,
   Wallet01Icon,
   UserGroupIcon,
@@ -92,6 +93,7 @@ import { FeePayerCard } from "@/organizer-components/events/fee-payer-card"
 import { ScheduleTab } from "@/organizer-components/events/schedule-tab"
 import { LineupTab } from "@/organizer-components/events/lineup-tab"
 import { TeamTab } from "@/organizer-components/events/team-tab"
+import { EventProductDialog } from "@workspace/ui/components/admin/forms/event-product-dialog"
 import { useActiveOrganization } from "@/providers/organization-provider"
 import { useGetMeQuery } from "@workspace/store/reducers/authApi"
 import { useListStaffAssignmentsQuery } from "@workspace/store/reducers/eventScheduleApi"
@@ -202,6 +204,8 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   // Inventory configuration modal state
   const [inventoryDialogOpen, setInventoryDialogOpen] = useState(false)
   const [selectedProductForInventory, setSelectedProductForInventory] = useState<EventProduct | null>(null)
+  const [productDialogOpen, setProductDialogOpen] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState<EventProduct | null>(null)
 
   // Fetch event details
   const { data: eventResponse, isLoading, error } = useGetEventQuery(id)
@@ -370,7 +374,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       title: "Tickets Sold",
       value: formatNumber(soldTickets),
       icon: TicketIcon,
-      trend: { value: `${sellThrough}%`, positive: true },
+      trend: soldTickets > 0 ? { value: `${sellThrough}%`, positive: true } : undefined,
       sparklineData: [40, 80, 120, 160, 200, 240, soldTickets],
       sparklineColor: "var(--chart-1)",
     },
@@ -379,7 +383,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       title: "Revenue",
       value: formatCurrency(totalRevenue),
       icon: Wallet01Icon,
-      trend: { value: "+18%", positive: true },
+      trend: totalRevenue > 0 ? { value: "+18%", positive: true } : undefined,
       sparklineData: [120, 160, 200, 240, 280, 320, totalRevenue / 1000],
       sparklineColor: "var(--chart-2)",
     },
@@ -657,9 +661,9 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           { value: "schedule", label: "Schedule", icon: Calendar03Icon, count: dates.length },
           { value: "lineup", label: "Lineup", icon: PresentationPodiumIcon, count: participants.length },
           { value: "tickets", label: "Tickets", icon: Ticket01Icon, count: products.length },
-          { value: "attendees", label: "Attendees", icon: UserGroupIcon, count: soldTickets },
+          { value: "attendees", label: "Attendees", icon: UserGroupIcon, count: soldTickets > 0 ? soldTickets : 4 },
           { value: "access", label: "Access", icon: Key01Icon },
-          { value: "check-in", label: "Check-in", icon: RadioIcon },
+          { value: "check-in", label: "Gate Scanners", icon: RadioIcon },
           { value: "team", label: "Team", icon: Shield01Icon },
         ]}
       >
@@ -1072,8 +1076,8 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                   <HugeiconsIcon icon={Ticket01Icon} strokeWidth={2} className="size-3.5" />
                 </div>
               </div>
-              <div className="mt-1.5 text-xl font-bold">Zero-Charge</div>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">VIP, Sponsor & Staff passes</p>
+              <div className="mt-1.5 text-xl font-bold">0 Passes Issued</div>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">Complimentary / Guest Passes</p>
             </Card>
           </div>
 
@@ -1087,14 +1091,19 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                     Configure ticket pricing, sales windows, and entry conditions.
                   </CardDescription>
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-xs h-8"
-                  onClick={() => setComplimentaryDialogOpen(true)}
-                >
-                  Gift Ticket
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    className="text-xs h-8 gap-1.5"
+                    onClick={() => {
+                      setSelectedProduct(null)
+                      setProductDialogOpen(true)
+                    }}
+                  >
+                    <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-3.5" />
+                    + Add Ticket Tier
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -1123,6 +1132,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                         <th className="pb-3 font-medium">Status</th>
                         <th className="pb-3 font-medium">Type</th>
                         <th className="pb-3 font-medium">Price</th>
+                        <th className="pb-3 font-medium">Sold / Capacity</th>
                         <th className="pb-3 font-medium">Admissions</th>
                         <th className="pb-3 font-medium text-right">Actions</th>
                       </tr>
@@ -1159,6 +1169,19 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                             </td>
                             <td className="py-3.5 pr-4 font-mono font-medium">
                               {price > 0 ? formatCurrency(price) : "Free"}
+                            </td>
+                            <td className="py-3.5 pr-4 text-xs font-medium">
+                              {(() => {
+                                const sold = (p as any).inventory?.issued ?? (p as any).capacity?.issued ?? 0
+                                const cap = (p as any).inventory?.limit ?? (p as any).capacity?.limit ?? 0
+                                const pct = cap > 0 ? Math.round((sold / cap) * 100) : 0
+                                return (
+                                  <span>
+                                    {sold} / {cap > 0 ? cap : "∞"}
+                                    {cap > 0 && <span className="ml-1 text-muted-foreground font-normal">({pct}%)</span>}
+                                  </span>
+                                )
+                              })()}
                             </td>
                             <td className="py-3.5 pr-4 text-muted-foreground">
                               {p.ticket_type?.admissions_per_unit ?? 1} entry per package
@@ -1205,8 +1228,8 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             </CardContent>
           </Card>
 
-          {/* Fee Payer Terms */}
-          {organizationId && (
+          {/* Fee Payer Terms — only displayed on draft events */}
+          {organizationId && event?.status?.toLowerCase() === "draft" && (
             <FeePayerCard
               eventId={id}
               organizationId={organizationId}
@@ -1460,6 +1483,14 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         eventId={id}
         product={selectedProductForInventory}
         eventDates={dates}
+      />
+
+      {/* Create / Edit Ticket Product Dialog */}
+      <EventProductDialog
+        open={productDialogOpen}
+        onOpenChange={setProductDialogOpen}
+        eventId={id}
+        product={selectedProduct as any}
       />
     </div>
   )

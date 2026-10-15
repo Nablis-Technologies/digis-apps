@@ -341,7 +341,7 @@ export default function OrganizerDashboard() {
         title: "Tickets Sold",
         value: formatNumber(totalSold),
         icon: TicketIcon,
-        trend: totalCapacity > 0
+        trend: totalSold > 0 && totalCapacity > 0
           ? { value: `${calculatePercentage(totalSold, totalCapacity)}% capacity`, positive: true }
           : undefined,
         sparklineData: [0, totalSold],
@@ -447,7 +447,7 @@ export default function OrganizerDashboard() {
           defaultValue="overview"
           tabs={[
             { value: "overview", label: "Overview", icon: LayoutTopIcon },
-            { value: "tickets", label: `Tickets (${tableRows.length})`, icon: TicketIcon },
+            { value: "tickets", label: `Active Events (${tableRows.length})`, icon: Calendar03Icon },
             { value: "sales", label: "Sales", icon: BarChartIcon },
           ]}
         >

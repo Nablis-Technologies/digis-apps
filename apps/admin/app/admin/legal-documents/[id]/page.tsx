@@ -107,7 +107,7 @@ export default function LegalDocumentDetailPage() {
               <HugeiconsIcon icon={Clock01Icon} strokeWidth={2} className="size-4" />Deactivate
             </Button>
           ) : (
-            <Button size="sm" className="bg-lime-500 text-white hover:bg-lime-600" onClick={async () => {
+            <Button size="sm" onClick={async () => {
               try {
                 await activateDoc(document.id).unwrap()
                 toastSuccess("Document activated.")

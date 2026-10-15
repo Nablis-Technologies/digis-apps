@@ -347,7 +347,7 @@ export default function OnboardingPage() {
                   verified ? "Organization verified!" : "Submitted for review!",
                   {
                     description: verified
-                      ? "Welcome to DEGES. You can now create and publish events."
+                      ? "Welcome to Digis. You can now create and publish events."
                       : "An admin will review your documents. You can create draft events meanwhile.",
                   }
                 )
@@ -446,7 +446,7 @@ export default function OnboardingPage() {
           {/* Logo/Brand */}
           <div className="flex items-center justify-between py-4">
             <div>
-              <h1 className="text-lg font-bold text-foreground">DEGES</h1>
+              <h1 className="text-lg font-bold text-foreground">Digis</h1>
               <p className="text-xs text-muted-foreground">Organizer Registration</p>
             </div>
             <div className="text-right">

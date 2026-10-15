@@ -10,16 +10,18 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "relative overflow-hidden border-emerald-500/20 bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/25 backdrop-blur-xl hover:shadow-xl hover:shadow-emerald-500/30 hover:from-emerald-400 hover:to-teal-500 dark:border-emerald-400/30 dark:from-emerald-600 dark:to-teal-700 dark:shadow-emerald-400/20 dark:hover:shadow-emerald-400/25 before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/20 before:to-transparent before:opacity-0 hover:before:opacity-100 before:transition-opacity",
+          "border-transparent bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 focus-visible:ring-primary/20",
+        primary:
+          "border-transparent bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 focus-visible:ring-primary/20",
         outline:
-          "border-border/50 bg-background/50 shadow-sm backdrop-blur-md hover:bg-muted/80 hover:text-foreground hover:border-border aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input/50 dark:bg-input/20 dark:hover:bg-input/40 dark:hover:border-input/70",
+          "border-border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground aria-expanded:bg-accent aria-expanded:text-accent-foreground dark:border-input/50 dark:bg-input/20 dark:hover:bg-input/40 dark:hover:border-input/70",
         secondary:
-          "border-emerald-200/50 bg-gradient-to-br from-emerald-50 to-teal-50 text-emerald-900 shadow-sm backdrop-blur-md hover:from-emerald-100 hover:to-teal-100 hover:shadow-md aria-expanded:from-emerald-100 aria-expanded:to-teal-100 dark:border-emerald-800/50 dark:from-emerald-950/50 dark:to-teal-950/50 dark:text-emerald-100 dark:hover:from-emerald-900/60 dark:hover:to-teal-900/60",
+          "border-transparent bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80 aria-expanded:bg-secondary/80",
         ghost:
-          "border-transparent hover:bg-muted/60 hover:text-foreground hover:backdrop-blur-md aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/40",
+          "border-transparent hover:bg-accent hover:text-accent-foreground aria-expanded:bg-accent aria-expanded:text-accent-foreground",
         destructive:
-          "border-red-500/20 bg-gradient-to-br from-red-500/10 to-rose-500/10 text-red-600 shadow-sm backdrop-blur-md hover:from-red-500/20 hover:to-rose-500/20 hover:shadow-md focus-visible:border-red-500/40 focus-visible:ring-red-500/20 dark:border-red-400/30 dark:from-red-500/20 dark:to-rose-500/20 dark:text-red-400 dark:hover:from-red-500/30 dark:hover:to-rose-500/30 dark:focus-visible:ring-red-400/40",
-        link: "border-transparent text-emerald-600 underline-offset-4 hover:underline hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300",
+          "border-transparent bg-destructive text-white shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/80",
+        link: "border-transparent text-primary underline-offset-4 hover:underline",
       },
       size: {
         default:

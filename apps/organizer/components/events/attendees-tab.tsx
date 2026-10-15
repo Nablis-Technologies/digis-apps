@@ -143,7 +143,10 @@ export function AttendeesTab({
         confirmed_at: new Date(Date.now() - 3600000 * 24 * 2).toISOString(),
         created_at: new Date(Date.now() - 3600000 * 24 * 2).toISOString(),
         updated_at: new Date(Date.now() - 3600000 * 24 * 2).toISOString(),
-      },
+        attendeeName: "Abebe Kebede",
+        attendeePhone: "+251 91 123 4567",
+        attendeeEmail: "abebe@example.com",
+      } as Registration,
       {
         id: "01a1b021-e011-73ef-9221-a4b12c449d02",
         event_id: eventId,
@@ -154,7 +157,10 @@ export function AttendeesTab({
         submitted_at: new Date(Date.now() - 3600000 * 5).toISOString(),
         created_at: new Date(Date.now() - 3600000 * 5).toISOString(),
         updated_at: new Date(Date.now() - 3600000 * 5).toISOString(),
-      },
+        attendeeName: "Bethlehem Tadesse",
+        attendeePhone: "+251 92 345 6789",
+        attendeeEmail: "bethlehem@example.com",
+      } as Registration,
       {
         id: "01a1b021-e011-73ef-9221-a4b12c449d03",
         event_id: eventId,
@@ -166,7 +172,10 @@ export function AttendeesTab({
         confirmed_at: new Date(Date.now() - 3600000 * 18).toISOString(),
         created_at: new Date(Date.now() - 3600000 * 18).toISOString(),
         updated_at: new Date(Date.now() - 3600000 * 18).toISOString(),
-      },
+        attendeeName: "Dawit Yohannes",
+        attendeePhone: "+251 91 876 5432",
+        attendeeEmail: "dawit.y@example.com",
+      } as Registration,
       {
         id: "01a1b021-e011-73ef-9221-a4b12c449d04",
         event_id: eventId,
@@ -178,7 +187,10 @@ export function AttendeesTab({
         waitlisted_at: new Date(Date.now() - 3600000 * 12).toISOString(),
         created_at: new Date(Date.now() - 3600000 * 12).toISOString(),
         updated_at: new Date(Date.now() - 3600000 * 12).toISOString(),
-      },
+        attendeeName: "Selamawit Haile",
+        attendeePhone: "+251 93 456 7890",
+        attendeeEmail: "selamawit@example.com",
+      } as Registration,
     ],
     [eventId, eventProducts]
   )
@@ -493,7 +505,7 @@ export function AttendeesTab({
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b text-xs uppercase text-muted-foreground">
-                    <th className="pb-3 font-medium">Attendee Ref</th>
+                    <th className="pb-3 font-medium">Attendee & Contact</th>
                     <th className="pb-3 font-medium">Tier Allocation</th>
                     <th className="pb-3 font-medium">Party Size</th>
                     <th className="pb-3 font-medium">Source</th>
@@ -511,8 +523,18 @@ export function AttendeesTab({
 
                     return (
                       <tr key={reg.id} className="hover:bg-muted/40 transition-colors">
-                        <td className="py-3.5 pr-4 font-mono text-xs text-foreground font-semibold">
-                          {reg.id.slice(0, 18)}...
+                        <td className="py-3.5 pr-4">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-semibold text-xs text-foreground">
+                              {(reg as any).attendeeName || "Attendee Guest"}
+                            </span>
+                            <span className="text-[11px] text-muted-foreground font-mono">
+                              {(reg as any).attendeePhone || "+251 91 123 4567"}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground/70 font-mono">
+                              Ref: {reg.id.slice(0, 8)}...
+                            </span>
+                          </div>
                         </td>
                         <td className="py-3.5 pr-4 font-medium text-xs">
                           {tier?.name || "General Admission"}

@@ -315,7 +315,7 @@ function TablePagination({
                 className={cn(
                   "flex size-8 items-center justify-center rounded-md text-sm font-medium transition-colors",
                   p === page
-                    ? "bg-lime-500 text-white shadow-xs"
+                    ? "bg-primary text-primary-foreground shadow-xs"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground"
                 )}
               >

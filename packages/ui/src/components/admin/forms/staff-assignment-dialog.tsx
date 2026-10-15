@@ -139,7 +139,6 @@ export function StaffAssignmentDialog({
             <Button
               type="submit"
               disabled={!isValid() || isCreating}
-              className="bg-lime-500 text-white hover:bg-lime-600 disabled:bg-lime-500/50"
             >
               {isCreating ? "Assigning..." : "Assign Staff"}
             </Button>

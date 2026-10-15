@@ -70,7 +70,6 @@ export default function CreditRatesPage() {
           </Button>
           <Button
             size="sm"
-            className="bg-lime-500 text-white hover:bg-lime-600"
             onClick={() => setOpenCreate(true)}
           >
             <HugeiconsIcon icon={Add01Icon} className="mr-1.5 size-4" />
@@ -214,7 +213,7 @@ export default function CreditRatesPage() {
               <Button type="button" variant="outline" onClick={() => setOpenCreate(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isCreating} className="bg-lime-500 text-white hover:bg-lime-600">
+              <Button type="submit" disabled={isCreating}>
                 {isCreating ? "Creating..." : "Create Rate"}
               </Button>
             </DialogFooter>

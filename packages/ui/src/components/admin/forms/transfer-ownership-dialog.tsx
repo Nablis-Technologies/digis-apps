@@ -114,7 +114,6 @@ export function TransferOwnershipDialog({
             <Button
               type="submit"
               disabled={!newOwnerId.trim() || !orgId || transferring}
-              className="bg-lime-500 text-white hover:bg-lime-600 disabled:bg-lime-500/50"
             >
               {transferring ? "Transferring..." : "Transfer"}
             </Button>

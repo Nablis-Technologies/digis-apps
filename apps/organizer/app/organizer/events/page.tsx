@@ -156,8 +156,8 @@ export default function EventsPage() {
       title: "Total Events",
       value: formatNumber(events.length),
       icon: Calendar03Icon,
-      trend: { value: "+12%", positive: true },
-      sparklineData: [16, 18, 19, 21, 22, 23, events.length],
+      trend: events.length > 0 ? { value: `${events.length} active`, positive: true } : undefined,
+      sparklineData: events.length > 0 ? [Math.max(0, events.length - 1), events.length] : [0, 0],
       sparklineColor: "var(--chart-1)",
     },
     {
@@ -165,8 +165,8 @@ export default function EventsPage() {
       title: "Tickets Sold",
       value: formatNumber(ticketsSold),
       icon: TicketIcon,
-      trend: { value: "+18%", positive: true },
-      sparklineData: [1800, 2200, 2600, 3000, 3400, 3600, ticketsSold],
+      trend: ticketsSold > 0 ? { value: "+18%", positive: true } : undefined,
+      sparklineData: [0, ticketsSold],
       sparklineColor: "var(--chart-2)",
     },
     {
@@ -174,8 +174,8 @@ export default function EventsPage() {
       title: "Total Revenue",
       value: formatCurrencyShort(totalRevenue),
       icon: Wallet01Icon,
-      trend: { value: "+25%", positive: true },
-      sparklineData: [2400, 2800, 3200, 3600, 4100, 4400, totalRevenue / 1000],
+      trend: totalRevenue > 0 ? { value: "+25%", positive: true } : undefined,
+      sparklineData: [0, totalRevenue],
       sparklineColor: "var(--chart-3)",
     },
     {
@@ -183,11 +183,8 @@ export default function EventsPage() {
       title: "Total Capacity",
       value: formatNumber(totalCapacity),
       icon: UserGroupIcon,
-      trend: {
-        value: totalCapacity > 0 ? `${Math.round((ticketsSold / totalCapacity) * 100)}% sold` : "N/A",
-        positive: true,
-      },
-      sparklineData: [2200, 2400, 2600, 2700, 2800, 2900, totalCapacity],
+      trend: totalCapacity > 0 ? { value: `${Math.round((ticketsSold / totalCapacity) * 100)}% sold`, positive: true } : undefined,
+      sparklineData: [0, totalCapacity],
       sparklineColor: "var(--chart-4)",
     },
   ]

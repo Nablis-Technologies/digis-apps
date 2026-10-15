@@ -73,7 +73,7 @@ function NavItem({
         className={cn(
           "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
           isActive
-            ? "bg-lime-500 text-white shadow-xs"
+            ? "bg-lime-500 text-zinc-950 font-semibold shadow-xs"
             : "text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
         )}
       >
@@ -96,7 +96,7 @@ function NavItem({
         className={cn(
           "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
           isActive
-            ? "bg-lime-500 text-white shadow-xs"
+            ? "bg-lime-500 text-zinc-950 font-semibold shadow-xs"
             : "text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
         )}
       >
@@ -110,7 +110,7 @@ function NavItem({
           className={cn(
             "size-3.5 text-sidebar-foreground/40 transition-transform duration-150",
             open && "rotate-90",
-            isActive && "text-white/60"
+            isActive && "text-zinc-950/70"
           )}
         />
       </button>

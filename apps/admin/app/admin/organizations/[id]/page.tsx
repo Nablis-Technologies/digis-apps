@@ -214,7 +214,7 @@ export default function OrgDetailPage() {
             <HugeiconsIcon icon={Mail02Icon} strokeWidth={2} className="size-4" />
             Message
           </Button>
-          <Button size="sm" className="bg-lime-500 text-white hover:bg-lime-600" onClick={() => setEditOpen(true)}>
+          <Button size="sm" onClick={() => setEditOpen(true)}>
             <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} className="size-4" />
             Edit
           </Button>
@@ -553,7 +553,7 @@ function VerificationFeedbackDialog({
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={!feedback.trim() || submitting} className="bg-lime-500 text-white hover:bg-lime-600 disabled:bg-lime-500/50">
+            <Button type="submit" disabled={!feedback.trim() || submitting}>
               {submitting ? "Sending..." : "Send"}
             </Button>
           </div>
@@ -603,7 +603,7 @@ function MembersTab({
     <div className="rounded-xl border border-border/50 bg-card p-6 shadow-xs">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold">Members</h3>
-        <Button size="sm" onClick={onAdd} className="bg-lime-500 text-white hover:bg-lime-600">
+        <Button size="sm" onClick={onAdd}>
           <HugeiconsIcon icon={PlusSignCircleIcon} strokeWidth={2} className="size-4" />Add Member
         </Button>
       </div>

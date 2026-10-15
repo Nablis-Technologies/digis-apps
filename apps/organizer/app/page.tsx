@@ -18,7 +18,7 @@ export default function LoginPage() {
                 className="size-4"
               />
             </div>
-            DEGES Organizer
+            Digis Organizer
           </a>
         </div>
         <div className="flex flex-1 items-center justify-center">
@@ -30,7 +30,7 @@ export default function LoginPage() {
       <div className="relative hidden bg-muted lg:block">
         <img
           src={Logo.src}
-          alt="DEGES Logo"
+          alt="Digis Logo"
           className="absolute inset-0 h-full w-full object-cover"
         />
       </div>

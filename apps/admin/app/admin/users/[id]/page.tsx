@@ -165,7 +165,7 @@ export default function UserDetailPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Button size="sm" className="bg-lime-500 text-white hover:bg-lime-600" onClick={() => setEditOpen(true)}>
+          <Button size="sm" onClick={() => setEditOpen(true)}>
             <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} className="size-4" />
             Edit
           </Button>
@@ -261,7 +261,7 @@ function RolesTab({ userId, onAssign, onRemove }: { userId: string; onAssign: ()
           <h3 className="font-semibold">Assigned Roles</h3>
           <p className="text-xs text-muted-foreground">Manage role assignments for this user</p>
         </div>
-        <Button size="sm" onClick={onAssign} className="bg-lime-500 text-white hover:bg-lime-600">
+        <Button size="sm" onClick={onAssign}>
           <HugeiconsIcon icon={PlusSignCircleIcon} strokeWidth={2} className="size-4" />Assign Role
         </Button>
       </div>

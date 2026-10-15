@@ -231,7 +231,6 @@ export function PermissionDialog({
             <Button
               type="submit"
               disabled={!isValid() || submitting}
-              className="bg-lime-500 text-white hover:bg-lime-600 disabled:bg-lime-500/50"
             >
               {submitting ? "Saving..." : isEdit ? "Update" : "Create"}
             </Button>

@@ -24,6 +24,14 @@ import {
 
 const labelMap: Record<string, string> = {
   admin: "Admin",
+  organizer: "Organizer",
+  events: "Events",
+  payouts: "Payouts",
+  team: "Team",
+  campaigns: "Campaigns",
+  organization: "Organization",
+  profile: "Profile",
+  tickets: "Tickets",
   users: "Users",
   roles: "Roles",
   permissions: "Permissions",
@@ -37,6 +45,9 @@ const labelMap: Record<string, string> = {
   general: "General",
 }
 
+const isUuid = (val: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}/i.test(val) || (val.length >= 20 && val.includes("-"))
+
 export function SiteHeader() {
   const { toggleSidebar } = useSidebar()
   const pathname = usePathname()
@@ -47,7 +58,7 @@ export function SiteHeader() {
     .split("/")
     .filter(Boolean)
     .map((s, i, arr) => ({
-      label: labelMap[s] ?? s.charAt(0).toUpperCase() + s.slice(1),
+      label: labelMap[s] ?? (isUuid(s) ? "Details" : s.charAt(0).toUpperCase() + s.slice(1)),
       href: "/" + arr.slice(0, i + 1).join("/"),
       isLast: i === arr.length - 1,
     }))

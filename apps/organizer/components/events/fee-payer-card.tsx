@@ -22,19 +22,27 @@ import {
 import { cn } from "@workspace/ui/lib/utils"
 
 interface FeePayerCardProps {
-  eventId: string
-  organizationId: string
+  eventId?: string
+  organizationId?: string
   currency?: string
+  value?: "buyer" | "organizer"
+  onChange?: (payer: "buyer" | "organizer") => void
 }
 
-export function FeePayerCard({ eventId, organizationId, currency = "ETB" }: FeePayerCardProps) {
+export function FeePayerCard({
+  eventId,
+  organizationId,
+  currency = "ETB",
+  value,
+  onChange,
+}: FeePayerCardProps) {
   const { data: termsData, isLoading: isLoadingTerms } = useGetOrganizationTermsQuery(
-    { organizationId },
+    { organizationId: organizationId || "" },
     { skip: !organizationId }
   )
 
   const { data: selectionsData, isLoading: isLoadingSelections } = useListEventPayerSelectionsQuery(
-    { eventId },
+    { eventId: eventId || "" },
     { skip: !eventId }
   )
 
@@ -45,16 +53,19 @@ export function FeePayerCard({ eventId, organizationId, currency = "ETB" }: FeeP
   const currentSelection = selectionsData?.data?.[0]
 
   // Default to buyer or the current selection / term's default charged_to
-  const effectivePayer = currentSelection?.charged_to || feeComponent?.charged_to || "buyer"
+  const effectivePayer =
+    value || currentSelection?.charged_to || feeComponent?.charged_to || "buyer"
   const [selectedPayer, setSelectedPayer] = useState<"buyer" | "organizer">(effectivePayer)
 
   useEffect(() => {
-    if (currentSelection?.charged_to) {
+    if (value) {
+      setSelectedPayer(value)
+    } else if (currentSelection?.charged_to) {
       setSelectedPayer(currentSelection.charged_to)
     } else if (feeComponent?.charged_to) {
       setSelectedPayer(feeComponent.charged_to)
     }
-  }, [currentSelection, feeComponent])
+  }, [value, currentSelection, feeComponent])
 
   const ratePercentage = feeComponent?.rate_bps
     ? (feeComponent.rate_bps / 100).toFixed(2)
@@ -62,6 +73,12 @@ export function FeePayerCard({ eventId, organizationId, currency = "ETB" }: FeeP
 
   const handleSave = async (payer: "buyer" | "organizer") => {
     setSelectedPayer(payer)
+    onChange?.(payer)
+
+    if (!eventId) {
+      // In event creation mode: selection will be persisted when event is created
+      return
+    }
 
     if (!feeComponent?.id && !feeComponent?.fee_component_id) {
       // If backend mock/terms have no explicit component ID, we notify user
@@ -98,7 +115,7 @@ export function FeePayerCard({ eventId, organizationId, currency = "ETB" }: FeeP
     }
   }
 
-  if (isLoadingTerms || isLoadingSelections) {
+  if ((isLoadingTerms && organizationId) || (isLoadingSelections && eventId)) {
     return (
       <Card>
         <CardHeader>
@@ -204,7 +221,9 @@ export function FeePayerCard({ eventId, organizationId, currency = "ETB" }: FeeP
         <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 p-3 rounded-lg">
           <HugeiconsIcon icon={InformationCircleIcon} strokeWidth={2} className="size-4 text-muted-foreground shrink-0" />
           <span>
-            Fee adjustments take effect immediately for all subsequent customer orders and do not affect tickets already sold.
+            {eventId
+              ? "Fee adjustments take effect immediately for all subsequent customer orders and do not affect tickets already sold."
+              : "Fee allocation determines whether the standard platform fee is passed to ticket buyers at checkout or absorbed in your event payout."}
           </span>
         </div>
       </CardContent>

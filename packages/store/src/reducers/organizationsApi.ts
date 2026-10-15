@@ -226,6 +226,27 @@ export const organizationsApi = createApi({
       invalidatesTags: (_result, _error, { id }) => [{ type: "Organizations", id }],
     }),
 
+    // ─── Public Endpoints (catalog / collaborator discovery) ─────────────────
+    listPublicOrganizations: builder.query<
+      PaginatedResponse<Organization>,
+      ListOrgsParams | void
+    >({
+      query: (params) => ({
+        url: "/organizations",
+        params: formatOrgQueryParams(params),
+      }),
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.data.map(({ id }) => ({
+                type: "Organizations" as const,
+                id,
+              })),
+              { type: "Organizations", id: "LIST_PUBLIC" },
+            ]
+          : [{ type: "Organizations", id: "LIST_PUBLIC" }],
+    }),
+
     // ─── Owner Endpoints (for organizer app) ─────────────────────────────────
     listOwnerOrganizations: builder.query<PaginatedResponse<Organization>, ListOrgsParams | void>({
       query: (params) => ({
@@ -346,6 +367,7 @@ export const organizationsApi = createApi({
 
 export const {
   useListOrganizationsQuery,
+  useListPublicOrganizationsQuery,
   useGetOrganizationQuery,
   useCreateOrganizationMutation,
   useUpdateOrganizationMutation,

@@ -66,11 +66,7 @@ export function ConfirmDialog({
             type="button"
             onClick={handleConfirm}
             disabled={submitting}
-            className={
-              variant === "destructive"
-                ? "bg-red-600 text-white hover:bg-red-700 disabled:bg-red-600/50"
-                : "bg-lime-500 text-white hover:bg-lime-600 disabled:bg-lime-500/50"
-            }
+            variant={variant === "destructive" ? "destructive" : "default"}
           >
             {submitting ? "Processing..." : confirmLabel}
           </Button>

@@ -660,6 +660,15 @@ export default function PayoutsPage() {
         </div>
       </div>
 
+      {/* Fast Settlements Trust Banner */}
+      <div className="flex items-center gap-2.5 rounded-xl border border-lime-500/30 bg-lime-500/10 px-4 py-3 text-xs text-foreground">
+        <span className="text-base">⚡️</span>
+        <div>
+          <span className="font-semibold text-foreground">Fast Settlements: </span>
+          <span className="text-muted-foreground">Telebirr transfers arrive within 2 hours. Bank transfers (CBE, Awash) settle next business day.</span>
+        </div>
+      </div>
+
       {isLoading ? (
         <PayoutsSkeleton />
       ) : (

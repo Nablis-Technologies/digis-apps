@@ -131,7 +131,7 @@ export default function EventDetailPage() {
             <HugeiconsIcon icon={event.status === "published" ? EyeClosedIcon : EyeIcon} strokeWidth={2} className="size-4" />
             {event.status === "published" ? "Unpublish" : "Publish"}
           </Button>
-          <Button size="sm" className="bg-lime-500 text-white hover:bg-lime-600" onClick={() => setEditOpen(true)}>
+          <Button size="sm" onClick={() => setEditOpen(true)}>
             <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} className="size-4" />
             Edit
           </Button>

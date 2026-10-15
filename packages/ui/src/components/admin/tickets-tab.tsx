@@ -135,7 +135,7 @@ export function TicketsTab({ eventId }: { eventId: string }) {
           <Button variant="outline" size="sm" onClick={() => refetch()}>
             <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} className="size-4" />Refresh
           </Button>
-          <Button size="sm" className="bg-lime-500 text-white hover:bg-lime-600" onClick={() => { setEditingProduct(null); setProductDialogOpen(true) }}>
+          <Button size="sm" onClick={() => { setEditingProduct(null); setProductDialogOpen(true) }}>
             <HugeiconsIcon icon={PlusSignCircleIcon} strokeWidth={2} className="size-4" />Add Product
           </Button>
         </div>

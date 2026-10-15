@@ -115,7 +115,7 @@ export default function VenueDetailPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Button size="sm" className="bg-lime-500 text-white hover:bg-lime-600" onClick={() => setEditOpen(true)}>
+          <Button size="sm" onClick={() => setEditOpen(true)}>
             <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} className="size-4" />
             Edit
           </Button>
