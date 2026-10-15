@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -449,9 +450,17 @@ export default function OnboardingPage() {
               <h1 className="text-lg font-bold text-foreground">Digis</h1>
               <p className="text-xs text-muted-foreground">Organizer Registration</p>
             </div>
-            <div className="text-right">
-              <p className="text-sm font-semibold text-foreground">Step {currentStep + 1} of {totalSteps}</p>
-              <p className="text-xs text-muted-foreground">{Math.round(progressPercentage)}% Complete</p>
+            <div className="flex items-center gap-4">
+              <Link
+                href="/"
+                className="hidden sm:inline-block text-xs text-muted-foreground hover:text-foreground transition-colors font-medium underline underline-offset-4"
+              >
+                Already have an account? Log in
+              </Link>
+              <div className="text-right">
+                <p className="text-sm font-semibold text-foreground">Step {currentStep + 1} of {totalSteps}</p>
+                <p className="text-xs text-muted-foreground">{Math.round(progressPercentage)}% Complete</p>
+              </div>
             </div>
           </div>
 

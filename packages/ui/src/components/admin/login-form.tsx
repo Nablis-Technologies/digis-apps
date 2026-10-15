@@ -8,13 +8,22 @@ import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { useLoginMutation } from "@workspace/store/reducers/authApi"
 import { toastSuccess, toastError } from "@workspace/ui/lib/toast"
+import Link from "next/link"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { EyeIcon, EyeOffIcon } from "@hugeicons/core-free-icons"
 
-type LoginFormProps = React.ComponentProps<"form"> & { redirectTo?: string }
+type LoginFormProps = React.ComponentProps<"form"> & {
+  redirectTo?: string
+  signupHref?: string
+  signupPrompt?: string
+  signupText?: string
+}
 
 export function LoginForm({
   redirectTo = "/admin",
+  signupHref,
+  signupPrompt = "Don't have an account?",
+  signupText = "Become an organizer",
   className,
   ...props
 }: LoginFormProps) {
@@ -105,6 +114,17 @@ export function LoginForm({
             {isLoading ? "Logging in..." : "Login"}
           </Button>
         </Field>
+        {signupHref && (
+          <div className="text-center text-sm text-muted-foreground pt-1">
+            {signupPrompt}{" "}
+            <Link
+              href={signupHref}
+              className="font-medium text-foreground underline underline-offset-4 hover:text-primary transition-colors"
+            >
+              {signupText}
+            </Link>
+          </div>
+        )}
       </FieldGroup>
     </form>
   )
