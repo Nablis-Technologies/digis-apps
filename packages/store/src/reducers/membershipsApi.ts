@@ -1,5 +1,5 @@
 import { createApi } from "@reduxjs/toolkit/query/react"
-import { baseQueryWithReauth } from "../api"
+import { baseQueryWithReauth, generateIdempotencyKey } from "../api"
 
 export type MembershipRole = "owner" | "admin" | "staff" | "member"
 export type MembershipStatus = "active" | "suspended"
@@ -8,6 +8,7 @@ export interface MembershipUser {
   id: string
   email?: string
   phone?: string | null
+  name?: string | null
   [key: string]: unknown
 }
 
@@ -22,6 +23,50 @@ export interface Membership {
   user?: MembershipUser
 }
 
+export interface MembershipInvitation {
+  id: string
+  organization_id: string
+  role: "admin" | "staff"
+  contact_type: "phone" | "email"
+  masked_contact: string
+  status: "pending" | "accepted" | "revoked" | "expired"
+  delivery_status: string
+  delivery_revision: number
+  expires_at: string
+  accepted_at?: string | null
+  revoked_at?: string | null
+  expired_at?: string | null
+  created_at: string
+}
+
+export interface TeamRosterData {
+  memberships: {
+    data: Membership[]
+    pagination: {
+      current_page: number
+      total_pages: number
+      total_count: number
+      per_page?: number
+    }
+  }
+  invitations: {
+    data: MembershipInvitation[]
+    pagination: {
+      current_page: number
+      total_pages: number
+      total_count: number
+      per_page?: number
+    }
+  }
+}
+
+export interface TeamRosterParams {
+  memberships_page?: number
+  memberships_per_page?: number
+  invitations_page?: number
+  invitations_per_page?: number
+}
+
 interface ListMembershipsParams {
   page?: number
   per_page?: number
@@ -32,6 +77,7 @@ interface PaginatedResponse<T> {
   data: T[]
   pagination: {
     current_page: number
+    total_page?: number
     per_page: number
     total_count: number
     total_pages: number
@@ -39,15 +85,50 @@ interface PaginatedResponse<T> {
 }
 
 interface SingleResponse<T> {
-  success: boolean
+  success?: boolean
+  status?: string
   data: T
 }
 
 export interface CreateMembershipPayload {
   membership: {
-    user_id: string
-    role: Exclude<MembershipRole, "owner">
+    user_id?: string
+    email?: string
+    phone?: string
+    identifier?: string
+    role?: Exclude<MembershipRole, "owner">
   }
+}
+
+export interface CreateMembershipInvitationPayload {
+  membership_invitation: {
+    phone: string
+    role: "admin" | "staff"
+    email?: string
+  }
+}
+
+export interface CreateMembershipInvitationResponse {
+  invitation: MembershipInvitation
+  claim_url?: string
+}
+
+export interface MembershipInvitationPreview {
+  organization: {
+    id: string
+    name: string
+  }
+  role: "admin" | "staff"
+  inviter?: {
+    email?: string
+  }
+  masked_contact: string
+  expires_at: string
+}
+
+export interface ClaimMembershipInvitationResponse {
+  membership: Membership
+  already_member: boolean
 }
 
 export interface UpdateMembershipPayload {
@@ -176,6 +257,7 @@ export const membershipsApi = createApi({
       invalidatesTags: (_result, _error, { organizationId, id }) => [
         { type: "OwnerMemberships", id },
         { type: "OwnerMemberships", id: `LIST-${organizationId}` },
+        { type: "OwnerMemberships", id: `ROSTER-${organizationId}` },
       ],
     }),
     deleteOwnerMembership: builder.mutation<
@@ -188,6 +270,7 @@ export const membershipsApi = createApi({
       }),
       invalidatesTags: (_result, _error, { organizationId }) => [
         { type: "OwnerMemberships", id: `LIST-${organizationId}` },
+        { type: "OwnerMemberships", id: `ROSTER-${organizationId}` },
       ],
     }),
     suspendOwnerMembership: builder.mutation<
@@ -201,6 +284,7 @@ export const membershipsApi = createApi({
       invalidatesTags: (_result, _error, { organizationId, id }) => [
         { type: "OwnerMemberships", id },
         { type: "OwnerMemberships", id: `LIST-${organizationId}` },
+        { type: "OwnerMemberships", id: `ROSTER-${organizationId}` },
       ],
     }),
     activateOwnerMembership: builder.mutation<
@@ -214,7 +298,94 @@ export const membershipsApi = createApi({
       invalidatesTags: (_result, _error, { organizationId, id }) => [
         { type: "OwnerMemberships", id },
         { type: "OwnerMemberships", id: `LIST-${organizationId}` },
+        { type: "OwnerMemberships", id: `ROSTER-${organizationId}` },
       ],
+    }),
+
+    // ─── Team Roster & Invitations (Unified Phone-First Model) ───────────────
+    getOwnerTeamRoster: builder.query<
+      SingleResponse<TeamRosterData>,
+      { organizationId: string; params?: TeamRosterParams }
+    >({
+      query: ({ organizationId, params }) => ({
+        url: `/organizations/owner/${organizationId}/team_roster`,
+        params,
+      }),
+      providesTags: (_result, _error, { organizationId }) => [
+        { type: "OwnerMemberships", id: `ROSTER-${organizationId}` },
+        { type: "OwnerMemberships", id: `LIST-${organizationId}` },
+      ],
+    }),
+    createOwnerMembershipInvitation: builder.mutation<
+      SingleResponse<CreateMembershipInvitationResponse>,
+      { organizationId: string; body: CreateMembershipInvitationPayload; idempotencyKey?: string }
+    >({
+      query: ({ organizationId, body, idempotencyKey }) => ({
+        url: `/organizations/owner/${organizationId}/membership_invitations`,
+        method: "POST",
+        body,
+        headers: {
+          "Idempotency-Key": idempotencyKey || generateIdempotencyKey(),
+        },
+      }),
+      invalidatesTags: (_result, _error, { organizationId }) => [
+        { type: "OwnerMemberships", id: `ROSTER-${organizationId}` },
+        { type: "OwnerMemberships", id: `LIST-${organizationId}` },
+      ],
+    }),
+    resendOwnerMembershipInvitation: builder.mutation<
+      SingleResponse<CreateMembershipInvitationResponse>,
+      { organizationId: string; id: string; idempotencyKey?: string }
+    >({
+      query: ({ organizationId, id, idempotencyKey }) => ({
+        url: `/organizations/owner/${organizationId}/membership_invitations/${id}/resend`,
+        method: "POST",
+        headers: {
+          "Idempotency-Key": idempotencyKey || generateIdempotencyKey(),
+        },
+      }),
+      invalidatesTags: (_result, _error, { organizationId }) => [
+        { type: "OwnerMemberships", id: `ROSTER-${organizationId}` },
+      ],
+    }),
+    revokeOwnerMembershipInvitation: builder.mutation<
+      SingleResponse<{ invitation: MembershipInvitation }>,
+      { organizationId: string; id: string; idempotencyKey?: string }
+    >({
+      query: ({ organizationId, id, idempotencyKey }) => ({
+        url: `/organizations/owner/${organizationId}/membership_invitations/${id}/revoke`,
+        method: "POST",
+        headers: {
+          "Idempotency-Key": idempotencyKey || generateIdempotencyKey(),
+        },
+      }),
+      invalidatesTags: (_result, _error, { organizationId }) => [
+        { type: "OwnerMemberships", id: `ROSTER-${organizationId}` },
+      ],
+    }),
+    previewMembershipInvitation: builder.mutation<
+      SingleResponse<MembershipInvitationPreview>,
+      { token: string }
+    >({
+      query: ({ token }) => ({
+        url: `/organizations/membership_invitations/preview`,
+        method: "POST",
+        body: { token },
+      }),
+    }),
+    claimMembershipInvitation: builder.mutation<
+      SingleResponse<ClaimMembershipInvitationResponse>,
+      { token: string; idempotencyKey?: string }
+    >({
+      query: ({ token, idempotencyKey }) => ({
+        url: `/organizations/membership_invitations/claim`,
+        method: "POST",
+        body: { token },
+        headers: {
+          "Idempotency-Key": idempotencyKey || generateIdempotencyKey(),
+        },
+      }),
+      invalidatesTags: () => [{ type: "OwnerMemberships" }],
     }),
   }),
 })
@@ -232,5 +403,10 @@ export const {
   useDeleteOwnerMembershipMutation,
   useSuspendOwnerMembershipMutation,
   useActivateOwnerMembershipMutation,
+  useGetOwnerTeamRosterQuery,
+  useCreateOwnerMembershipInvitationMutation,
+  useResendOwnerMembershipInvitationMutation,
+  useRevokeOwnerMembershipInvitationMutation,
+  usePreviewMembershipInvitationMutation,
+  useClaimMembershipInvitationMutation,
 } = membershipsApi
-

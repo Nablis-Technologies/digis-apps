@@ -1,6 +1,8 @@
 "use client"
 
 import * as React from "react"
+import Image from "next/image"
+import { useRouter, usePathname } from "next/navigation"
 import { toast } from "sonner"
 import {
   Popover,
@@ -9,7 +11,7 @@ import {
 } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
+import { Badge, RoleBadge, VerificationBadge } from "@/components/ui/badge"
 import {
   useActiveOrganization,
   isOrgSuspendedOrRemoved,
@@ -29,7 +31,85 @@ import {
   AlertCircleIcon,
 } from "@hugeicons/core-free-icons"
 
+function resolveImageUrl(path?: string | null): string | null {
+  if (!path) return null
+  if (path.startsWith("blob:") || path.startsWith("data:")) return path
+  let url = path
+  if (url.includes("://web:3000")) {
+    url = url.replace("://web:3000", "://localhost:3000")
+  }
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return url
+  }
+  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000"
+  return `${apiBase}${url.startsWith("/") ? "" : "/"}${url}`
+}
+
+function OrgAvatar({
+  org,
+  sizeClass = "size-9",
+  textClass = "text-xs",
+  className,
+}: {
+  org?: Organization | null
+  sizeClass?: string
+  textClass?: string
+  className?: string
+}) {
+  const [hasError, setHasError] = React.useState(false)
+  const isSuspended = isOrgSuspendedOrRemoved(org)
+  const isArchived = org?.archived === true
+  const resolvedUrl = React.useMemo(() => resolveImageUrl(org?.profile_url), [org?.profile_url])
+
+  React.useEffect(() => {
+    setHasError(false)
+  }, [resolvedUrl])
+
+  const initials = org?.name
+    ? org.name
+        .split(" ")
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((w) => w[0].toUpperCase())
+        .join("") || "ORG"
+    : null
+
+  return (
+    <div
+      className={cn(
+        "flex aspect-square items-center justify-center rounded-lg font-bold shrink-0 border overflow-hidden select-none",
+        sizeClass,
+        textClass,
+        isArchived
+          ? "bg-muted text-muted-foreground border-border"
+          : isSuspended
+            ? "bg-destructive/15 text-destructive border-destructive/30"
+            : "bg-primary/15 text-primary border-primary/20",
+        className
+      )}
+    >
+      {resolvedUrl && !hasError ? (
+        <Image
+          src={resolvedUrl}
+          alt={org?.name || "Organization logo"}
+          width={48}
+          height={48}
+          unoptimized
+          onError={() => setHasError(true)}
+          className="size-full object-cover"
+        />
+      ) : initials ? (
+        initials
+      ) : (
+        <HugeiconsIcon icon={Building02Icon} strokeWidth={2} className="size-4" />
+      )}
+    </div>
+  )
+}
+
 export function OrgSidebarSwitcher() {
+  const router = useRouter()
+  const pathname = usePathname()
   const {
     activeOrg,
     activeOrgId,
@@ -69,22 +149,18 @@ export function OrgSidebarSwitcher() {
     setOpen(false)
     setSearchQuery("")
 
+    // If currently on an event detail page, route back to the events list of the selected organization
+    const isEventDetailsPage =
+      pathname.startsWith("/organizer/events/") && pathname !== "/organizer/events/new"
+    if (isEventDetailsPage) {
+      router.push("/organizer/events")
+    }
+
     if (isSuspended) {
       toast.warning(`Selected ${org.name} (Suspended)`, {
         description: "Your membership in this organization is suspended. Action permissions are restricted.",
       })
     }
-  }
-
-  // Get 2-letter initials
-  const getInitials = (name?: string | null) => {
-    if (!name) return "ORG"
-    return name
-      .split(" ")
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((w) => w[0].toUpperCase())
-      .join("")
   }
 
   const isActiveOrgSuspended = isOrgSuspendedOrRemoved(activeOrg)
@@ -102,20 +178,12 @@ export function OrgSidebarSwitcher() {
             )}
           >
             {/* Org Avatar */}
-            <div
-              className={cn(
-                "flex aspect-square size-9 items-center justify-center rounded-lg font-bold text-xs shrink-0 border shadow-xs",
-                isActiveOrgSuspended
-                  ? "bg-red-500/15 text-red-700 dark:bg-red-500/20 dark:text-red-300 border-red-500/30"
-                  : "bg-lime-500/15 text-lime-700 dark:bg-lime-500/20 dark:text-lime-300 border-lime-500/20"
-              )}
-            >
-              {activeOrg ? (
-                getInitials(activeOrg.name)
-              ) : (
-                <HugeiconsIcon icon={Building02Icon} strokeWidth={2} className="size-4" />
-              )}
-            </div>
+            <OrgAvatar
+              org={activeOrg}
+              sizeClass="size-9"
+              textClass="text-xs"
+              className="shadow-xs"
+            />
 
             {/* Org Info */}
             <div className="grid flex-1 min-w-0 text-left leading-tight">
@@ -124,24 +192,19 @@ export function OrgSidebarSwitcher() {
               </span>
               <div className="flex items-center gap-1.5 mt-0.5">
                 {activeOrg?.membership_role && !isActiveOrgSuspended && !activeOrg.archived && (
-                  <Badge
-                    variant="outline"
-                    className="h-4 px-1.5 text-[9px] font-semibold capitalize border-primary/30 text-primary gap-0.5 w-fit"
-                  >
-                    {activeOrg.membership_role}
-                  </Badge>
+                  <RoleBadge role={activeOrg.membership_role} />
                 )}
                 {activeOrg?.archived ? (
                   <Badge
                     variant="outline"
-                    className="h-4 px-1.5 text-[10px] font-semibold border-zinc-500/40 bg-zinc-500/10 text-zinc-500 gap-1 w-fit"
+                    className="h-4 px-1.5 text-[10px] font-semibold border-zinc-500/40 bg-zinc-500/15 text-zinc-600 dark:text-zinc-400 gap-1 w-fit shadow-2xs"
                   >
                     Archived
                   </Badge>
                 ) : isActiveOrgSuspended ? (
                   <Badge
                     variant="destructive"
-                    className="h-4 px-1.5 text-[10px] font-semibold border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400 gap-1 w-fit"
+                    className="h-4 px-1.5 text-[10px] font-semibold border-red-500/40 bg-red-500/15 text-red-600 dark:text-red-400 gap-1 w-fit shadow-2xs"
                   >
                     <HugeiconsIcon
                       icon={AlertCircleIcon}
@@ -150,30 +213,8 @@ export function OrgSidebarSwitcher() {
                     />
                     Suspended
                   </Badge>
-                ) : activeOrg?.verified ? (
-                  <Badge
-                    variant="outline"
-                    className="h-4 px-1.5 text-[10px] font-semibold border-lime-500/40 bg-lime-500/10 text-lime-700 dark:text-lime-300 gap-1 w-fit"
-                  >
-                    <HugeiconsIcon
-                      icon={CheckmarkCircle01Icon}
-                      strokeWidth={2.5}
-                      className="size-2.5 text-lime-600 dark:text-lime-400"
-                    />
-                    Verified
-                  </Badge>
                 ) : (
-                  <Badge
-                    variant="outline"
-                    className="h-4 px-1.5 text-[10px] font-semibold border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 gap-1 w-fit"
-                  >
-                    <HugeiconsIcon
-                      icon={AlertCircleIcon}
-                      strokeWidth={2.5}
-                      className="size-2.5 text-amber-600 dark:text-amber-400"
-                    />
-                    Not Verified
-                  </Badge>
+                  <VerificationBadge verified={Boolean(activeOrg?.verified)} />
                 )}
               </div>
             </div>
@@ -241,32 +282,25 @@ export function OrgSidebarSwitcher() {
                               : "hover:bg-muted text-foreground"
                       )}
                     >
-                      <div
-                        className={cn(
-                          "flex aspect-square size-6 items-center justify-center rounded-md font-bold text-[10px] shrink-0 border",
-                          isArchived
-                            ? "bg-muted text-muted-foreground border-border"
-                            : isSuspended
-                              ? "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30"
-                              : "bg-lime-500/15 text-lime-700 dark:bg-lime-500/20 dark:text-lime-300 border-lime-500/20"
-                        )}
-                      >
-                        {getInitials(org.name)}
-                      </div>
+                      <OrgAvatar
+                        org={org}
+                        sizeClass="size-6"
+                        textClass="text-[10px]"
+                      />
                       <span className="truncate flex-1 font-medium">
                         {org.name}
                       </span>
                       {isArchived ? (
                         <Badge
                           variant="outline"
-                          className="text-[9px] px-1.5 py-0 h-4 shrink-0 border-zinc-500/30 text-zinc-500"
+                          className="text-[9px] px-1.5 py-0 h-4 shrink-0 border border-zinc-500/40 text-zinc-600 dark:text-zinc-400 bg-zinc-500/10 shadow-2xs"
                         >
                           Archived
                         </Badge>
                       ) : isSuspended ? (
                         <Badge
                           variant="destructive"
-                          className="text-[9px] px-1.5 py-0 h-4 shrink-0 font-semibold border-red-500/40 bg-red-500/15 text-red-600 dark:text-red-400 gap-1 shadow-2xs"
+                          className="text-[9px] px-1.5 py-0 h-4 shrink-0 font-semibold border border-red-500/40 bg-red-500/15 text-red-600 dark:text-red-400 gap-1 shadow-2xs"
                         >
                           <HugeiconsIcon
                             icon={AlertCircleIcon}
@@ -278,13 +312,13 @@ export function OrgSidebarSwitcher() {
                       ) : (
                         <div className="flex items-center gap-1 shrink-0">
                           {org.membership_role && (
-                            <Badge
-                              variant="outline"
-                              className="text-[9px] px-1.5 py-0 h-4 capitalize font-semibold border-primary/30 text-primary"
-                            >
-                              {org.membership_role}
-                            </Badge>
+                            <RoleBadge role={org.membership_role} />
                           )}
+                          <VerificationBadge
+                            verified={Boolean(org.verified)}
+                            className="text-[9px] px-1 py-0 h-4"
+                            showIcon={false}
+                          />
                           {isActive && (
                             <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} className="size-4 text-primary shrink-0" />
                           )}
@@ -337,18 +371,11 @@ export function OrgSidebarSwitcher() {
                               : "hover:bg-muted text-foreground"
                       )}
                     >
-                      <div
-                        className={cn(
-                          "flex aspect-square size-7 items-center justify-center rounded-md font-bold text-[10px] shrink-0 border",
-                          isArchived
-                            ? "bg-muted text-muted-foreground border-border"
-                            : isSuspended
-                              ? "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30"
-                              : "bg-lime-500/15 text-lime-700 dark:bg-lime-500/20 dark:text-lime-300 border-lime-500/10"
-                        )}
-                      >
-                        {getInitials(org.name)}
-                      </div>
+                      <OrgAvatar
+                        org={org}
+                        sizeClass="size-7"
+                        textClass="text-[10px]"
+                      />
                       <div className="grid flex-1 min-w-0">
                         <span className="truncate font-medium text-foreground">
                           {org.name}
@@ -371,14 +398,14 @@ export function OrgSidebarSwitcher() {
                       {isArchived ? (
                         <Badge
                           variant="outline"
-                          className="text-[9px] px-1.5 py-0 h-4 shrink-0 border-zinc-500/40 text-zinc-500 bg-zinc-500/10"
+                          className="text-[9px] px-1.5 py-0 h-4 shrink-0 border border-zinc-500/40 text-zinc-600 dark:text-zinc-400 bg-zinc-500/10 shadow-2xs"
                         >
                           Archived
                         </Badge>
                       ) : isSuspended ? (
                         <Badge
                           variant="destructive"
-                          className="text-[9px] px-1.5 py-0 h-4 shrink-0 font-semibold border-red-500/40 bg-red-500/15 text-red-600 dark:text-red-400 gap-1 shadow-2xs"
+                          className="text-[9px] px-1.5 py-0 h-4 shrink-0 font-semibold border border-red-500/40 bg-red-500/15 text-red-600 dark:text-red-400 gap-1 shadow-2xs"
                         >
                           <HugeiconsIcon
                             icon={AlertCircleIcon}
@@ -390,24 +417,13 @@ export function OrgSidebarSwitcher() {
                       ) : (
                         <div className="flex items-center gap-1.5 shrink-0">
                           {org.membership_role && (
-                            <Badge
-                              variant="outline"
-                              className="text-[9px] px-1.5 py-0 h-4 capitalize font-semibold border-primary/30 text-primary"
-                            >
-                              {org.membership_role}
-                            </Badge>
+                            <RoleBadge role={org.membership_role} />
                           )}
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-[9px] px-1.5 py-0 h-4 font-medium",
-                              org.verified
-                                ? "border-lime-500/30 bg-lime-500/10 text-lime-600 dark:text-lime-400"
-                                : "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                            )}
-                          >
-                            {org.verified ? "Verified" : "Not Verified"}
-                          </Badge>
+                          <VerificationBadge
+                            verified={Boolean(org.verified)}
+                            className="text-[9px] px-1.5 py-0 h-4"
+                            showIcon={false}
+                          />
                           {!isSuspended && isActive && (
                             <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} className="size-4 text-primary shrink-0 ml-0.5" />
                           )}
@@ -432,7 +448,7 @@ export function OrgSidebarSwitcher() {
               }}
               className="w-full justify-start gap-2 h-9 text-xs font-medium text-foreground hover:bg-muted cursor-pointer"
             >
-              <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-4 text-lime-600 dark:text-lime-400" />
+              <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-4 text-primary" />
               Create New Organization
             </Button>
           </div>

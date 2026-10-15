@@ -5,6 +5,99 @@ import { baseQueryWithReauth } from "../api"
 // Type Definitions
 // ─────────────────────────────────────────────────────────────────────────────
 
+export interface ScannerRosterInvitation {
+  id: string
+  masked_phone: string
+  display_label?: string | null
+  note?: string | null
+  status: "pending" | "pairing_reset" | "active" | "expired" | "revoked" | string
+  delivery_status: "queued" | "accepted" | "delivered" | "failed" | "unknown" | string
+  delivery_revision?: number
+  zone_mode: "all_current_zones" | "selected_zones" | string
+  selected_zone_ids: string[]
+  starts_at?: string | null
+  ends_at?: string | null
+  expires_at?: string | null
+  created_at: string
+}
+
+export interface ScannerRosterAssignmentZone {
+  id: string
+  name: string
+  code: string
+}
+
+export interface ScannerRosterAssignment {
+  id: string
+  event_staff_assignment_id: string
+  scanner_device_id: string
+  scanner_name: string
+  display_label?: string | null
+  masked_phone: string
+  invitation_status?: string | null
+  status: "active" | "expired" | "suspended" | "revoked" | string
+  starts_at?: string | null
+  ends_at?: string | null
+  last_seen_at?: string | null
+  scan_count: number
+  zones: ScannerRosterAssignmentZone[]
+}
+
+export interface ScannerRosterData {
+  event_id: string
+  invitations: ScannerRosterInvitation[]
+  assignments: ScannerRosterAssignment[]
+}
+
+export interface PairingMaterial {
+  token: string
+  pairing_code: string
+  pairing_url: string
+  pairing_code_expires_at?: string | null
+}
+
+export interface ScannerInvitationResult {
+  scanner_invitation: ScannerRosterInvitation & { event_id: string }
+  replayed: boolean
+  pairing_material?: PairingMaterial
+}
+
+export interface CreateScannerInvitationPayload {
+  phone: string
+  display_label?: string
+  note?: string
+  zone_mode?: "all_current_zones" | "selected_zones"
+  zone_ids?: string[]
+  starts_at?: string
+  ends_at?: string
+  expires_at?: string
+}
+
+export interface UpdateScannerAssignmentPayload {
+  zone_mode: "all_current_zones" | "selected_zones"
+  zone_ids?: string[]
+  starts_at?: string
+  ends_at?: string
+}
+
+export interface PairScannerPayload {
+  pairing_token?: string
+  pairing_code?: string
+  pairing_method: "sms_link" | "organizer_qr" | "short_code"
+  installation_id: string
+  device_name: string
+}
+
+export interface PairScannerResponseData {
+  scanner_session_token?: string
+  replayed: boolean
+  event: { id: string; title: string }
+  device: { id: string; name: string }
+  assignment: { id: string; status: string; starts_at?: string | null; ends_at?: string | null }
+  zones: Array<{ id: string; name: string }>
+  expires_at?: string | null
+}
+
 export interface ScannerDevice {
   id: string
   organization_id: string
@@ -117,7 +210,7 @@ interface PaginatedResponse<T> {
 export const attendeesApi = createApi({
   reducerPath: "attendeesApi",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["ScannerDevices", "AttendeeExports", "Registrations", "ComplimentaryTickets"],
+  tagTypes: ["ScannerDevices", "ScannerRoster", "AttendeeExports", "Registrations", "ComplimentaryTickets"],
   endpoints: (builder) => ({
     // ── Complimentary Tickets ──
     issueComplimentaryTicket: builder.mutation<
@@ -218,6 +311,105 @@ export const attendeesApi = createApi({
       }),
       invalidatesTags: (_result, _error, { organizationId }) =>
         organizationId ? [{ type: "ScannerDevices", id: organizationId }] : [{ type: "ScannerDevices" }],
+    }),
+
+    // ── Scanner Roster & Invitations (Event-Owned) ──
+    getScannerRoster: builder.query<SingleResponse<ScannerRosterData>, string>({
+      query: (eventId) => `/events/${eventId}/scanners`,
+      providesTags: (_result, _error, eventId) => [{ type: "ScannerRoster", id: eventId }],
+    }),
+
+    createScannerInvitation: builder.mutation<
+      SingleResponse<ScannerInvitationResult>,
+      { eventId: string; payload: CreateScannerInvitationPayload }
+    >({
+      query: ({ eventId, payload }) => ({
+        url: `/events/${eventId}/scanner_invitations`,
+        method: "POST",
+        headers: {
+          "Idempotency-Key": crypto.randomUUID(),
+        },
+        body: {
+          scanner_invitation: payload,
+        },
+      }),
+      invalidatesTags: (_result, _error, { eventId }) => [{ type: "ScannerRoster", id: eventId }],
+    }),
+
+    resendScannerInvitation: builder.mutation<
+      SingleResponse<ScannerInvitationResult>,
+      { invitationId: string; eventId?: string }
+    >({
+      query: ({ invitationId }) => ({
+        url: `/scanner_invitations/${invitationId}/resend`,
+        method: "POST",
+        headers: {
+          "Idempotency-Key": crypto.randomUUID(),
+        },
+      }),
+      invalidatesTags: (_result, _error, { eventId }) =>
+        eventId ? [{ type: "ScannerRoster", id: eventId }] : [{ type: "ScannerRoster" }],
+    }),
+
+    resetScannerPairing: builder.mutation<
+      SingleResponse<ScannerInvitationResult>,
+      { invitationId: string; eventId?: string }
+    >({
+      query: ({ invitationId }) => ({
+        url: `/scanner_invitations/${invitationId}/reset_pairing`,
+        method: "POST",
+        headers: {
+          "Idempotency-Key": crypto.randomUUID(),
+        },
+      }),
+      invalidatesTags: (_result, _error, { eventId }) =>
+        eventId ? [{ type: "ScannerRoster", id: eventId }] : [{ type: "ScannerRoster" }],
+    }),
+
+    revokeScannerInvitation: builder.mutation<
+      SingleResponse<ScannerInvitationResult>,
+      { invitationId: string; eventId?: string }
+    >({
+      query: ({ invitationId }) => ({
+        url: `/scanner_invitations/${invitationId}/revoke`,
+        method: "POST",
+        headers: {
+          "Idempotency-Key": crypto.randomUUID(),
+        },
+      }),
+      invalidatesTags: (_result, _error, { eventId }) =>
+        eventId ? [{ type: "ScannerRoster", id: eventId }] : [{ type: "ScannerRoster" }],
+    }),
+
+    updateScannerAssignment: builder.mutation<
+      SingleResponse<unknown>,
+      { eventId: string; assignmentId: string; payload: UpdateScannerAssignmentPayload }
+    >({
+      query: ({ eventId, assignmentId, payload }) => ({
+        url: `/events/${eventId}/scanner_device_assignments/${assignmentId}`,
+        method: "PATCH",
+        headers: {
+          "Idempotency-Key": crypto.randomUUID(),
+        },
+        body: {
+          scanner_device_assignment: payload,
+        },
+      }),
+      invalidatesTags: (_result, _error, { eventId }) => [{ type: "ScannerRoster", id: eventId }],
+    }),
+
+    pairScanner: builder.mutation<
+      SingleResponse<PairScannerResponseData>,
+      PairScannerPayload
+    >({
+      query: (payload) => ({
+        url: `/scanner/pair`,
+        method: "POST",
+        headers: {
+          "Idempotency-Key": crypto.randomUUID(),
+        },
+        body: payload,
+      }),
     }),
 
     // ── Registrations & Attendee Management ──
@@ -339,6 +531,13 @@ export const {
   useListScannerDevicesQuery,
   useRotateScannerTokenMutation,
   useRevokeScannerDeviceMutation,
+  useGetScannerRosterQuery,
+  useCreateScannerInvitationMutation,
+  useResendScannerInvitationMutation,
+  useResetScannerPairingMutation,
+  useRevokeScannerInvitationMutation,
+  useUpdateScannerAssignmentMutation,
+  usePairScannerMutation,
   useGetRegistrationQuery,
   useApproveRegistrationMutation,
   useRejectRegistrationMutation,

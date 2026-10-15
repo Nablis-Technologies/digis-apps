@@ -1,11 +1,11 @@
 "use client"
 
-import { use, useState, useMemo } from "react"
+import { use, useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { notFound } from "next/navigation"
+import { notFound, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { Badge, VisibilityBadge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { DataTable, type Column } from "@/components/ui/data-table"
 import { TabsContent } from "@/components/ui/tabs"
@@ -82,6 +82,7 @@ import { CancelEventDialog } from "@/organizer-components/events/cancel-event-di
 import { IssueComplimentaryDialog } from "@/organizer-components/tickets/issue-complimentary-dialog"
 import { RequestExportDialog } from "@/organizer-components/tickets/request-export-dialog"
 import { AccessCodesTab } from "@/organizer-components/events/access-codes-tab"
+import { AccessZonesSection } from "@/organizer-components/events/access-zones-section"
 import { AttendeesTab } from "@/organizer-components/events/attendees-tab"
 import { ScannersTab } from "@/organizer-components/events/scanners-tab"
 import { ReorderGalleryDialog } from "@/organizer-components/events/reorder-gallery-dialog"
@@ -179,7 +180,10 @@ function SalesTooltip({
 
 export default function EventDetailPage({ params }: EventDetailPageProps) {
   const { id } = use(params)
+  const router = useRouter()
+  const { isOwnerOrAdmin, activeOrgId } = useActiveOrganization()
   const [activeTab, setActiveTab] = useState("overview")
+  const [accessSubTab, setAccessSubTab] = useState<"zones" | "codes">("zones")
 
   // Modal Dialogs
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
@@ -204,6 +208,13 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const event = eventResponse?.data
   const organizationId = event?.organization_id ?? event?.organization?.id
   const dates = (event?.event_dates as any[]) || []
+
+  // Automatically redirect away if active organization switches to one that doesn't own this event
+  useEffect(() => {
+    if (activeOrgId && organizationId && activeOrgId !== organizationId) {
+      router.push("/organizer/events")
+    }
+  }, [activeOrgId, organizationId, router])
   const primaryDate = dates[0]
   const venue = (event as any)?.venue || primaryDate?.venue
 
@@ -223,8 +234,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const [activateProduct] = useActivateEventProductMutation()
   const [deactivateProduct] = useDeactivateEventProductMutation()
 
-  // Permissions: Organization context & Staff assignments for attendee export
-  const { isOwnerOrAdmin } = useActiveOrganization()
+  // Permissions: Staff assignments for attendee export
   const { data: meData } = useGetMeQuery()
   const currentUserId = meData?.data?.user?.id
   const { data: staffData } = useListStaffAssignmentsQuery({ eventId: id }, { skip: !id })
@@ -295,6 +305,10 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   }
 
   if (error || !event) {
+    if ((error as any)?.status === 403 || (error as any)?.status === 404) {
+      router.push("/organizer/events")
+      return null
+    }
     notFound()
   }
 
@@ -512,9 +526,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               </h1>
               {getStatusBadge(event.status)}
               {event.visibility && (
-                <Badge variant="outline" className="text-[10px] capitalize text-muted-foreground font-normal">
-                  {event.visibility}
-                </Badge>
+                <VisibilityBadge visibility={event.visibility} />
               )}
             </div>
 
@@ -1217,14 +1229,49 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           />
         </TabsContent>
 
-        {/* ─── 6. ACCESS TAB ─────────────────────────────────────────────────── */}
-        <TabsContent value="access" className="flex flex-col gap-5">
-          <AccessCodesTab eventId={id} eventProducts={products} />
+        {/* ─── 6. ACCESS TAB (Venue & Parking Access Zones + Ticket Codes) ───── */}
+        <TabsContent value="access" className="flex flex-col gap-6">
+          <div className="flex flex-col gap-4">
+            <div className="inline-flex h-9 w-fit items-center rounded-lg bg-muted p-1 text-muted-foreground">
+              <button
+                type="button"
+                onClick={() => setAccessSubTab("zones")}
+                className={cn(
+                  "inline-flex items-center gap-2 justify-center whitespace-nowrap rounded-md px-3 py-1 text-xs font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  accessSubTab === "zones"
+                    ? "bg-background text-foreground shadow-xs font-semibold"
+                    : "hover:text-foreground"
+                )}
+              >
+                <HugeiconsIcon icon={Location01Icon} className="size-3.5" />
+                Venue & Parking Zones
+              </button>
+              <button
+                type="button"
+                onClick={() => setAccessSubTab("codes")}
+                className={cn(
+                  "inline-flex items-center gap-2 justify-center whitespace-nowrap rounded-md px-3 py-1 text-xs font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  accessSubTab === "codes"
+                    ? "bg-background text-foreground shadow-xs font-semibold"
+                    : "hover:text-foreground"
+                )}
+              >
+                <HugeiconsIcon icon={Key01Icon} className="size-3.5" />
+                Ticket Codes & Invitations
+              </button>
+            </div>
+
+            {accessSubTab === "zones" ? (
+              <AccessZonesSection eventId={id} eventDates={dates} />
+            ) : (
+              <AccessCodesTab eventId={id} eventProducts={products} />
+            )}
+          </div>
         </TabsContent>
 
         {/* ─── 7. CHECK-IN TAB ───────────────────────────────────────────────── */}
         <TabsContent value="check-in" className="flex flex-col gap-5">
-          <ScannersTab organizationId={organizationId} />
+          <ScannersTab eventId={id} organizationId={organizationId} />
         </TabsContent>
 
         {/* ─── 8. TEAM TAB (Staff + Collaborating Organizations) ─────────────── */}

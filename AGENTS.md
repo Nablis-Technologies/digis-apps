@@ -182,4 +182,15 @@ endpoint, open that file and confirm:
   will drift; put it in `packages/ui`.
 - Editing a store endpoint without checking `Digis API_collection (2).json` →
   silent runtime mismatch with the backend. The collection is the contract.
+
+## 9. Backend Changes Documentation (`BACKEND_FIXES.md`) — MANDATORY
+
+The backend developer is a separate team member. Whenever ANY file in `digis_backend` is modified:
+- You **MUST** document the change in `BACKEND_FIXES.md` (located in both `digis-apps/BACKEND_FIXES.md` and `digis_backend/BACKEND_FIXES.md`).
+- For every change, document:
+  1. The exact file path.
+  2. The UI or feature area that triggered the change.
+  3. The problem encountered (e.g., 403 authorization, Ransack error, serialization attribute stripping, multi-tenant isolation).
+  4. The exact git diff.
+  5. Backend recommendations (e.g. migrations, counter caches, test coverage).
 <!-- END:digis-monorepo-agent-rules -->

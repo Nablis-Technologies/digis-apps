@@ -309,6 +309,38 @@ export const organizationsApi = createApi({
         { type: "OwnerOrganizations", id: "LIST" },
       ],
     }),
+    // Documents
+    downloadAdminDocument: builder.query<
+      Blob,
+      { id: string; documentType: string }
+    >({
+      query: ({ id, documentType }) => ({
+        url: `/admin/organizations/${id}/documents/${documentType}`,
+        responseHandler: (response) => response.blob(),
+      }),
+    }),
+    uploadOwnerDocuments: builder.mutation<
+      SingleResponse<Organization>,
+      { id: string; formData: FormData }
+    >({
+      query: ({ id, formData }) => ({
+        url: `/organizations/owner/${id}/documents`,
+        method: "PATCH",
+        body: formData,
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: "OwnerOrganizations", id },
+      ],
+    }),
+    downloadOwnerDocument: builder.query<
+      Blob,
+      { id: string; documentType: string }
+    >({
+      query: ({ id, documentType }) => ({
+        url: `/organizations/owner/${id}/documents/${documentType}`,
+        responseHandler: (response) => response.blob(),
+      }),
+    }),
   }),
 })
 
@@ -330,5 +362,10 @@ export const {
   useUploadOwnerOrganizationDocumentsMutation,
   useSubmitVerificationMutation,
   useResubmitVerificationMutation,
+  useDownloadAdminDocumentQuery,
+  useLazyDownloadAdminDocumentQuery,
+  useUploadOwnerDocumentsMutation,
+  useDownloadOwnerDocumentQuery,
+  useLazyDownloadOwnerDocumentQuery,
 } = organizationsApi
 

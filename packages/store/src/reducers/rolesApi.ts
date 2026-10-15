@@ -70,6 +70,10 @@ export const rolesApi = createApi({
             ]
           : [{ type: "Roles", id: "LIST" }],
     }),
+    getRole: builder.query<SingleResponse<Role>, string>({
+      query: (id) => `/admin/roles/${id}`,
+      providesTags: (_result, _error, id) => [{ type: "Roles", id }],
+    }),
     createRole: builder.mutation<SingleResponse<Role>, CreateRolePayload>({
       query: (body) => ({
         url: "/admin/roles",
@@ -101,6 +105,7 @@ export const rolesApi = createApi({
 
 export const {
   useListRolesQuery,
+  useGetRoleQuery,
   useCreateRoleMutation,
   useUpdateRoleMutation,
   useDeleteRoleMutation,

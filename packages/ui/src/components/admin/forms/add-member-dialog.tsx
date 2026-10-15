@@ -11,6 +11,7 @@ import {
 } from "@workspace/ui/components/dialog"
 import { Button } from "@workspace/ui/components/button"
 import { Label } from "@workspace/ui/components/label"
+import { SearchableSelect } from "@workspace/ui/components/searchable-select"
 import { cn } from "@workspace/ui/lib/utils"
 import { useCreateMembershipMutation } from "@workspace/store/reducers/membershipsApi"
 import { useListUsersQuery } from "@workspace/store/reducers/usersApi"
@@ -36,10 +37,16 @@ export function AddMemberDialog({
   const [createMember, { isLoading: isCreating }] =
     useCreateMembershipMutation()
   const { data: usersData, isLoading: usersLoading } = useListUsersQuery(
-    { page: 1, per_page: 50, status: "active", order_by: "created_at", order_direction: "desc" },
+    { page: 1, per_page: 100, status: "active", order_by: "created_at", order_direction: "desc" },
     { skip: !open }
   )
   const users = usersData?.data ?? []
+
+  const userOptions = users.map((u) => ({
+    value: u.id,
+    label: u.email,
+    description: u.phone ? `Phone: ${u.phone}` : undefined,
+  }))
 
   useEffect(() => {
     if (open) {
@@ -83,7 +90,7 @@ export function AddMemberDialog({
         if (!isCreating) onOpenChange(o)
       }}
     >
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add Member</DialogTitle>
           <DialogDescription>
@@ -95,38 +102,15 @@ export function AddMemberDialog({
             <Label>
               User <span className="text-destructive">*</span>
             </Label>
-            {usersLoading ? (
-              <p className="text-sm text-muted-foreground">Loading users...</p>
-            ) : (
-              <div className="max-h-48 space-y-1.5 overflow-y-auto rounded-lg border border-border/50 p-2">
-                {users.length === 0 ? (
-                  <p className="px-2 py-1.5 text-sm text-muted-foreground">
-                    No active users found.
-                  </p>
-                ) : (
-                  users.map((u) => (
-                    <button
-                      key={u.id}
-                      type="button"
-                      onClick={() => update("userId", u.id)}
-                      className={cn(
-                        "w-full rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors",
-                        form.userId === u.id
-                          ? "border-lime-500 bg-lime-50 text-lime-700 dark:bg-lime-950/20 dark:text-lime-400"
-                          : "border-border text-muted-foreground hover:border-foreground/20 hover:text-foreground"
-                      )}
-                    >
-                      {u.email}
-                      {u.phone && (
-                        <span className="ml-2 text-xs text-muted-foreground">
-                          {u.phone}
-                        </span>
-                      )}
-                    </button>
-                  ))
-                )}
-              </div>
-            )}
+            <SearchableSelect
+              options={userOptions}
+              value={form.userId}
+              onChange={(val) => update("userId", val)}
+              placeholder="Select user to add..."
+              searchPlaceholder="Search users..."
+              loading={usersLoading}
+              emptyMessage="No active users found."
+            />
           </div>
           <div className="space-y-2">
             <Label>Role</Label>

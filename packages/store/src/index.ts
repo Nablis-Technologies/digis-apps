@@ -16,10 +16,14 @@ import { ticketingApi } from "./reducers/ticketingApi"
 import { eventScheduleApi } from "./reducers/eventScheduleApi"
 import { registrationApi } from "./reducers/registrationApi"
 import { financeApi } from "./reducers/financeApi"
+import { refundsApi } from "./reducers/refundsApi"
+import { commercialApi } from "./reducers/commercialApi"
+import { systemApi } from "./reducers/systemApi"
+import { notificationsApi } from "./reducers/notificationsApi"
+import { adminMessagingApi } from "./reducers/adminMessagingApi"
+import { adminMarketplaceApi } from "./reducers/adminMarketplaceApi"
 import { attendeesApi } from "./reducers/attendeesApi"
 import { messagingApi } from "./reducers/messagingApi"
-import { commercialApi } from "./reducers/commercialApi"
-import { notificationsApi } from "./reducers/notificationsApi"
 
 export const store = configureStore({
   reducer: {
@@ -40,10 +44,14 @@ export const store = configureStore({
     [eventScheduleApi.reducerPath]: eventScheduleApi.reducer,
     [registrationApi.reducerPath]: registrationApi.reducer,
     [financeApi.reducerPath]: financeApi.reducer,
+    [refundsApi.reducerPath]: refundsApi.reducer,
+    [commercialApi.reducerPath]: commercialApi.reducer,
+    [systemApi.reducerPath]: systemApi.reducer,
+    [notificationsApi.reducerPath]: notificationsApi.reducer,
+    [adminMessagingApi.reducerPath]: adminMessagingApi.reducer,
+    [adminMarketplaceApi.reducerPath]: adminMarketplaceApi.reducer,
     [attendeesApi.reducerPath]: attendeesApi.reducer,
     [messagingApi.reducerPath]: messagingApi.reducer,
-    [commercialApi.reducerPath]: commercialApi.reducer,
-    [notificationsApi.reducerPath]: notificationsApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
@@ -64,17 +72,21 @@ export const store = configureStore({
       eventScheduleApi.middleware,
       registrationApi.middleware,
       financeApi.middleware,
-      attendeesApi.middleware,
-      messagingApi.middleware,
+      refundsApi.middleware,
       commercialApi.middleware,
-      notificationsApi.middleware
+      systemApi.middleware,
+      notificationsApi.middleware,
+      adminMessagingApi.middleware,
+      adminMarketplaceApi.middleware,
+      attendeesApi.middleware,
+      messagingApi.middleware
     ),
 })
 
 export type RootState = ReturnType<typeof store.getState>
 export type AppDispatch = typeof store.dispatch
 
+export * from "./api"
 export * from "./reducers/messagingApi"
 export * from "./reducers/commercialApi"
 export * from "./reducers/notificationsApi"
-

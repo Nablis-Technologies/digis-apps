@@ -78,6 +78,10 @@ export const permissionsApi = createApi({
             ]
           : [{ type: "Permissions", id: "LIST" }],
     }),
+    getPermission: builder.query<SingleResponse<Permission>, string>({
+      query: (id) => `/admin/permissions/${id}`,
+      providesTags: (_result, _error, id) => [{ type: "Permissions", id }],
+    }),
     createPermission: builder.mutation<
       SingleResponse<Permission>,
       CreatePermissionPayload
@@ -114,6 +118,7 @@ export const permissionsApi = createApi({
 
 export const {
   useListPermissionsQuery,
+  useGetPermissionQuery,
   useCreatePermissionMutation,
   useUpdatePermissionMutation,
   useDeletePermissionMutation,

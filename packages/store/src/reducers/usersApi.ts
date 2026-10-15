@@ -163,8 +163,25 @@ export const usersApi = createApi({
     }),
     listUserRoles: builder.query<UserRole[], string>({
       query: (userId) => `/admin/users/${userId}/roles`,
-      transformResponse: (response: { success: boolean; data: UserRole[] }) =>
-        response.data,
+      transformResponse: (response: any) => {
+        const rawList = Array.isArray(response?.data) ? response.data : []
+        return rawList.map((item: any) => {
+          if (item.role) {
+            return {
+              id: item.id ?? item.role.id,
+              role_id: item.role.id ?? item.role_id,
+              code: item.role.code ?? "",
+              name: item.role.name ?? "",
+            }
+          }
+          return {
+            id: item.id,
+            role_id: item.role_id ?? item.id,
+            code: item.code ?? "",
+            name: item.name ?? "",
+          }
+        })
+      },
       providesTags: (_result, _error, userId) => [
         { type: "UserRoles", id: userId },
       ],

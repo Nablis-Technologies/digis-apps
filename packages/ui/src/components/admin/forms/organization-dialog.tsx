@@ -12,18 +12,21 @@ import {
 import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
 import { Label } from "@workspace/ui/components/label"
+import { SearchableSelect } from "@workspace/ui/components/searchable-select"
 import {
   useCreateOrganizationMutation,
   useUpdateOrganizationMutation,
 } from "@workspace/store/reducers/organizationsApi"
+import { useListUsersQuery } from "@workspace/store/reducers/usersApi"
 import { toastSuccess, toastError } from "@workspace/ui/lib/toast"
 
 type FormData = {
   name: string
   description: string
+  owner_id: string
 }
 
-const empty: FormData = { name: "", description: "" }
+const empty: FormData = { name: "", description: "", owner_id: "" }
 
 export function OrganizationDialog({
   open,
@@ -40,7 +43,18 @@ export function OrganizationDialog({
 
   const [createOrg, { isLoading: isCreating }] = useCreateOrganizationMutation()
   const [updateOrg, { isLoading: isUpdating }] = useUpdateOrganizationMutation()
+  const { data: usersData, isLoading: isUsersLoading } = useListUsersQuery(
+    { per_page: 100 },
+    { skip: !open || isEdit }
+  )
+
   const submitting = isCreating || isUpdating
+
+  const userOptions = (usersData?.data ?? []).map((u) => ({
+    value: u.id,
+    label: u.email,
+    description: u.phone ? `Phone: ${u.phone}` : `ID: ${u.id.slice(0, 8)}...`,
+  }))
 
   useEffect(() => {
     if (open) {
@@ -49,6 +63,7 @@ export function OrganizationDialog({
           ? {
               name: organization.name,
               description: organization.description ?? "",
+              owner_id: "",
             }
           : empty
       )
@@ -59,8 +74,9 @@ export function OrganizationDialog({
   function update<K extends keyof FormData>(key: K, value: FormData[K]) {
     setForm((p) => ({ ...p, [key]: value }))
   }
+
   function isValid() {
-    return form.name.trim()
+    return form.name.trim() && (isEdit || form.owner_id)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -80,7 +96,7 @@ export function OrganizationDialog({
         await updateOrg({ id: organization.id, body: payload }).unwrap()
       } else {
         await createOrg({
-          organization: { ...payload.organization, owner_id: "" },
+          organization: { ...payload.organization, owner_id: form.owner_id },
         }).unwrap()
       }
       onOpenChange(false)
@@ -126,6 +142,24 @@ export function OrganizationDialog({
               required
             />
           </div>
+
+          {!isEdit && (
+            <div className="space-y-2">
+              <Label>
+                Owner User <span className="text-destructive">*</span>
+              </Label>
+              <SearchableSelect
+                options={userOptions}
+                value={form.owner_id}
+                onChange={(val) => update("owner_id", val)}
+                placeholder="Select owner user..."
+                searchPlaceholder="Search by email..."
+                loading={isUsersLoading}
+                emptyMessage="No users found."
+              />
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="desc">Description</Label>
             <Input

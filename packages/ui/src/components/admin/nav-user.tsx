@@ -12,12 +12,21 @@ import { LogoutIcon } from "@hugeicons/core-free-icons"
 import { useLogoutMutation } from "@workspace/store/reducers/authApi"
 import { toastSuccess } from "@workspace/ui/lib/toast"
 
+import { UserAvatar } from "./user-avatar"
+
 export function NavUser({
   user,
 }: {
   user: {
-    phone: string
-    email: string
+    phone?: string
+    email?: string
+    name?: string
+    profile?: {
+      first_name?: string
+      last_name?: string
+      full_name?: string
+      avatar_url?: string | null
+    } | null
   }
 }) {
   const router = useRouter()
@@ -34,31 +43,22 @@ export function NavUser({
     }
   }
 
-  const initials = user.email
-    ? user.email
-        .split("@")[0]
-        .split(".")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
-    : (user.email?.charAt(0).toUpperCase() ?? "?")
+  const primaryLabel = user.profile?.full_name || user.name || user.email || "Account"
+  const secondaryLabel = user.profile?.full_name
+    ? user.email || user.phone || ""
+    : user.phone || ""
 
   return (
     <SidebarMenu>
       <SidebarMenuItem className="flex items-center gap-1">
         <SidebarMenuButton size="lg" className="flex-1 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
-          <Avatar className="h-8 w-8 rounded-lg">
-            <AvatarFallback className="rounded-lg text-xs font-medium">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
+          <UserAvatar user={user} className="h-8 w-8 rounded-lg" />
           <div className="grid flex-1 text-left text-sm leading-tight">
             <span className="truncate font-medium">
-              {user.email}
+              {primaryLabel}
             </span>
-            <span className="truncate text-xs">
-              {user.phone ? user.phone : ""}
+            <span className="truncate text-xs text-muted-foreground">
+              {secondaryLabel}
             </span>
           </div>
         </SidebarMenuButton>

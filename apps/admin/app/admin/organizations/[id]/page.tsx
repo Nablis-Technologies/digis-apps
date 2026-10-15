@@ -35,12 +35,14 @@ import { OrganizationDialog } from "@/components/forms/organization-dialog"
 import { TransferOwnershipDialog } from "@/components/forms/transfer-ownership-dialog"
 import { AddMemberDialog } from "@/components/forms/add-member-dialog"
 import { ConfirmDialog } from "@/components/forms/confirm-dialog"
+import { CreditAdjustmentDialog } from "@/components/forms/credit-adjustment-dialog"
 import {
   useGetOrganizationQuery,
   useDeleteOrganizationMutation,
   useApproveVerificationMutation,
   useRejectVerificationMutation,
   useRequestVerificationModificationMutation,
+  useLazyDownloadAdminDocumentQuery,
   type Organization,
 } from "@/store/reducers/organizationsApi"
 import {
@@ -48,6 +50,7 @@ import {
   useUpdateMembershipMutation,
   useDeleteMembershipMutation,
 } from "@/store/reducers/membershipsApi"
+import { useListEventsQuery, type Event } from "@/store/reducers/eventsApi"
 
 // ─── Mock Data ──────────────────────────────────────────────────────────────
 
@@ -138,6 +141,7 @@ export default function OrgDetailPage() {
   const [transferOpen, setTransferOpen] = useState(false)
   const [addMemberOpen, setAddMemberOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [creditAdjustmentOpen, setCreditAdjustmentOpen] = useState(false)
   const [feedbackDialog, setFeedbackDialog] = useState<{ mode: "reject" | "modify" } | null>(null)
 
   async function handleDelete() {
@@ -202,6 +206,10 @@ export default function OrgDetailPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <Button variant="outline" size="sm" onClick={() => setCreditAdjustmentOpen(true)}>
+            <HugeiconsIcon icon={Dollar01Icon} strokeWidth={2} className="size-4" />
+            Adjust Credits
+          </Button>
           <Button variant="outline" size="sm">
             <HugeiconsIcon icon={Mail02Icon} strokeWidth={2} className="size-4" />
             Message
@@ -217,6 +225,9 @@ export default function OrgDetailPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem onClick={() => setCreditAdjustmentOpen(true)}>
+                <HugeiconsIcon icon={Dollar01Icon} strokeWidth={2} />Adjust Credits
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setTransferOpen(true)}>
                 <HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} />Transfer Ownership
               </DropdownMenuItem>
@@ -269,6 +280,7 @@ export default function OrgDetailPage() {
       )}
       {tab === "verification" && (
         <VerificationTab
+          orgId={org.id}
           verified={org.verified}
           onApprove={async () => {
             try {
@@ -289,6 +301,7 @@ export default function OrgDetailPage() {
       <OrganizationDialog open={editOpen} onOpenChange={setEditOpen} organization={org} />
       <TransferOwnershipDialog open={transferOpen} onOpenChange={setTransferOpen} orgId={org.id} orgName={org.name} />
       <AddMemberDialog open={addMemberOpen} onOpenChange={setAddMemberOpen} orgId={org.id} />
+      <CreditAdjustmentDialog open={creditAdjustmentOpen} onOpenChange={setCreditAdjustmentOpen} organizationId={org.id} organizationName={org.name} />
       <ConfirmDialog open={confirmOpen} onOpenChange={setConfirmOpen} title="Delete Organization" description={`Delete ${org.name}? All members will be removed and events will be affected.`} confirmLabel={deleting ? "Deleting..." : "Delete"} onConfirm={handleDelete} />
       {feedbackDialog && (
         <VerificationFeedbackDialog
@@ -313,6 +326,9 @@ export default function OrgDetailPage() {
 // ─── Tab Components ─────────────────────────────────────────────────────────
 
 function OverviewTab({ org }: { org: Organization }) {
+  const { data: eventsData } = useListEventsQuery({ per_page: 10 })
+  const events = eventsData?.data ?? []
+
   const profileFields = [
     { label: "Organization Type", value: org.organizer_type === "company" ? "Company" : "Individual", icon: Building01Icon },
     { label: "Category", value: org.category ?? "—", icon: Building01Icon },
@@ -326,24 +342,13 @@ function OverviewTab({ org }: { org: Organization }) {
     { label: "Event Frequency", value: org.event_frequency ?? "—", icon: Calendar01Icon },
   ]
 
-  const eventColumns: Column<MockEvent>[] = [
-    { header: "Event", accessorKey: "name", cell: (row) => <span className="font-medium">{row.name}</span> },
-    { header: "Type", accessorKey: "type", hideOnMobile: true, cell: (row) => <span className="text-muted-foreground">{row.type}</span> },
-    { header: "Date", accessorKey: "date", cell: (row) => <span className="text-sm">{fmtDate(row.date)}</span> },
-    { header: "Venue", accessorKey: "venue", hideOnMobile: true },
+  const eventColumns: Column<Event>[] = [
+    { header: "Event", accessorKey: "title", cell: (row) => <span className="font-medium">{row.title}</span> },
     { header: "Status", accessorKey: "status", cell: (row) => {
-      const s = eventStatus[row.status]
+      const s = eventStatus[row.status] ?? { label: row.status, cls: "bg-zinc-100 text-zinc-700" }
       return <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", s.cls)}>{s.label}</span>
     }},
-    { header: "Tickets", accessorKey: "ticketsSold", cell: (row) => (
-      <div className="flex items-center gap-2 min-w-[120px]">
-        <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
-          <div className="h-full rounded-full bg-lime-500 transition-all" style={{ width: `${row.totalTickets > 0 ? (row.ticketsSold / row.totalTickets) * 100 : 0}%` }} />
-        </div>
-        <span className="text-xs text-muted-foreground tabular-nums">{row.ticketsSold}/{row.totalTickets}</span>
-      </div>
-    )},
-    { header: "Revenue", accessorKey: "revenue", cell: (row) => <span className="font-medium tabular-nums">${row.revenue.toLocaleString()}</span> },
+    { header: "Slug", accessorKey: "slug", hideOnMobile: true, cell: (row) => <span className="text-xs text-muted-foreground">{row.slug}</span> },
   ]
 
   return (
@@ -382,9 +387,9 @@ function OverviewTab({ org }: { org: Organization }) {
         <h3 className="font-semibold mb-3">Upcoming / Recent Events</h3>
         <DataTable
           columns={eventColumns}
-          data={mockEvents}
+          data={events}
           keyExtractor={(row) => row.id}
-          pagination={{ page: 1, totalPages: 1, total: mockEvents.length, perPage: 10 }}
+          pagination={{ page: 1, totalPages: 1, total: events.length, perPage: 10 }}
           renderActions={() => (
             <div className="flex items-center gap-1">
               <button className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
@@ -402,38 +407,91 @@ function OverviewTab({ org }: { org: Organization }) {
 }
 
 function VerificationTab({
+  orgId,
   verified,
   onApprove,
   onReject,
   onRequestModification,
 }: {
+  orgId: string
   verified: boolean
   onApprove: () => void
   onReject: () => void
   onRequestModification: () => void
 }) {
+  const [downloadDoc, { isFetching: isDownloading }] = useLazyDownloadAdminDocumentQuery()
+
+  const handleDownload = async (docType: string) => {
+    try {
+      const blob = await downloadDoc({ id: orgId, documentType: docType }).unwrap()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `${docType}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (err) {
+      toastError(err, `Failed to download ${docType.replace(/_/g, " ")}.`)
+    }
+  }
+
   return (
-    <div className="rounded-xl border border-border/50 bg-card p-6 shadow-xs">
-      <h3 className="font-semibold mb-1">Verification</h3>
-      <p className="text-sm text-muted-foreground mb-5">Review and manage this organization&apos;s verification status.</p>
-      <div className="flex items-center gap-3 rounded-lg border border-border/50 px-4 py-3 mb-5">
-        <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", verified ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400" : "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400")}>
-          {verified ? "Verified" : "Unverified"}
-        </span>
-        <span className="text-sm text-muted-foreground">
-          {verified ? "This organization has been verified." : "This organization has not been verified yet."}
-        </span>
+    <div className="space-y-6">
+      <div className="rounded-xl border border-border/50 bg-card p-6 shadow-xs">
+        <h3 className="font-semibold mb-1">Verification Status</h3>
+        <p className="text-sm text-muted-foreground mb-5">Review and manage this organization&apos;s verification status.</p>
+        <div className="flex items-center gap-3 rounded-lg border border-border/50 px-4 py-3 mb-5">
+          <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", verified ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400" : "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400")}>
+            {verified ? "Verified" : "Unverified"}
+          </span>
+          <span className="text-sm text-muted-foreground">
+            {verified ? "This organization has been verified." : "This organization has not been verified yet."}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button size="sm" className="bg-emerald-500 text-white hover:bg-emerald-600" onClick={onApprove} disabled={verified}>
+            <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-4" />Approve
+          </Button>
+          <Button size="sm" variant="destructive" onClick={onReject} disabled={verified}>
+            <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-4" />Reject
+          </Button>
+          <Button size="sm" variant="outline" onClick={onRequestModification} disabled={verified}>
+            <HugeiconsIcon icon={Edit02Icon} strokeWidth={2} className="size-4" />Request Changes
+          </Button>
+        </div>
       </div>
-      <div className="flex items-center gap-2">
-        <Button size="sm" className="bg-emerald-500 text-white hover:bg-emerald-600" onClick={onApprove} disabled={verified}>
-          <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-4" />Approve
-        </Button>
-        <Button size="sm" variant="destructive" onClick={onReject} disabled={!verified}>
-          <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-4" />Reject
-        </Button>
-        <Button size="sm" variant="outline" onClick={onRequestModification} disabled={!verified}>
-          <HugeiconsIcon icon={Edit02Icon} strokeWidth={2} className="size-4" />Request Changes
-        </Button>
+
+      <div className="rounded-xl border border-border/50 bg-card p-6 shadow-xs">
+        <h3 className="font-semibold mb-1">Submitted Documents</h3>
+        <p className="text-sm text-muted-foreground mb-4">Verification documents provided during registration.</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-muted/20">
+            <div className="flex items-center gap-2.5">
+              <HugeiconsIcon icon={File01Icon} strokeWidth={2} className="size-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Business License</p>
+                <p className="text-xs text-muted-foreground">Legal registration certificate</p>
+              </div>
+            </div>
+            <Button size="sm" variant="outline" disabled={isDownloading} onClick={() => handleDownload("business_license")}>
+              Download
+            </Button>
+          </div>
+          <div className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-muted/20">
+            <div className="flex items-center gap-2.5">
+              <HugeiconsIcon icon={File01Icon} strokeWidth={2} className="size-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">TIN Certificate</p>
+                <p className="text-xs text-muted-foreground">Tax identification document</p>
+              </div>
+            </div>
+            <Button size="sm" variant="outline" disabled={isDownloading} onClick={() => handleDownload("tin_certificate")}>
+              Download
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   )

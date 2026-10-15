@@ -10,9 +10,10 @@ import {
   DialogClose,
 } from "@workspace/ui/components/dialog"
 import { Button } from "@workspace/ui/components/button"
-import { Input } from "@workspace/ui/components/input"
 import { Label } from "@workspace/ui/components/label"
+import { SearchableSelect } from "@workspace/ui/components/searchable-select"
 import { useTransferOrganizationMutation } from "@workspace/store/reducers/organizationsApi"
+import { useListUsersQuery } from "@workspace/store/reducers/usersApi"
 import { toastSuccess, toastError } from "@workspace/ui/lib/toast"
 
 export function TransferOwnershipDialog({
@@ -30,6 +31,17 @@ export function TransferOwnershipDialog({
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [transferOrg, { isLoading: transferring }] =
     useTransferOrganizationMutation()
+
+  const { data: usersData, isLoading: isUsersLoading } = useListUsersQuery(
+    { per_page: 100 },
+    { skip: !open }
+  )
+
+  const userOptions = (usersData?.data ?? []).map((u) => ({
+    value: u.id,
+    label: u.email,
+    description: u.phone ? `Phone: ${u.phone}` : `ID: ${u.id.slice(0, 8)}...`,
+  }))
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -63,31 +75,33 @@ export function TransferOwnershipDialog({
         }
       }}
     >
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Transfer Ownership</DialogTitle>
           <DialogDescription>
             {orgName ? (
               <>
                 Transfer ownership of <strong>{orgName}</strong> to another
-                user. The new owner must already be a member.
+                user.
               </>
             ) : (
-              "Transfer ownership to another user. The new owner must already be a member."
+              "Transfer ownership to another user."
             )}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="newOwnerId">
-              New Owner ID <span className="text-destructive">*</span>
+            <Label>
+              New Owner User <span className="text-destructive">*</span>
             </Label>
-            <Input
-              id="newOwnerId"
-              placeholder="owner user id"
+            <SearchableSelect
+              options={userOptions}
               value={newOwnerId}
-              onChange={(e) => setNewOwnerId(e.target.value)}
-              required
+              onChange={setNewOwnerId}
+              placeholder="Select user to transfer to..."
+              searchPlaceholder="Search by email..."
+              loading={isUsersLoading}
+              emptyMessage="No users found."
             />
           </div>
           {errorMsg && <p className="text-sm text-destructive">{errorMsg}</p>}

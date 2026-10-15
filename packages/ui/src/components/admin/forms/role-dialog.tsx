@@ -12,10 +12,12 @@ import {
 import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
 import { Label } from "@workspace/ui/components/label"
+import { SearchableSelect } from "@workspace/ui/components/searchable-select"
 import {
   useCreateRoleMutation,
   useUpdateRoleMutation,
 } from "@workspace/store/reducers/rolesApi"
+import { useListPermissionsQuery } from "@workspace/store/reducers/permissionsApi"
 import { toastSuccess, toastError } from "@workspace/ui/lib/toast"
 
 type RoleFormData = {
@@ -23,6 +25,7 @@ type RoleFormData = {
   name: string
   description: string
   active: boolean
+  permission_ids: string[]
 }
 
 const empty: RoleFormData = {
@@ -30,6 +33,7 @@ const empty: RoleFormData = {
   name: "",
   description: "",
   active: true,
+  permission_ids: [],
 }
 
 export function RoleDialog({
@@ -45,6 +49,7 @@ export function RoleDialog({
     name: string
     description: string | null
     active: boolean
+    permission_ids?: string[]
   } | null
 }) {
   const isEdit = !!role
@@ -53,7 +58,18 @@ export function RoleDialog({
 
   const [createRole, { isLoading: isCreating }] = useCreateRoleMutation()
   const [updateRole, { isLoading: isUpdating }] = useUpdateRoleMutation()
+  const { data: permsData, isLoading: permsLoading } = useListPermissionsQuery(
+    { per_page: 100 },
+    { skip: !open }
+  )
+
   const submitting = isCreating || isUpdating
+
+  const permOptions = (permsData?.data ?? []).map((p) => ({
+    value: p.id,
+    label: p.code,
+    description: p.description || `${p.resource}:${p.action}`,
+  }))
 
   useEffect(() => {
     if (open) {
@@ -64,6 +80,7 @@ export function RoleDialog({
               name: role.name,
               description: role.description ?? "",
               active: role.active,
+              permission_ids: role.permission_ids ?? [],
             }
           : empty
       )
@@ -96,6 +113,7 @@ export function RoleDialog({
               name: form.name,
               description: form.description || undefined,
               active: form.active,
+              permission_ids: form.permission_ids,
             },
           },
         }).unwrap()
@@ -106,6 +124,7 @@ export function RoleDialog({
             name: form.name,
             description: form.description || undefined,
             active: form.active,
+            permission_ids: form.permission_ids,
           },
         }).unwrap()
       }
@@ -173,6 +192,19 @@ export function RoleDialog({
               placeholder="Event organizer role"
               value={form.description}
               onChange={(e) => update("description", e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Permissions</Label>
+            <SearchableSelect
+              options={permOptions}
+              value={form.permission_ids}
+              onChange={(val) => update("permission_ids", val)}
+              placeholder="Select permissions..."
+              searchPlaceholder="Search permissions..."
+              loading={permsLoading}
+              multiple
+              emptyMessage="No permissions found."
             />
           </div>
           <div className="flex items-center gap-2">

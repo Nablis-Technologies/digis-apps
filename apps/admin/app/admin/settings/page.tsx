@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Settings05Icon,
@@ -11,25 +11,18 @@ import {
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { PhoneInput, stripCountryCode } from "@workspace/ui/components/phone-input"
 import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-
-// ─── Types ──────────────────────────────────────────────────────────────────
+import { useGetMeQuery } from "@workspace/store/reducers/authApi"
+import {
+  useGetNotificationPreferencesQuery,
+  useUpdateNotificationPreferencesMutation,
+} from "@workspace/store/reducers/notificationsApi"
+import { UserAvatar } from "@workspace/ui/components/admin/user-avatar"
 
 type Section = "general" | "profile" | "password" | "notifications"
 
-// ─── Page ───────────────────────────────────────────────────────────────────
-
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState<Section>("general")
-
-  const sections: { id: Section; label: string }[] = [
-    { id: "general", label: "General" },
-    { id: "profile", label: "Profile" },
-    { id: "password", label: "Password" },
-    { id: "notifications", label: "Notifications" },
-  ]
 
   return (
     <div className="space-y-6">
@@ -67,12 +60,10 @@ export default function SettingsPage() {
   )
 }
 
-// ─── General Section ────────────────────────────────────────────────────────
-
 function GeneralSection() {
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
-    siteName: "Digis Events",
+    siteName: "Digis Admin",
     timezone: "Africa/Addis_Ababa",
     language: "en",
     dateFormat: "DD/MM/YYYY",
@@ -161,86 +152,58 @@ function GeneralSection() {
   )
 }
 
-// ─── Profile Section ────────────────────────────────────────────────────────
-
 function ProfileSection() {
-  const [saving, setSaving] = useState(false)
+  const { data: meData, isLoading } = useGetMeQuery()
+  const user = meData?.data?.user
+
   const [form, setForm] = useState({
-    name: "Admin User",
-    email: "admin@digis.events",
-    phone: stripCountryCode("+251911123456"),
+    email: "",
+    phone: "",
+    role: "",
   })
+
+  useEffect(() => {
+    if (user) {
+      setForm({
+        email: user.email ?? "",
+        phone: user.phone ?? "",
+        role: user.role ?? "Admin",
+      })
+    }
+  }, [user])
+
+  if (isLoading) {
+    return <div className="p-4 text-sm text-muted-foreground">Loading profile...</div>
+  }
+
+  const displayName = user?.profile?.full_name || form.email || "Administrator"
 
   return (
     <div className="p-2">
       <div className="mb-6 flex items-center gap-4">
-        <div className="flex size-16 items-center justify-center rounded-full bg-lime-500 text-2xl font-bold text-white">
-          A
-        </div>
+        <UserAvatar user={user} className="size-16 rounded-full text-2xl font-bold" />
         <div>
-          <p className="font-medium">Admin User</p>
-          <p className="text-sm text-muted-foreground">super_admin</p>
-          <button
-            type="button"
-            className="mt-1 text-xs text-lime-600 hover:underline"
-          >
-            Change Avatar
-          </button>
+          <p className="font-medium text-base">{displayName}</p>
+          <p className="text-sm text-muted-foreground">{form.role}</p>
         </div>
       </div>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          setSaving(true)
-          setTimeout(() => setSaving(false), 600)
-        }}
-        className="max-w-lg space-y-6"
-      >
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Full Name</Label>
-            <Input
-              id="name"
-              value={form.name}
-              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={form.email}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, email: e.target.value }))
-              }
-            />
-          </div>
+      <div className="max-w-lg space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input id="email" type="email" value={form.email} disabled />
         </div>
         <div className="space-y-2">
           <Label htmlFor="phone">Phone</Label>
-          <PhoneInput
-            id="phone"
-            placeholder="91 123 4567"
-            value={form.phone}
-            onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
-          />
+          <Input id="phone" type="tel" value={form.phone || "Not set"} disabled />
         </div>
-        <div className="flex justify-end">
-          <Button
-            type="submit"
-            disabled={saving}
-            className="bg-lime-500 text-white hover:bg-lime-600 disabled:bg-lime-500/50"
-          >
-            {saving ? "Saving..." : "Save Changes"}
-          </Button>
+        <div className="space-y-2">
+          <Label htmlFor="role">Assigned Role</Label>
+          <Input id="role" value={form.role} disabled />
         </div>
-      </form>
+      </div>
     </div>
   )
 }
-
-// ─── Password Section ───────────────────────────────────────────────────────
 
 function PasswordSection() {
   const [saving, setSaving] = useState(false)
@@ -255,7 +218,10 @@ function PasswordSection() {
           e.preventDefault()
           if (!valid) return
           setSaving(true)
-          setTimeout(() => setSaving(false), 600)
+          setTimeout(() => {
+            setSaving(false)
+            setForm({ current: "", newPass: "", confirm: "" })
+          }, 600)
         }}
         className="max-w-lg space-y-6"
       >
@@ -314,45 +280,71 @@ function PasswordSection() {
   )
 }
 
-// ─── Notifications Section ──────────────────────────────────────────────────
-
 function NotificationsSection() {
-  const [saving, setSaving] = useState(false)
+  const { data: prefData, isLoading } = useGetNotificationPreferencesQuery()
+  const [updatePrefs, { isLoading: isSaving }] = useUpdateNotificationPreferencesMutation()
+
   const [prefs, setPrefs] = useState({
-    newUser: true,
-    organizationVerification: true,
-    eventPublished: false,
-    systemAlerts: true,
-    weeklyReport: true,
+    email_enabled: true,
+    sms_enabled: true,
+    push_enabled: true,
+    marketing_emails: false,
+    transactional_sms: true,
+    security_alerts: true,
   })
 
-  const toggles = [
+  useEffect(() => {
+    if (prefData?.data) {
+      setPrefs({
+        email_enabled: prefData.data.email_enabled ?? true,
+        sms_enabled: prefData.data.sms_enabled ?? true,
+        push_enabled: prefData.data.push_enabled ?? true,
+        marketing_emails: prefData.data.marketing_emails ?? false,
+        transactional_sms: prefData.data.transactional_sms ?? true,
+        security_alerts: prefData.data.security_alerts ?? true,
+      })
+    }
+  }, [prefData])
+
+  const toggles: {
+    key: keyof typeof prefs
+    label: string
+    desc: string
+  }[] = [
     {
-      key: "newUser",
-      label: "New User Registrations",
-      desc: "When a new user signs up",
+      key: "email_enabled",
+      label: "Email Notifications",
+      desc: "Receive operational and system emails",
     },
     {
-      key: "organizationVerification",
-      label: "Verification Requests",
-      desc: "When an organization submits for verification",
+      key: "sms_enabled",
+      label: "SMS Notifications",
+      desc: "Receive SMS for critical alerts",
     },
     {
-      key: "eventPublished",
-      label: "Event Published",
-      desc: "When a new event goes live",
+      key: "push_enabled",
+      label: "Push Notifications",
+      desc: "Receive immediate browser push alerts",
     },
     {
-      key: "systemAlerts",
-      label: "System Alerts",
-      desc: "Critical system notifications and errors",
+      key: "security_alerts",
+      label: "Security Alerts",
+      desc: "Alerts on unauthorized access attempts or policy breaches",
     },
     {
-      key: "weeklyReport",
-      label: "Weekly Report",
-      desc: "Weekly summary of platform activity",
+      key: "transactional_sms",
+      label: "Transactional SMS",
+      desc: "Status updates for ticket and payment actions",
     },
-  ] as const
+  ]
+
+  const handleSave = async () => {
+    await updatePrefs(prefs).unwrap().catch(() => {})
+  }
+
+  if (isLoading) {
+    return <div className="p-4 text-sm text-muted-foreground">Loading preferences...</div>
+  }
 
   return (
     <div className="p-2">
@@ -389,14 +381,11 @@ function NotificationsSection() {
         </div>
         <div className="flex justify-end pt-2">
           <Button
-            onClick={() => {
-              setSaving(true)
-              setTimeout(() => setSaving(false), 600)
-            }}
-            disabled={saving}
+            onClick={handleSave}
+            disabled={isSaving}
             className="bg-lime-500 text-white hover:bg-lime-600 disabled:bg-lime-500/50"
           >
-            {saving ? "Saving..." : "Save Preferences"}
+            {isSaving ? "Saving..." : "Save Preferences"}
           </Button>
         </div>
       </div>

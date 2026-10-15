@@ -13,89 +13,13 @@ import {
 } from "@hugeicons/core-free-icons"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
+import {
+  useListNotificationsQuery,
+  useMarkNotificationAsReadMutation,
+  type NotificationItem,
+} from "@workspace/store/reducers/notificationsApi"
 
 type NotificationType = "all" | "users" | "organizations" | "events" | "system"
-
-interface Notification {
-  id: string
-  type: Exclude<NotificationType, "all">
-  title: string
-  description: string
-  time: string
-  read: boolean
-  link?: string
-}
-
-const mockNotifications: Notification[] = [
-  {
-    id: "1",
-    type: "users",
-    title: "New user registered",
-    description: "Abebe Kebede created a new account",
-    time: "2 minutes ago",
-    read: false,
-    link: "/admin/users",
-  },
-  {
-    id: "2",
-    type: "organizations",
-    title: "Organization verification",
-    description: "Ethio Events PLC submitted verification documents",
-    time: "15 minutes ago",
-    read: false,
-    link: "/admin/organizations",
-  },
-  {
-    id: "3",
-    type: "events",
-    title: "Event awaiting approval",
-    description: "Great Ethiopian Run 2026 is pending review",
-    time: "1 hour ago",
-    read: false,
-  },
-  {
-    id: "4",
-    type: "system",
-    title: "Backup completed",
-    description: "Daily database backup finished successfully",
-    time: "3 hours ago",
-    read: true,
-  },
-  {
-    id: "5",
-    type: "users",
-    title: "Account verification",
-    description: "Meron Tadesse completed email verification",
-    time: "5 hours ago",
-    read: true,
-    link: "/admin/users",
-  },
-  {
-    id: "6",
-    type: "organizations",
-    title: "New organization created",
-    description: "Nabis Entertainment registered as an organizer",
-    time: "Yesterday at 4:30 PM",
-    read: true,
-    link: "/admin/organizations",
-  },
-  {
-    id: "7",
-    type: "events",
-    title: "Event cancelled",
-    description: "Addis Jazz Night has been cancelled by the organizer",
-    time: "Yesterday at 2:15 PM",
-    read: true,
-  },
-  {
-    id: "8",
-    type: "system",
-    title: "SSL certificate expiring",
-    description: "SSL certificate will expire in 14 days",
-    time: "2 days ago",
-    read: true,
-  },
-]
 
 const typeConfig: Record<Exclude<NotificationType, "all">, { label: string; icon: typeof NotificationIcon; color: string }> = {
   users: {
@@ -120,25 +44,42 @@ const typeConfig: Record<Exclude<NotificationType, "all">, { label: string; icon
   },
 }
 
+function formatRelativeTime(dateString: string) {
+  try {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+
+    if (diffInSeconds < 60) return "just now"
+    const diffInMinutes = Math.floor(diffInSeconds / 60)
+    if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`
+    const diffInHours = Math.floor(diffInMinutes / 60)
+    if (diffInHours < 24) return `${diffInHours} hours ago`
+    const diffInDays = Math.floor(diffInHours / 24)
+    if (diffInDays === 1) return "Yesterday"
+    return `${diffInDays} days ago`
+  } catch {
+    return dateString
+  }
+}
+
 export default function NotificationsPage() {
   const [filter, setFilter] = useState<NotificationType>("all")
-  const [notifications, setNotifications] = useState(mockNotifications)
+  const { data, isLoading } = useListNotificationsQuery({ per_page: 50 })
+  const [markAsRead] = useMarkNotificationAsReadMutation()
+
+  const notifications: NotificationItem[] = data?.data ?? []
 
   const filtered =
     filter === "all"
       ? notifications
-      : notifications.filter((n) => n.type === filter)
+      : notifications.filter((n) => (n.category ?? "system") === filter)
 
   const unreadCount = notifications.filter((n) => !n.read).length
 
-  const markAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
-  }
-
-  const markRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    )
+  const markAllRead = async () => {
+    const unread = notifications.filter((n) => !n.read)
+    await Promise.all(unread.map((n) => markAsRead(n.id).unwrap().catch(() => {})))
   }
 
   const filters: { key: NotificationType; label: string }[] = [
@@ -157,7 +98,9 @@ export default function NotificationsPage() {
             Notifications
           </h1>
           <p className="text-sm text-muted-foreground">
-            {unreadCount > 0
+            {isLoading
+              ? "Loading notifications..."
+              : unreadCount > 0
               ? `You have ${unreadCount} unread notification${unreadCount > 1 ? "s" : ""}`
               : "All caught up!"}
           </p>
@@ -192,7 +135,11 @@ export default function NotificationsPage() {
       </div>
 
       <div className="space-y-0 rounded-xl border border-border/50 bg-card shadow-xs">
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <div className="py-16 text-center text-sm text-muted-foreground">
+            Loading notifications...
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <HugeiconsIcon
               icon={NotificationIcon}
@@ -203,14 +150,19 @@ export default function NotificationsPage() {
           </div>
         ) : (
           filtered.map((n, i) => {
-            const config = typeConfig[n.type]
+            const categoryKey = (n.category && n.category in typeConfig ? n.category : "system") as Exclude<NotificationType, "all">
+            const config = typeConfig[categoryKey]
             const isLast = i === filtered.length - 1
+            const link = n.metadata && typeof n.metadata === "object" && "link" in n.metadata ? (n.metadata.link as string) : undefined
 
             return (
               <div
                 key={n.id}
+                onClick={() => {
+                  if (!n.read) markAsRead(n.id)
+                }}
                 className={cn(
-                  "group flex items-start gap-4 px-6 py-4 transition-colors hover:bg-muted/50",
+                  "group flex cursor-pointer items-start gap-4 px-6 py-4 transition-colors hover:bg-muted/50",
                   !isLast && "border-b border-border/50",
                   !n.read && "bg-lime-50/50 dark:bg-lime-950/10"
                 )}
@@ -238,17 +190,20 @@ export default function NotificationsPage() {
                     )}
                   </div>
                   <p className="mt-0.5 text-sm text-muted-foreground">
-                    {n.description}
+                    {n.message}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <time className="text-xs text-muted-foreground">
-                    {n.time}
+                    {formatRelativeTime(n.created_at)}
                   </time>
-                  {n.link && (
+                  {link && (
                     <Link
-                      href={n.link}
-                      onClick={() => markRead(n.id)}
+                      href={link}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (!n.read) markAsRead(n.id)
+                      }}
                       className="rounded-md p-1 opacity-0 transition-opacity hover:bg-muted group-hover:opacity-100"
                     >
                       <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4 text-muted-foreground" />
