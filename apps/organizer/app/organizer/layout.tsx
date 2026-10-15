@@ -90,6 +90,7 @@ const navSecondary: NavSecondaryItem[] = [
 import { OrganizationProvider } from "../../providers/organization-provider"
 import { OrgSidebarSwitcher } from "../../components/layout/org-sidebar-switcher"
 import { SuspendedOrgBanner } from "../../components/layout/suspended-org-banner"
+import { MobileBottomNav } from "../../components/layout/mobile-bottom-nav"
 
 export default function OrganizerLayout({
   children,
@@ -109,11 +110,12 @@ export default function OrganizerLayout({
                   sections={navSections}
                   secondaryItems={navSecondary}
                 />
-                <SidebarInset className="flex min-w-0 flex-1 flex-col gap-4 p-4">
+                <SidebarInset className="flex min-w-0 flex-1 flex-col gap-4 p-4 pb-20 md:pb-4">
                   <SuspendedOrgBanner />
                   {children}
                 </SidebarInset>
               </div>
+              <MobileBottomNav />
             </SidebarProvider>
           </div>
         </OrganizerGuard>

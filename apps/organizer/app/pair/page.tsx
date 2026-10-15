@@ -656,7 +656,7 @@ export default function ScannerPairPage() {
 
         {/* Terminal Footer */}
         <footer className="p-4 border-t bg-muted/10 text-center text-[11px] text-muted-foreground">
-          DEGES Instant Gate Pairing • ID: {installationId.slice(0, 8)}...
+          Digis Instant Gate Pairing • ID: {installationId.slice(0, 8)}...
         </footer>
       </div>
     )
@@ -672,7 +672,7 @@ export default function ScannerPairPage() {
         <div className="flex size-14 items-center justify-center rounded-3xl bg-primary text-primary-foreground shadow-lg mb-4">
           <HugeiconsIcon icon={SmartPhone01Icon} size={28} strokeWidth={2.2} />
         </div>
-        <h1 className="text-2xl font-black tracking-tight text-foreground">DEGES Gate Scanner</h1>
+        <h1 className="text-2xl font-black tracking-tight text-foreground">Digis Gate Scanner</h1>
         <p className="text-xs text-muted-foreground mt-1 max-w-xs">
           Instant Device Pairing. No usernames, passwords, or SMS OTPs required.
         </p>
@@ -758,7 +758,7 @@ export default function ScannerPairPage() {
 
       {/* Footer Info */}
       <footer className="text-center py-4 text-[11px] text-muted-foreground space-y-1">
-        <p>DEGES Instant Gate Pairing Protocol</p>
+        <p>Digis Instant Gate Pairing Protocol</p>
         <p className="font-mono text-[10px] text-muted-foreground/60">
           Device ID: {installationId || "Initializing..."}
         </p>

@@ -92,7 +92,6 @@ export function AssignRoleDialog({
             <Button
               type="submit"
               disabled={!selected || isLoading}
-              className="bg-lime-500 text-white hover:bg-lime-600 disabled:bg-lime-500/50"
             >
               {isLoading ? "Assigning..." : "Assign Role"}
             </Button>

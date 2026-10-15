@@ -141,7 +141,6 @@ export function CreditAdjustmentDialog({
             <Button
               type="submit"
               disabled={!isValid() || isLoading}
-              className="bg-lime-500 text-white hover:bg-lime-600 disabled:bg-lime-500/50"
             >
               {isLoading ? "Applying..." : "Apply Adjustment"}
             </Button>

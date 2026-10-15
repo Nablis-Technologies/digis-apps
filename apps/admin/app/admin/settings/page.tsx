@@ -142,7 +142,6 @@ function GeneralSection() {
           <Button
             type="submit"
             disabled={saving}
-            className="bg-lime-500 text-white hover:bg-lime-600 disabled:bg-lime-500/50"
           >
             {saving ? "Saving..." : "Save Changes"}
           </Button>
@@ -270,7 +269,6 @@ function PasswordSection() {
           <Button
             type="submit"
             disabled={!valid || saving}
-            className="bg-lime-500 text-white hover:bg-lime-600 disabled:bg-lime-500/50"
           >
             {saving ? "Updating..." : "Change Password"}
           </Button>
@@ -366,7 +364,7 @@ function NotificationsSection() {
                 onClick={() => setPrefs((p) => ({ ...p, [t.key]: !p[t.key] }))}
                 className={cn(
                   "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
-                  prefs[t.key] ? "bg-lime-500" : "bg-muted"
+                  prefs[t.key] ? "bg-primary" : "bg-muted"
                 )}
               >
                 <span
@@ -383,7 +381,6 @@ function NotificationsSection() {
           <Button
             onClick={handleSave}
             disabled={isSaving}
-            className="bg-lime-500 text-white hover:bg-lime-600 disabled:bg-lime-500/50"
           >
             {isSaving ? "Saving..." : "Save Preferences"}
           </Button>

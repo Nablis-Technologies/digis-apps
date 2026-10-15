@@ -16,8 +16,9 @@ import {
   ArrowRight01Icon,
   ArrowLeft01Icon,
   Calendar03Icon,
-  Add01Icon,
   ArrowDown01Icon,
+  UserIcon,
+  TicketIcon,
 } from "@hugeicons/core-free-icons"
 import {
   Dialog,
@@ -62,11 +63,41 @@ interface CreateCampaignFormProps {
 }
 
 const MERGE_TAGS = [
-  { tag: "{{first_name}}", label: "First Name", desc: "Recipient's given name", sample: "Sarah" },
-  { tag: "{{last_name}}", label: "Last Name", desc: "Recipient's family name", sample: "Kibret" },
-  { tag: "{{event_title}}", label: "Event Title", desc: "Name of target event", sample: "Gize Concert Night" },
-  { tag: "{{event_link}}", label: "Event Link", desc: "Branded short link to event page", sample: "dig.is/gize-2026" },
-  { tag: "{{ticket_link}}", label: "Ticket Link", desc: "Direct personalized ticket pass link", sample: "dig.is/t/vip-pass" },
+  {
+    tag: "{{first_name}}",
+    label: "Attendee First Name",
+    desc: "Replaced with recipient's first name",
+    sample: "Sarah",
+    icon: <HugeiconsIcon icon={UserIcon} size={13} className="text-teal-600 dark:text-teal-400 shrink-0" />,
+  },
+  {
+    tag: "{{last_name}}",
+    label: "Attendee Last Name",
+    desc: "Replaced with recipient's family name",
+    sample: "Kibret",
+    icon: <HugeiconsIcon icon={UserIcon} size={13} className="text-teal-600 dark:text-teal-400 shrink-0" />,
+  },
+  {
+    tag: "{{event_title}}",
+    label: "Event Name",
+    desc: "Replaced with target event title",
+    sample: "Gize Concert Night",
+    icon: <HugeiconsIcon icon={Megaphone01Icon} size={13} className="text-indigo-600 dark:text-indigo-400 shrink-0" />,
+  },
+  {
+    tag: "{{event_link}}",
+    label: "Event Page Link",
+    desc: "Branded short link to event page",
+    sample: "dig.is/gize-2026",
+    icon: <HugeiconsIcon icon={Link01Icon} size={13} className="text-lime-600 dark:text-lime-400 shrink-0" />,
+  },
+  {
+    tag: "{{ticket_link}}",
+    label: "Personal Ticket Link",
+    desc: "Direct personalized ticket pass link",
+    sample: "dig.is/t/vip-pass",
+    icon: <HugeiconsIcon icon={TicketIcon} size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />,
+  },
 ]
 
 const POPULAR_EMOJIS = [
@@ -551,7 +582,7 @@ export function CreateCampaignForm({
 
                 {/* Attached Bottom Formatting Toolbar */}
                 <div className="flex flex-wrap items-center gap-1.5 px-3.5 py-2.5 border-t border-border/60 bg-muted/20">
-                  {/* Merge Tag Dropdown */}
+                  {/* Personalization Dropdown */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -560,22 +591,39 @@ export function CreateCampaignForm({
                         size="sm"
                         className="h-7.5 text-xs gap-1.5 px-3 bg-background shadow-2xs font-medium text-foreground hover:bg-muted"
                       >
-                        <HugeiconsIcon icon={Add01Icon} size={13} />
-                        Insert merge tag
+                        <HugeiconsIcon icon={UserIcon} size={13} className="text-lime-600 dark:text-lime-400" />
+                        <span className="hidden sm:inline">Personalize (Name, Link...)</span>
+                        <span className="sm:hidden">Personalize</span>
                         <HugeiconsIcon icon={ArrowDown01Icon} size={12} className="opacity-60" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-56 p-1">
+                    <DropdownMenuContent align="start" className="w-72 p-1.5">
+                      <div className="px-2 py-1.5 border-b border-border/50 mb-1">
+                        <p className="text-xs font-semibold text-foreground">Personalize Message</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          Automatically replaces with each recipient&apos;s real info when sent.
+                        </p>
+                      </div>
                       {MERGE_TAGS.map((t) => (
                         <DropdownMenuItem
                           key={t.tag}
                           onClick={() => handleInsertTag(t.tag)}
-                          className="flex flex-col items-start gap-0.5 py-1.5 cursor-pointer"
+                          className="flex items-start gap-2.5 px-2.5 py-1.5 cursor-pointer rounded-lg hover:bg-muted/60"
                         >
-                          <span className="font-mono text-xs font-semibold text-foreground">
-                            {t.tag}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground">{t.desc}</span>
+                          <div className="p-1 rounded-md bg-muted shrink-0 mt-0.5">
+                            {t.icon}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-1.5">
+                              <span className="font-semibold text-xs text-foreground">{t.label}</span>
+                              <code className="font-mono text-[10px] text-muted-foreground bg-muted/70 px-1 py-0.5 rounded">
+                                {t.tag}
+                              </code>
+                            </div>
+                            <p className="text-[10.5px] text-muted-foreground mt-0.5 leading-snug">
+                              {t.desc} <span className="text-foreground/70">({t.sample})</span>
+                            </p>
+                          </div>
                         </DropdownMenuItem>
                       ))}
                     </DropdownMenuContent>

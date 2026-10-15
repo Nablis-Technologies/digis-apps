@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { motion, AnimatePresence, Reorder } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,10 +17,17 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { VenueCombobox } from "@/components/ui/venue-combobox"
+import { ArtistCombobox } from "@/components/ui/artist-combobox"
+import { OrganizationCombobox } from "@/components/ui/organization-combobox"
 import { cn, normalizeYoutubeUrl, validateYoutubeUrl, mapDateSelection } from "@/lib/utils"
 import { useGetMeQuery } from "@workspace/store/reducers/authApi"
-import { useListOwnerOrganizationsQuery } from "@workspace/store/reducers/organizationsApi"
+import { useListOwnerOrganizationsQuery, useListPublicOrganizationsQuery } from "@workspace/store/reducers/organizationsApi"
 import { useActiveOrganization, isOrgSuspendedOrRemoved } from "../../providers/organization-provider"
+import { FeePayerCard } from "./fee-payer-card"
+import {
+  useGetOrganizationTermsQuery,
+  useSetEventPayerSelectionMutation,
+} from "@workspace/store/reducers/commercialApi"
 import { useListPublicCategoriesQuery } from "@workspace/store/reducers/categoriesApi"
 import { useListPublicVenuesQuery } from "@workspace/store/reducers/venuesApi"
 import { useListPublicArtistsQuery } from "@workspace/store/reducers/artistsApi"
@@ -154,7 +161,7 @@ type CustomQuestion = {
   type: CustomQuestionType
   required: boolean
   placeholder?: string
-  options?: string
+  options?: string[] | string
 }
 
 type QuestionFormData = {
@@ -163,6 +170,7 @@ type QuestionFormData = {
   required: boolean
   placeholder: string
   options: string
+  optionsList: string[]
 }
 
 
@@ -440,9 +448,17 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   const { activeOrg, activeOrgId, organizations, isLoading: isLoadingOrgs } = useActiveOrganization()
   const { data: categoriesData } = useListPublicCategoriesQuery()
   const { data: venuesData, isLoading: isLoadingVenues } = useListPublicVenuesQuery({ page: 1, per_page: 100 })
-  const { data: artistsData } = useListPublicArtistsQuery({ per_page: 100 })
+  const { data: artistsData, isLoading: isLoadingArtists } = useListPublicArtistsQuery({ per_page: 100 })
+  const { data: publicOrgsData, isLoading: isLoadingPublicOrgs } = useListPublicOrganizationsQuery({ per_page: 100, order_by: "name", order_direction: "asc" })
   
   const [selectedOrgId, setSelectedOrgId] = useState<string>("")
+  const currentOrgId = selectedOrgId || activeOrgId || activeOrg?.id
+  const [feePayer, setFeePayer] = useState<"buyer" | "organizer">("buyer")
+  const [setEventPayerSelection] = useSetEventPayerSelectionMutation()
+  const { data: termsData } = useGetOrganizationTermsQuery(
+    { organizationId: currentOrgId || "" },
+    { skip: !currentOrgId }
+  )
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [step, setStep] = useState(0)
   const [error, setError] = useState("")
@@ -465,6 +481,18 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   const [bannerPreview, setBannerPreview] = useState("")
   const [bannerCaption, setBannerCaption] = useState("")
   const [galleryFiles, setGalleryFiles] = useState<{ file: File; preview: string; caption?: string }[]>([])
+  const [draggedGalleryIdx, setDraggedGalleryIdx] = useState<number | null>(null)
+  const [dragOverGalleryIdx, setDragOverGalleryIdx] = useState<number | null>(null)
+
+  const moveGalleryItem = (fromIdx: number, toIdx: number) => {
+    if (fromIdx < 0 || fromIdx >= galleryFiles.length || toIdx < 0 || toIdx >= galleryFiles.length || fromIdx === toIdx) return
+    setGalleryFiles((prev) => {
+      const next = [...prev]
+      const [item] = next.splice(fromIdx, 1)
+      if (item) next.splice(toIdx, 0, item)
+      return next
+    })
+  }
 
   // Video Links state
   const [showVideoLinks, setShowVideoLinks] = useState(false)
@@ -480,7 +508,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   // Collaborators state
   const [showCollaborators, setShowCollaborators] = useState(false)
   const [collaborators, setCollaborators] = useState<CollaboratorInput[]>([])
-  const [newCollaborator, setNewCollaborator] = useState({ organizationId: "", type: "co_organizer", role: "collaborator" })
+  const [newCollaborator, setNewCollaborator] = useState({ organizationId: "", orgName: "", type: "co_organizer", role: "collaborator" })
 
   const MAX_GALLERY = 20
 
@@ -545,7 +573,8 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
     type: "text",
     required: false,
     placeholder: "",
-    options: ""
+    options: "",
+    optionsList: ["", ""],
   })
 
   const addTicketType = () =>
@@ -628,6 +657,19 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   const handleAddParticipant = () => {
     const trimmedName = newParticipant.name.trim()
     if (!trimmedName) return false
+
+    // Check duplicate
+    if (
+      participants.some(
+        (p) =>
+          (newParticipant.artistId && p.artistId === newParticipant.artistId) ||
+          p.name.toLowerCase() === trimmedName.toLowerCase()
+      )
+    ) {
+      toast.error(`"${trimmedName}" is already in the lineup`)
+      return false
+    }
+
     setParticipants((prev) => [
       ...prev,
       {
@@ -643,30 +685,74 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   }
 
   const handleAddCollaborator = () => {
-    if (!newCollaborator.organizationId) return false
-    const matchedOrg = organizations?.find((o) => o.id === newCollaborator.organizationId)
+    const trimmedName = (newCollaborator.orgName || "").trim()
+    if (!trimmedName && !newCollaborator.organizationId) return false
+
+    let orgName = trimmedName
+    if (!orgName && newCollaborator.organizationId) {
+      const matchedOrg =
+        organizations?.find((o) => o.id === newCollaborator.organizationId) ||
+        publicOrgsData?.data?.find((o) => o.id === newCollaborator.organizationId)
+      orgName = matchedOrg?.name || "Collaborator Org"
+    }
+
+    // Check duplicate
+    if (
+      collaborators.some(
+        (c) =>
+          (newCollaborator.organizationId && c.organizationId === newCollaborator.organizationId) ||
+          (orgName && c.orgName.toLowerCase() === orgName.toLowerCase())
+      )
+    ) {
+      toast.error(`"${orgName}" is already added as a collaborator`)
+      return false
+    }
+
     setCollaborators((prev) => [
       ...prev,
       {
         _id: crypto.randomUUID(),
         organizationId: newCollaborator.organizationId,
-        orgName: matchedOrg?.name || "Collaborator Org",
+        orgName,
         type: newCollaborator.type || "co_organizer",
         role: newCollaborator.role || "collaborator",
       },
     ])
-    setNewCollaborator({ organizationId: "", type: "co_organizer", role: "collaborator" })
+    setNewCollaborator({ organizationId: "", orgName: "", type: "co_organizer", role: "collaborator" })
     return true
   }
 
   // Custom Questions functions
+  const addOption = () => {
+    setQForm((prev) => ({
+      ...prev,
+      optionsList: [...prev.optionsList, ""],
+    }))
+  }
+
+  const updateOption = (index: number, val: string) => {
+    setQForm((prev) => {
+      const next = [...prev.optionsList]
+      next[index] = val
+      return { ...prev, optionsList: next }
+    })
+  }
+
+  const removeOption = (index: number) => {
+    setQForm((prev) => ({
+      ...prev,
+      optionsList: prev.optionsList.filter((_, idx) => idx !== index),
+    }))
+  }
+
   const openAddQuestion = () => {
     setQForm({
       label: "",
       type: "text",
       required: false,
       placeholder: "",
-      options: ""
+      options: "",
+      optionsList: ["", ""],
     })
     setEditingQId(null)
     setShowCustomQuestions(true)
@@ -674,12 +760,23 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   }
 
   const openEditQuestion = (question: CustomQuestion) => {
+    let parsedOptions: string[] = ["", ""]
+    if (Array.isArray(question.options) && question.options.length > 0) {
+      parsedOptions = [...question.options]
+    } else if (typeof question.options === "string" && question.options.trim()) {
+      parsedOptions = question.options.split(",").map((o) => o.trim()).filter(Boolean)
+    }
+    if (parsedOptions.length < 2) {
+      while (parsedOptions.length < 2) parsedOptions.push("")
+    }
+
     setQForm({
       label: question.label,
       type: question.type,
       required: question.required,
       placeholder: question.placeholder || "",
-      options: question.options || ""
+      options: Array.isArray(question.options) ? question.options.join(", ") : question.options || "",
+      optionsList: parsedOptions,
     })
     setEditingQId(question.id)
     setShowQForm(true)
@@ -687,42 +784,52 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
 
   const handleSaveQuestion = () => {
     if (!qForm.label.trim()) return
+
+    let validOptions: string[] | undefined = undefined
+    if (qForm.type === "select") {
+      validOptions = qForm.optionsList.map((o) => o.trim()).filter(Boolean)
+      if (validOptions.length < 2) {
+        toast.error("Please provide at least 2 choices for the dropdown")
+        return
+      }
+    }
     
     setQSaving(true)
     
-    // Simulate async operation
     setTimeout(() => {
       if (editingQId) {
         // Update existing question
-        setQuestions(prev => prev.map(q => 
-          q.id === editingQId 
-            ? {
-                ...q,
-                label: qForm.label,
-                type: qForm.type,
-                required: qForm.required,
-                placeholder: qForm.placeholder || undefined,
-                options: qForm.type === "select" ? qForm.options : undefined
-              }
-            : q
-        ))
+        setQuestions((prev) =>
+          prev.map((q) =>
+            q.id === editingQId
+              ? {
+                  ...q,
+                  label: qForm.label.trim(),
+                  type: qForm.type,
+                  required: qForm.required,
+                  placeholder: qForm.placeholder || undefined,
+                  options: qForm.type === "select" ? validOptions : undefined,
+                }
+              : q
+          )
+        )
       } else {
         // Add new question
         const newQuestion: CustomQuestion = {
           id: crypto.randomUUID(),
-          label: qForm.label,
+          label: qForm.label.trim(),
           type: qForm.type,
           required: qForm.required,
           placeholder: qForm.placeholder || undefined,
-          options: qForm.type === "select" ? qForm.options : undefined
+          options: qForm.type === "select" ? validOptions : undefined,
         }
-        setQuestions(prev => [...prev, newQuestion])
+        setQuestions((prev) => [...prev, newQuestion])
       }
       
       setShowQForm(false)
       setEditingQId(null)
       setQSaving(false)
-    }, 500)
+    }, 200)
   }
 
   const handleDeleteQuestion = (questionId: string) => {
@@ -831,7 +938,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
       // Step 1: Create the event (draft)
       stepLabel = "create-event"
       toast.loading("Creating event...")
-      const finalVisibility: Visibility = entryType === "invite_only" ? "private" : (visibility === "private" ? "private" : "public")
+      const finalVisibility: Visibility = visibility === "private" ? "private" : "public"
       const eventResult = await createEvent({
         event: {
           title: title.trim(),
@@ -1243,7 +1350,11 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
             help_text: q.placeholder || undefined,
             required: q.required,
             position: idx,
-            options: q.options ? q.options.split(",").map((o) => o.trim()).filter(Boolean) : undefined,
+            options: q.options
+              ? (Array.isArray(q.options)
+                  ? q.options.map((o) => o.trim()).filter(Boolean)
+                  : q.options.split(",").map((o) => o.trim()).filter(Boolean))
+              : undefined,
           }))
 
           const versionResult = await createRegistrationFormVersion({
@@ -1265,6 +1376,25 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
             } catch {
               // Form version publish can proceed
             }
+          }
+        }
+      }
+
+      // Step 3c: Set ticketing fee allocation if paid tickets exist
+      if (entryType === "ticketed" || (entryType === "invite_only" && usePaidTickets)) {
+        const feeComponent = termsData?.data?.current_terms?.components?.[0]
+        const componentId = feeComponent?.id || feeComponent?.fee_component_id
+        if (componentId) {
+          try {
+            await setEventPayerSelection({
+              eventId,
+              selection: {
+                fee_component_id: componentId,
+                charged_to: feePayer,
+              },
+            }).unwrap()
+          } catch (feeErr) {
+            console.warn("Failed to set fee payer selection during event creation:", feeErr)
           }
         }
       }
@@ -1315,18 +1445,20 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
       // Step 4c: Add collaborator organizations (optional)
       stepLabel = "create-event-collaborators"
       const finalCollaborators = [...collaborators]
-      if (newCollaborator.organizationId) {
-        const matchedOrg = organizations?.find((o) => o.id === newCollaborator.organizationId)
+      if (newCollaborator.organizationId || newCollaborator.orgName.trim()) {
+        const matchedOrg =
+          organizations?.find((o) => o.id === newCollaborator.organizationId) ||
+          publicOrgsData?.data?.find((o) => o.id === newCollaborator.organizationId)
         const flushedCollab: CollaboratorInput = {
           _id: crypto.randomUUID(),
           organizationId: newCollaborator.organizationId,
-          orgName: matchedOrg?.name || "Collaborator Org",
+          orgName: newCollaborator.orgName.trim() || matchedOrg?.name || "Collaborator Org",
           type: newCollaborator.type || "co_organizer",
           role: newCollaborator.role || "collaborator",
         }
         finalCollaborators.push(flushedCollab)
         setCollaborators(finalCollaborators)
-        setNewCollaborator({ organizationId: "", type: "co_organizer", role: "collaborator" })
+        setNewCollaborator({ organizationId: "", orgName: "", type: "co_organizer", role: "collaborator" })
       }
 
       if (finalCollaborators.length > 0) {
@@ -1438,7 +1570,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <div className="sticky top-0 z-10 bg-popover pb-3">
+      <div className="sticky top-0 z-10 bg-popover pb-3 pr-10">
       {/* Step indicators */}
       <div className="flex items-center gap-2">
         {steps.map((s, i) => (
@@ -1476,7 +1608,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
       </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden pr-1">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden pr-2 scrollbar-thin scrollbar-thumb-zinc-700">
       <AnimatePresence mode="wait">
         {/* ─── Step 0: Event Type ─────────────────────────────────────── */}
         {step === 0 && (
@@ -1526,11 +1658,6 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                   </div>
                   <div className="font-semibold text-sm">{et.label}</div>
                   <div className="text-xs text-muted-foreground mt-0.5 leading-snug">{et.desc}</div>
-                  {et.value === "invite_only" && (
-                    <div className="mt-2 text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md inline-block">
-                      Forces private visibility
-                    </div>
-                  )}
                 </button>
               ))}
             </div>
@@ -1538,32 +1665,18 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
             <div>
               <div className="flex items-center justify-between mb-1">
                 <h2 className="font-bold text-base">Who can discover this event?</h2>
-                {entryType === "invite_only" && (
-                  <Badge variant="outline" className="text-[10px] text-amber-600 dark:text-amber-400 border-amber-500/30">
-                    Locked to Private for Invite Only
-                  </Badge>
-                )}
               </div>
               <p className="text-muted-foreground text-sm mb-3">Controls whether it appears in the browse page</p>
               <div className="space-y-2">
                 {VISIBILITY_OPTIONS.map((v) => {
-                  const isLocked = entryType === "invite_only" && v.value === "public"
-                  const effectiveVisibility = entryType === "invite_only" ? "private" : visibility
-                  const isSelected = effectiveVisibility === v.value
+                  const isSelected = visibility === v.value
                   return (
                     <button
                       key={v.value}
                       type="button"
-                      disabled={isLocked}
-                      onClick={() => {
-                        if (!isLocked) {
-                          setVisibility(v.value)
-                        }
-                      }}
+                      onClick={() => setVisibility(v.value)}
                       className={`w-full text-left px-4 py-3 rounded-xl border transition-all flex items-start gap-3 ${
-                        isLocked
-                          ? "opacity-40 cursor-not-allowed border-border/30 bg-muted/20"
-                          : isSelected
+                        isSelected
                           ? `${selectedEntryType.borderClass} ${selectedEntryType.bgClass}/10`
                           : "border-border/40 hover:border-border bg-card/50"
                       }`}
@@ -1574,7 +1687,6 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                       <div className="flex-1">
                         <div className="font-medium text-sm flex items-center gap-2">
                           {v.label}
-                          {isLocked && <span className="text-[10px] text-muted-foreground font-normal">(Unavailable for Invite Only)</span>}
                         </div>
                         <div className="text-xs text-muted-foreground">{v.desc}</div>
                       </div>
@@ -1608,11 +1720,11 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                 {selectedEntryType.label}
               </Badge>
               <Badge 
-                variant={(entryType === "invite_only" ? "private" : visibility) === "public" ? "info" : "violet"} 
+                variant={visibility === "public" ? "info" : "violet"} 
                 className="text-xs gap-1.5 font-semibold"
               >
-                {VISIBILITY_OPTIONS.find((v) => v.value === (entryType === "invite_only" ? "private" : visibility))?.icon}
-                {entryType === "invite_only" ? "Private" : (visibility.charAt(0).toUpperCase() + visibility.slice(1))}
+                {VISIBILITY_OPTIONS.find((v) => v.value === visibility)?.icon}
+                {visibility.charAt(0).toUpperCase() + visibility.slice(1)}
               </Badge>
             </div>
 
@@ -1748,8 +1860,8 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                 <span className="font-semibold text-sm">Date & Schedule</span>
               </div>
 
-              {/* Start Date & Time */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* Start & End Date / Time - Single Compact Responsive Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Start Date <span className="text-destructive">*</span></Label>
                   <Input
@@ -1806,10 +1918,6 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                     className="h-10"
                   />
                 </div>
-              </div>
-
-              {/* End Date & Time (required) */}
-              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">End Date <span className="text-destructive">*</span></Label>
                   <Input
@@ -2018,12 +2126,30 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                     <div className="grid grid-cols-3 gap-2">
                       <div></div>
                       <div className="relative group">
-                        <div className="bg-card border border-border/60 rounded-xl overflow-hidden">
+                        <div className="bg-card border border-border/60 rounded-xl overflow-hidden relative">
                           <img
                             src={bannerPreview}
                             alt="Banner preview"
                             className="w-full h-full object-cover aspect-[4/5] pointer-events-none"
                           />
+                          {/* Number badge on banner — always visible */}
+                          <span className="absolute top-2 left-2 size-6 rounded-full bg-white text-black text-xs font-bold flex items-center justify-center shadow-md border border-black/10 z-10 pointer-events-none">
+                            1
+                          </span>
+                          {/* Remove 'x' button on banner — always visible */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              URL.revokeObjectURL(bannerPreview)
+                              setBannerPreview("")
+                              setBannerFile(null)
+                              setBannerCaption("")
+                            }}
+                            className="absolute top-2 right-2 size-6 rounded-full bg-white text-red-600 hover:bg-red-50 hover:text-red-700 flex items-center justify-center shadow-md border border-black/10 transition-colors z-10 cursor-pointer"
+                            title="Remove cover photo"
+                          >
+                            <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2.5} className="size-3.5 text-red-600" />
+                          </button>
                         </div>
                         <Input
                           placeholder="Caption..."
@@ -2031,19 +2157,6 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                           onChange={(e) => setBannerCaption(e.target.value)}
                           className="mt-1 h-6 text-[10px] px-1.5 bg-background/90"
                         />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            URL.revokeObjectURL(bannerPreview)
-                            setBannerPreview("")
-                            setBannerFile(null)
-                            setBannerCaption("")
-                          }}
-                          className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                          title="Remove cover photo"
-                        >
-                          <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-3" />
-                        </button>
                       </div>
                       <div></div>
                     </div>
@@ -2094,54 +2207,127 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                     <div className="px-4 pb-4 space-y-3 border-t border-border/40 pt-3">
                       {galleryFiles.length > 0 && (
                         <>
-                          <p className="text-xs text-muted-foreground">Drag images to reorder — position 1 uploads first.</p>
-                          <Reorder.Group
-                            axis="x"
-                            values={galleryFiles}
-                            onReorder={setGalleryFiles}
-                            className="grid grid-cols-3 gap-2 list-none p-0 m-0"
-                          >
-                            {galleryFiles.map((item, idx) => (
-                              <Reorder.Item
-                                key={item.preview}
-                                value={item}
-                                className="relative group cursor-grab active:cursor-grabbing"
-                                whileDrag={{ scale: 1.05, zIndex: 10 }}
-                              >
-                                <div className="bg-card border border-border/60 rounded-xl overflow-hidden">
-                                  <img
-                                    src={item.preview}
-                                    alt={`Gallery ${idx + 1}`}
-                                    className="w-full h-full object-cover aspect-[4/5] pointer-events-none"
-                                  />
-                                </div>
-                                <Input
-                                  placeholder="Caption..."
-                                  value={item.caption || ""}
-                                  onChange={(e) => {
-                                    const val = e.target.value
-                                    setGalleryFiles((prev) => prev.map((g, i) => i === idx ? { ...g, caption: val } : g))
+                          <p className="text-xs text-muted-foreground">
+                            Drag images or use arrows to reorder — position 1 uploads first.
+                          </p>
+                          <div className="grid grid-cols-3 gap-2.5 list-none p-0 m-0">
+                            {galleryFiles.map((item, idx) => {
+                              const isDragging = draggedGalleryIdx === idx
+                              const isDragOver = dragOverGalleryIdx === idx && draggedGalleryIdx !== idx
+
+                              return (
+                                <div
+                                  key={item.preview}
+                                  draggable
+                                  onDragStart={(e) => {
+                                    setDraggedGalleryIdx(idx)
+                                    e.dataTransfer.effectAllowed = "move"
+                                    e.dataTransfer.setData("text/plain", String(idx))
                                   }}
-                                  className="mt-1 h-6 text-[10px] px-1.5 bg-background/90"
-                                  onPointerDown={(e) => e.stopPropagation()}
-                                />
-                                <button
-                                  type="button"
-                                  onPointerDown={(e) => e.stopPropagation()}
-                                  onClick={() => {
-                                    URL.revokeObjectURL(item.preview)
-                                    setGalleryFiles((prev) => prev.filter((g) => g.preview !== item.preview))
+                                  onDragOver={(e) => {
+                                    e.preventDefault()
+                                    e.dataTransfer.dropEffect = "move"
+                                    if (dragOverGalleryIdx !== idx) {
+                                      setDragOverGalleryIdx(idx)
+                                    }
                                   }}
-                                  className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onDragLeave={() => {
+                                    if (dragOverGalleryIdx === idx) {
+                                      setDragOverGalleryIdx(null)
+                                    }
+                                  }}
+                                  onDrop={(e) => {
+                                    e.preventDefault()
+                                    if (draggedGalleryIdx !== null && draggedGalleryIdx !== idx) {
+                                      moveGalleryItem(draggedGalleryIdx, idx)
+                                    }
+                                    setDraggedGalleryIdx(null)
+                                    setDragOverGalleryIdx(null)
+                                  }}
+                                  onDragEnd={() => {
+                                    setDraggedGalleryIdx(null)
+                                    setDragOverGalleryIdx(null)
+                                  }}
+                                  className={cn(
+                                    "relative group transition-all duration-150 rounded-xl",
+                                    isDragging && "opacity-40 scale-95",
+                                    isDragOver && "ring-2 ring-primary ring-offset-2 ring-offset-background scale-[1.02]"
+                                  )}
                                 >
-                                  <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-3" />
-                                </button>
-                                <span className="absolute bottom-8 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full">
-                                  {idx + 1}
-                                </span>
-                              </Reorder.Item>
-                            ))}
-                          </Reorder.Group>
+                                  <div className="bg-card border border-border/60 rounded-xl overflow-hidden relative cursor-grab active:cursor-grabbing">
+                                    <img
+                                      src={item.preview}
+                                      alt={`Gallery ${idx + 1}`}
+                                      className="w-full h-full object-cover aspect-[4/5] pointer-events-none select-none"
+                                    />
+                                    {/* Number badge on gallery item — always visible */}
+                                    <span className="absolute top-2 left-2 size-6 rounded-full bg-white text-black text-xs font-bold flex items-center justify-center shadow-md border border-black/10 z-10 pointer-events-none">
+                                      {idx + 1}
+                                    </span>
+                                    {/* Remove 'x' button on gallery item — always visible */}
+                                    <button
+                                      type="button"
+                                      onPointerDown={(e) => e.stopPropagation()}
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        URL.revokeObjectURL(item.preview)
+                                        setGalleryFiles((prev) => prev.filter((g) => g.preview !== item.preview))
+                                      }}
+                                      className="absolute top-2 right-2 size-6 rounded-full bg-white text-red-600 hover:bg-red-50 hover:text-red-700 flex items-center justify-center shadow-md border border-black/10 transition-colors z-10 cursor-pointer"
+                                      title="Remove gallery image"
+                                    >
+                                      <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2.5} className="size-3.5 text-red-600" />
+                                    </button>
+                                  </div>
+
+                                  {/* Caption and Reorder Controls */}
+                                  <div className="mt-1 flex items-center gap-1">
+                                    <Input
+                                      placeholder="Caption..."
+                                      value={item.caption || ""}
+                                      onChange={(e) => {
+                                        const val = e.target.value
+                                        setGalleryFiles((prev) => prev.map((g, i) => i === idx ? { ...g, caption: val } : g))
+                                      }}
+                                      onPointerDown={(e) => e.stopPropagation()}
+                                      draggable={false}
+                                      onDragStart={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                      }}
+                                      className="h-6 text-[10px] px-1.5 bg-background/90 flex-1 min-w-0"
+                                    />
+                                    <div className="flex items-center gap-0.5 shrink-0">
+                                      <button
+                                        type="button"
+                                        disabled={idx === 0}
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          moveGalleryItem(idx, idx - 1)
+                                        }}
+                                        className="size-6 flex items-center justify-center rounded-md border border-border/60 bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-25 disabled:pointer-events-none transition-colors cursor-pointer"
+                                        title="Move earlier"
+                                      >
+                                        <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-3" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={idx === galleryFiles.length - 1}
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          moveGalleryItem(idx, idx + 1)
+                                        }}
+                                        className="size-6 flex items-center justify-center rounded-md border border-border/60 bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-25 disabled:pointer-events-none transition-colors cursor-pointer"
+                                        title="Move later"
+                                      >
+                                        <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-3" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
                         </>
                       )}
                       {galleryFiles.length < MAX_GALLERY && (
@@ -2484,6 +2670,18 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                 <Button variant="outline" className="w-full border-dashed border-border h-10" onClick={addTicketType}>
                   <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-4 mr-2" /> Add another ticket type
                 </Button>
+
+                {/* Ticketing Fee Allocation */}
+                {currentOrgId && (
+                  <div className="pt-2">
+                    <FeePayerCard
+                      organizationId={currentOrgId}
+                      currency="ETB"
+                      value={feePayer}
+                      onChange={setFeePayer}
+                    />
+                  </div>
+                )}
               </div>
             )}
 
@@ -2657,6 +2855,18 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                           <Button variant="outline" size="sm" className="w-full border-dashed" onClick={addTicketType}>
                             <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-3 mr-1" /> Add tier
                           </Button>
+
+                          {/* Ticketing Fee Allocation */}
+                          {currentOrgId && (
+                            <div className="pt-2">
+                              <FeePayerCard
+                                organizationId={currentOrgId}
+                                currency="ETB"
+                                value={feePayer}
+                                onChange={setFeePayer}
+                              />
+                            </div>
+                          )}
                         </div>
                       </motion.div>
                     )}
@@ -3256,7 +3466,16 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                             <button
                               key={t.value}
                               type="button"
-                              onClick={() => setQForm((f) => ({ ...f, type: t.value }))}
+                              onClick={() =>
+                                setQForm((f) => ({
+                                  ...f,
+                                  type: t.value,
+                                  optionsList:
+                                    t.value === "select" && f.optionsList.length < 2
+                                      ? ["", ""]
+                                      : f.optionsList,
+                                }))
+                              }
                               className={`flex flex-col items-center gap-1 py-2 rounded-xl border text-[10px] font-semibold transition-all ${
                                 qForm.type === t.value
                                   ? `${selectedEntryType.borderClass}/50 ${selectedEntryType.bgClass}/10 ${selectedEntryType.textClass}`
@@ -3270,16 +3489,70 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                         </div>
                       </div>
                       
-                      {/* Options for Select Type */}
+                      {/* Options for Select / Dropdown Type */}
                       {qForm.type === "select" && (
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Options <span className="text-muted-foreground">(comma-separated)</span></Label>
-                          <Input
-                            placeholder="Vegetarian, Vegan, Non-vegetarian"
-                            value={qForm.options}
-                            onChange={(e) => setQForm((f) => ({ ...f, options: e.target.value }))}
-                            className="h-9 text-sm"
-                          />
+                        <div className="space-y-2 pt-1">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-xs font-semibold">
+                              Dropdown Choices <span className="text-destructive">*</span>
+                            </Label>
+                            <span className="text-[11px] text-muted-foreground">
+                              Attendees pick one from this list
+                            </span>
+                          </div>
+
+                          <div className="space-y-2">
+                            {qForm.optionsList.map((opt, idx) => (
+                              <div key={idx} className="flex items-center gap-2">
+                                <div className="size-6 rounded-md bg-muted text-muted-foreground flex items-center justify-center text-[10px] font-bold shrink-0">
+                                  {idx + 1}
+                                </div>
+                                <Input
+                                  value={opt}
+                                  onChange={(e) => updateOption(idx, e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      e.preventDefault()
+                                      addOption()
+                                    }
+                                  }}
+                                  placeholder={
+                                    idx === 0
+                                      ? "e.g. Vegetarian"
+                                      : idx === 1
+                                      ? "e.g. Vegan"
+                                      : idx === 2
+                                      ? "e.g. Non-vegetarian"
+                                      : `Choice ${idx + 1}`
+                                  }
+                                  className="h-8.5 text-xs flex-1 bg-background"
+                                />
+                                {qForm.optionsList.length > 2 && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="size-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0 rounded-lg cursor-pointer"
+                                    onClick={() => removeOption(idx)}
+                                    title="Remove choice"
+                                  >
+                                    <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-3.5" />
+                                  </Button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={addOption}
+                            className="w-full h-8 text-xs border-dashed text-muted-foreground hover:text-foreground mt-1 cursor-pointer"
+                          >
+                            <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-3.5 mr-1.5" />
+                            Add another choice
+                          </Button>
                         </div>
                       )}
                       
@@ -3392,8 +3665,8 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                                 <span className={`text-[10px] font-bold ${selectedEntryType.bgClass}/10 ${selectedEntryType.textClass} px-1 rounded`}>Required</span>
                               )}
                               {q.type === "select" && q.options && (
-                                <span className="text-[10px] text-muted-foreground/60 truncate max-w-[120px]">
-                                  {q.options}
+                                <span className="text-[10px] text-muted-foreground/60 truncate max-w-[160px]">
+                                  {Array.isArray(q.options) ? q.options.join(" · ") : q.options}
                                 </span>
                               )}
                             </div>
@@ -3466,83 +3739,106 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                     <div className="px-4 pb-4 space-y-3 border-t border-border/40 pt-3">
                       {participants.length > 0 && (
                         <div className="space-y-2">
-                          {participants.map((p, idx) => (
-                            <div key={p._id} className="flex items-center justify-between gap-2 p-2.5 rounded-xl border border-border/60 bg-background text-xs">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className="size-5 rounded-full bg-muted flex items-center justify-center font-bold text-[10px] text-muted-foreground shrink-0">
-                                  {idx + 1}
-                                </span>
-                                <div className="truncate">
-                                  <div className="font-semibold text-foreground truncate">{p.name}</div>
-                                  <div className="text-[11px] text-muted-foreground truncate">
-                                    <span className="capitalize">{p.type}</span>{p.description ? ` • ${p.description}` : ""}
+                          {participants.map((p, idx) => {
+                            const role = getParticipantRoleConfig(p.type)
+                            return (
+                              <div
+                                key={p._id}
+                                className="flex items-center justify-between gap-2.5 p-2.5 rounded-xl border border-border/60 bg-background text-xs shadow-2xs hover:border-violet-500/30 transition-colors"
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <span className="size-5 rounded-full bg-muted flex items-center justify-center font-bold text-[10px] text-muted-foreground shrink-0">
+                                    {idx + 1}
+                                  </span>
+                                  <div
+                                    className={cn(
+                                      "size-7 rounded-md bg-gradient-to-br flex items-center justify-center text-white font-bold text-[10px] shadow-2xs shrink-0",
+                                      role.avatarGradient
+                                    )}
+                                  >
+                                    {p.name.slice(0, 2).toUpperCase()}
+                                  </div>
+                                  <div className="truncate">
+                                    <div className="flex items-center gap-1.5 truncate">
+                                      <span className="font-semibold text-foreground truncate">{p.name}</span>
+                                      {p.artistId && (
+                                        <span title="Verified Directory Artist" className="inline-flex shrink-0">
+                                          <HugeiconsIcon
+                                            icon={CheckmarkCircle01Icon}
+                                            strokeWidth={2}
+                                            className="size-3 text-sky-500"
+                                          />
+                                        </span>
+                                      )}
+                                      <span
+                                        className={cn(
+                                          "text-[9px] font-semibold px-1.5 py-0.2 rounded border leading-none",
+                                          role.badgeStyle
+                                        )}
+                                      >
+                                        {role.label}
+                                      </span>
+                                    </div>
+                                    {p.description && (
+                                      <div className="text-[11px] text-muted-foreground truncate mt-0.5">
+                                        {p.description}
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="size-7 text-muted-foreground hover:text-destructive shrink-0"
+                                  onClick={() => setParticipants((prev) => prev.filter((x) => x._id !== p._id))}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
                               </div>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="size-7 text-muted-foreground hover:text-destructive shrink-0"
-                                onClick={() => setParticipants(prev => prev.filter(x => x._id !== p._id))}
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </Button>
-                            </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       )}
-                      <div className="space-y-2 rounded-xl border border-dashed border-border/80 p-3 bg-muted/20">
-                        {artistsData?.data && artistsData.data.length > 0 && (
-                          <div className="pb-1">
-                            <Select
-                              value={newParticipant.artistId || ""}
-                              onValueChange={(artistId) => {
-                                const art = artistsData.data.find((a) => a.id === artistId)
-                                if (art) {
-                                  setNewParticipant((prev) => ({
-                                    ...prev,
-                                    artistId: art.id,
-                                    name: art.name,
-                                    type: "performer",
-                                    description: art.genres?.join(", ") || prev.description,
-                                  }))
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="h-7 text-[11px] bg-background">
-                                <SelectValue placeholder="Quick-fill from Artist Directory..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {artistsData.data.map((art) => (
-                                  <SelectItem key={art.id} value={art.id} className="text-xs">
-                                    {art.name}{art.genres?.length ? ` (${art.genres.join(", ")})` : ""}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                          <div className="sm:col-span-1">
-                            <Input
-                              placeholder="Performer Name *"
-                              value={newParticipant.name}
-                              onChange={(e) => setNewParticipant(prev => ({ ...prev, name: e.target.value }))}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault()
-                                  handleAddParticipant()
-                                }
-                              }}
-                              className="h-8 text-xs"
-                            />
-                          </div>
-                          <div className="sm:col-span-1">
+
+                      <div className="space-y-2.5 rounded-xl border border-dashed border-border/80 p-3 bg-muted/20">
+                        {/* Searchable Artist Combobox */}
+                        <ArtistCombobox
+                          artists={artistsData?.data}
+                          isLoading={isLoadingArtists}
+                          value={newParticipant.name}
+                          artistId={newParticipant.artistId}
+                          placeholder="Search artist directory or enter performer name..."
+                          onChange={(name, art) => {
+                            setNewParticipant((prev) => ({
+                              ...prev,
+                              name: name,
+                              artistId: art?.id,
+                              description: art?.genres?.length ? art.genres.join(", ") : prev.description,
+                            }))
+                          }}
+                          onDirectAdd={(art) => {
+                            if (!art.name.trim()) return
+                            setParticipants((prev) => [
+                              ...prev,
+                              {
+                                _id: crypto.randomUUID(),
+                                name: art.name.trim(),
+                                type: newParticipant.type || "performer",
+                                description: art.description || "",
+                                artistId: art.artistId,
+                              },
+                            ])
+                            setNewParticipant({ name: "", type: "performer", description: "", artistId: "" })
+                          }}
+                        />
+
+                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                          <div className="sm:col-span-5">
                             <Select
                               value={newParticipant.type}
-                              onValueChange={(v) => setNewParticipant(prev => ({ ...prev, type: v }))}
+                              onValueChange={(v) => setNewParticipant((prev) => ({ ...prev, type: v }))}
                             >
-                              <SelectTrigger className="h-8 text-xs">
+                              <SelectTrigger className="h-8 text-xs bg-background">
                                 <SelectValue placeholder="Role" />
                               </SelectTrigger>
                               <SelectContent>
@@ -3556,26 +3852,27 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                               </SelectContent>
                             </Select>
                           </div>
-                          <div className="sm:col-span-1">
+                          <div className="sm:col-span-7">
                             <Input
-                              placeholder="Note (e.g. Headliner)"
+                              placeholder="Note (e.g. Headliner, Opening Set)"
                               value={newParticipant.description}
-                              onChange={(e) => setNewParticipant(prev => ({ ...prev, description: e.target.value }))}
+                              onChange={(e) => setNewParticipant((prev) => ({ ...prev, description: e.target.value }))}
                               onKeyDown={(e) => {
                                 if (e.key === "Enter") {
                                   e.preventDefault()
                                   handleAddParticipant()
                                 }
                               }}
-                              className="h-8 text-xs"
+                              className="h-8 text-xs bg-background"
                             />
                           </div>
                         </div>
+
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
-                          className="w-full h-8 text-xs font-medium"
+                          className="w-full h-8 text-xs font-semibold hover:bg-primary/10 hover:text-primary hover:border-primary/40 transition-colors"
                           disabled={!newParticipant.name.trim()}
                           onClick={handleAddParticipant}
                         >
@@ -3628,72 +3925,126 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                     <div className="px-4 pb-4 space-y-3 border-t border-border/40 pt-3">
                       {collaborators.length > 0 && (
                         <div className="space-y-2">
-                          {collaborators.map((c) => (
-                            <div key={c._id} className="flex items-center justify-between gap-2 p-2.5 rounded-xl border border-border/60 bg-background text-xs">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <Badge variant="outline" className="text-[10px] capitalize font-mono shrink-0">
-                                  {c.type.replace("_", " ")}
-                                </Badge>
-                                <span className="font-semibold text-foreground truncate">{c.orgName}</span>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="size-7 text-muted-foreground hover:text-destructive shrink-0"
-                                onClick={() => setCollaborators(prev => prev.filter(x => x._id !== c._id))}
+                          {collaborators.map((c, idx) => {
+                            const collab = getCollaboratorTypeConfig(c.type)
+                            return (
+                              <div
+                                key={c._id}
+                                className="flex items-center justify-between gap-2.5 p-2.5 rounded-xl border border-border/60 bg-background text-xs shadow-2xs hover:border-indigo-500/30 transition-colors"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </Button>
-                            </div>
-                          ))}
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <span className="size-5 rounded-full bg-muted flex items-center justify-center font-bold text-[10px] text-muted-foreground shrink-0">
+                                    {idx + 1}
+                                  </span>
+                                  <div
+                                    className={cn(
+                                      "size-7 rounded-md bg-gradient-to-br flex items-center justify-center text-white font-bold text-[10px] shadow-2xs shrink-0",
+                                      collab.avatarGradient
+                                    )}
+                                  >
+                                    <HugeiconsIcon icon={Building02Icon} strokeWidth={2} className="size-3.5" />
+                                  </div>
+                                  <div className="truncate">
+                                    <div className="flex items-center gap-1.5 truncate">
+                                      <span className="font-semibold text-foreground truncate">{c.orgName}</span>
+                                      <span
+                                        className={cn(
+                                          "text-[9px] font-semibold px-1.5 py-0.2 rounded border leading-none capitalize",
+                                          collab.badgeStyle
+                                        )}
+                                      >
+                                        {collab.label}
+                                      </span>
+                                      {c.organizationId && (
+                                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-sky-500/10 text-sky-600 dark:text-sky-400 font-mono">
+                                          Platform Org
+                                        </span>
+                                      )}
+                                    </div>
+                                    {c.role && (
+                                      <div className="text-[11px] text-muted-foreground truncate mt-0.5">
+                                        {c.role}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="size-7 text-muted-foreground hover:text-destructive shrink-0"
+                                  onClick={() => setCollaborators((prev) => prev.filter((x) => x._id !== c._id))}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              </div>
+                            )
+                          })}
                         </div>
                       )}
-                      <div className="space-y-2 rounded-xl border border-dashed border-border/80 p-3 bg-muted/20">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          <Select
-                            value={newCollaborator.organizationId}
-                            onValueChange={(v) => {
-                              setNewCollaborator(prev => ({ ...prev, organizationId: v }))
-                            }}
-                          >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="Select Organization" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {organizations
-                                ?.filter((o) => o.id !== (activeOrgId || activeOrg?.id))
-                                ?.map((org) => (
-                                  <SelectItem key={org.id} value={org.id}>
-                                    {org.name}
-                                  </SelectItem>
-                                ))}
-                            </SelectContent>
-                          </Select>
-                          <Select
-                            value={newCollaborator.type}
-                            onValueChange={(v) => setNewCollaborator(prev => ({ ...prev, type: v }))}
-                          >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="Relationship Type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="co_organizer">Co-Organizer</SelectItem>
-                              <SelectItem value="promoter">Promoter</SelectItem>
-                              <SelectItem value="sponsor">Sponsor</SelectItem>
-                              <SelectItem value="venue_partner">Venue Partner</SelectItem>
-                            </SelectContent>
-                          </Select>
+
+                      <div className="space-y-2.5 rounded-xl border border-dashed border-border/80 p-3 bg-muted/20">
+                        {/* Searchable Organization Combobox */}
+                        <OrganizationCombobox
+                          publicOrganizations={publicOrgsData?.data}
+                          ownerOrganizations={organizations}
+                          excludeOrgId={activeOrgId || activeOrg?.id}
+                          existingOrgIds={collaborators.map((c) => c.organizationId).filter(Boolean) as string[]}
+                          value={newCollaborator.orgName}
+                          organizationId={newCollaborator.organizationId}
+                          isLoading={isLoadingPublicOrgs}
+                          placeholder="Search directory or enter partner/sponsor name..."
+                          onChange={(name, org) => {
+                            setNewCollaborator((prev) => ({
+                              ...prev,
+                              orgName: name,
+                              organizationId: org?.id || "",
+                            }))
+                          }}
+                          onDirectAdd={(data) => {
+                            if (!data.orgName.trim() && !data.organizationId) return
+                            setCollaborators((prev) => [
+                              ...prev,
+                              {
+                                _id: crypto.randomUUID(),
+                                organizationId: data.organizationId || "",
+                                orgName: data.orgName,
+                                type: newCollaborator.type || "co_organizer",
+                                role: "collaborator",
+                              },
+                            ])
+                            setNewCollaborator({ organizationId: "", orgName: "", type: "co_organizer", role: "collaborator" })
+                          }}
+                        />
+
+                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                          <div className="sm:col-span-12">
+                            <Select
+                              value={newCollaborator.type}
+                              onValueChange={(v) => setNewCollaborator((prev) => ({ ...prev, type: v }))}
+                            >
+                              <SelectTrigger className="h-8 text-xs bg-background">
+                                <SelectValue placeholder="Relationship Type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="co_organizer">Co-Organizer (Event Operations)</SelectItem>
+                                <SelectItem value="promoter">Promoter (Marketing & Sales)</SelectItem>
+                                <SelectItem value="sponsor">Sponsor (Financial / In-Kind)</SelectItem>
+                                <SelectItem value="venue_partner">Venue Partner (Host / Location)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
+
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
-                          className="w-full h-8 text-xs font-medium"
-                          disabled={!newCollaborator.organizationId}
+                          className="w-full h-8 text-xs font-semibold hover:bg-primary/10 hover:text-primary hover:border-primary/40 transition-colors"
+                          disabled={!newCollaborator.orgName.trim() && !newCollaborator.organizationId}
                           onClick={handleAddCollaborator}
                         >
                           <Plus className="w-3.5 h-3.5 mr-1.5" />
-                          Add Organization
+                          Add Collaborator Organization
                         </Button>
                       </div>
                     </div>
@@ -3996,11 +4347,11 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
 
                     {/* Visibility Badge */}
                     <Badge 
-                      variant={(entryType === "invite_only" ? "private" : visibility) === "public" ? "info" : "violet"} 
+                      variant={visibility === "public" ? "info" : "violet"} 
                       className="text-xs gap-1.5 font-semibold shadow-2xs h-6 px-2.5"
                     >
-                      {VISIBILITY_OPTIONS.find((v) => v.value === (entryType === "invite_only" ? "private" : visibility))?.icon}
-                      <span>{entryType === "invite_only" ? "Private" : (visibility.charAt(0).toUpperCase() + visibility.slice(1))}</span>
+                      {VISIBILITY_OPTIONS.find((v) => v.value === visibility)?.icon}
+                      <span>{visibility.charAt(0).toUpperCase() + visibility.slice(1)}</span>
                     </Badge>
 
                     {/* Approval Required Badge */}
@@ -4411,6 +4762,14 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                           </div>
                         </div>
                       ))}
+                    </div>
+
+                    {/* Ticketing Fee Allocation Summary */}
+                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-muted/20 border border-border/50 text-xs">
+                      <span className="font-semibold text-foreground">Ticketing Fee Allocation</span>
+                      <span className="font-medium text-foreground">
+                        {feePayer === "buyer" ? "Pass fees to Buyer" : "Absorb in Ticket Price"}
+                      </span>
                     </div>
                   </div>
                 )}

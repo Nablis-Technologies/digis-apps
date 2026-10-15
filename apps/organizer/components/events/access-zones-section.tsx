@@ -535,7 +535,7 @@ export function AccessZonesSection({ eventId, eventDates = [] }: AccessZonesSect
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="h-8 px-3 text-xs font-semibold border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 shadow-2xs gap-1.5 transition-all"
+                                className="h-8 px-3 text-xs font-medium gap-1.5 text-emerald-600 dark:text-emerald-400"
                                 onClick={() => handleToggleActive(zone)}
                                 disabled={isUpdating}
                               >

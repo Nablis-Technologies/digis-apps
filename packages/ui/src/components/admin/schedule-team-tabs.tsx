@@ -100,7 +100,7 @@ export function ScheduleTab({ eventId }: { eventId: string }) {
             <Button variant="outline" size="sm" onClick={() => refetchDates()}>
               <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} className="size-4" />Refresh
             </Button>
-            <Button size="sm" className="bg-lime-500 text-white hover:bg-lime-600" onClick={() => { setEditingDate(null); setDateDialogOpen(true) }}>
+            <Button size="sm" onClick={() => { setEditingDate(null); setDateDialogOpen(true) }}>
               <HugeiconsIcon icon={PlusSignCircleIcon} strokeWidth={2} className="size-4" />Add Date
             </Button>
           </div>
@@ -143,7 +143,7 @@ export function ScheduleTab({ eventId }: { eventId: string }) {
             <Button variant="outline" size="sm" onClick={() => refetchZones()}>
               <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} className="size-4" />Refresh
             </Button>
-            <Button size="sm" className="bg-lime-500 text-white hover:bg-lime-600" onClick={() => { setEditingZone(null); setZoneDialogOpen(true) }}>
+            <Button size="sm" onClick={() => { setEditingZone(null); setZoneDialogOpen(true) }}>
               <HugeiconsIcon icon={PlusSignCircleIcon} strokeWidth={2} className="size-4" />Add Zone
             </Button>
           </div>
@@ -257,7 +257,7 @@ export function TeamTab({ eventId }: { eventId: string }) {
             <Button variant="outline" size="sm" onClick={() => refetchOrgs()}>
               <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} className="size-4" />Refresh
             </Button>
-            <Button size="sm" className="bg-lime-500 text-white hover:bg-lime-600" onClick={() => { setEditingOrg(null); setOrgDialogOpen(true) }}>
+            <Button size="sm" onClick={() => { setEditingOrg(null); setOrgDialogOpen(true) }}>
               <HugeiconsIcon icon={PlusSignCircleIcon} strokeWidth={2} className="size-4" />Add Org
             </Button>
           </div>
@@ -307,7 +307,7 @@ export function TeamTab({ eventId }: { eventId: string }) {
             <Button variant="outline" size="sm" onClick={() => refetchStaff()}>
               <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} className="size-4" />Refresh
             </Button>
-            <Button size="sm" className="bg-lime-500 text-white hover:bg-lime-600" onClick={() => setStaffDialogOpen(true)}>
+            <Button size="sm" onClick={() => setStaffDialogOpen(true)}>
               <HugeiconsIcon icon={PlusSignCircleIcon} strokeWidth={2} className="size-4" />Assign Staff
             </Button>
           </div>

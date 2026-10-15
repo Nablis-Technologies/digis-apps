@@ -9,8 +9,8 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { Toaster } from "sonner"
 
 export const metadata: Metadata = {
-  title: "DEGES Organizer - Event Management Platform",
-  description: "Create and manage exceptional events with DEGES - Ethiopia's premier event management platform",
+  title: "Digis Organizer - Event Management Platform",
+  description: "Create and manage exceptional events with Digis - Ethiopia's premier event management platform",
 }
 
 const spaceGrotesk = Space_Grotesk({

@@ -301,10 +301,10 @@ export function ApiEventCard({
                     size="sm"
                     onClick={handlePublish}
                     disabled={isPublishing || isLocalPublishing}
-                    className="h-8 px-3.5 text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-md shadow-emerald-600/25 hover:shadow-lg hover:shadow-emerald-600/35 active:scale-95 transition-all duration-200 rounded-xl gap-1.5 border border-emerald-400/25"
+                    className="h-8 px-3.5 text-xs font-semibold gap-1.5 shadow-xs"
                   >
                     <Rocket
-                      className={cn("size-3.5 text-white", (isPublishing || isLocalPublishing) && "animate-bounce")}
+                      className={cn("size-3.5", (isPublishing || isLocalPublishing) && "animate-bounce")}
                     />
                     <span>{isPublishing || isLocalPublishing ? "Publishing..." : "Publish"}</span>
                   </Button>
