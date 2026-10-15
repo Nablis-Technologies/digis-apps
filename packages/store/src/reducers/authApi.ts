@@ -87,6 +87,32 @@ interface SignupResponse {
   }
 }
 
+export interface RequestSignupOtpRequest {
+  phone: string
+}
+
+export interface RequestSignupOtpResponse {
+  success: boolean
+  data: {
+    challenge_id: string
+    status: string
+    expires_at: string
+  }
+}
+
+export interface VerifyPhoneRequest {
+  challengeId: string
+  code: string
+}
+
+export interface VerifyPhoneResponse {
+  success: boolean
+  data: {
+    verification_token: string
+    expires_at?: string
+  }
+}
+
 interface ReauthenticateRequest {
   purpose: string
   password: string
@@ -200,6 +226,26 @@ export const authApi = createApi({
         body,
       }),
     }),
+    requestSignupOtp: builder.mutation<
+      RequestSignupOtpResponse,
+      RequestSignupOtpRequest
+    >({
+      query: (body) => ({
+        url: "/auth/signup/request_otp",
+        method: "POST",
+        body,
+      }),
+    }),
+    verifyPhone: builder.mutation<
+      VerifyPhoneResponse,
+      VerifyPhoneRequest
+    >({
+      query: ({ challengeId, code }) => ({
+        url: `/phone_verifications/${challengeId}/verify`,
+        method: "POST",
+        body: { code },
+      }),
+    }),
     getUser: builder.query<UserResponse, void>({
       query: () => "/user",
       providesTags: ["CurrentUser"],
@@ -276,6 +322,8 @@ export const {
   useSignupMutation,
   useReauthenticateMutation,
   useCreatePhoneVerificationMutation,
+  useRequestSignupOtpMutation,
+  useVerifyPhoneMutation,
   useGetUserQuery,
   useLazyGetUserQuery,
   useGetMeQuery,

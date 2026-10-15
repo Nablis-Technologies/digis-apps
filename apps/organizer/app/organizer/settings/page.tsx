@@ -4,7 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { useActiveOrganization } from "../../../providers/organization-provider"
 import { useGetMeQuery } from "@workspace/store/reducers/authApi"
-import { Badge } from "@/components/ui/badge"
+import { Badge, VerificationBadge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -30,14 +30,12 @@ export default function SettingsPage() {
       description: "Manage organization details, official addresses, brand logos, banners, and verification documents.",
       url: "/organizer/organization",
       icon: Building02Icon,
-      badge: activeOrg?.verified ? (
-        <Badge variant="outline" className="border-lime-500/30 text-lime-600 dark:text-lime-400 text-[10px]">
-          Verified
-        </Badge>
-      ) : (
-        <Badge variant="outline" className="border-amber-500/30 text-amber-600 dark:text-amber-400 text-[10px]">
-          Unverified
-        </Badge>
+      badge: (
+        <VerificationBadge
+          verified={Boolean(activeOrg?.verified)}
+          unverifiedLabel="Unverified"
+          className="h-5 px-2 text-[10px]"
+        />
       ),
       highlight: activeOrg?.name || "Active Workspace",
     },
@@ -59,7 +57,10 @@ export default function SettingsPage() {
       url: "/organizer/profile",
       icon: UserCircleIcon,
       badge: user?.verified_at ? (
-        <Badge variant="outline" className="border-lime-500/30 text-lime-600 dark:text-lime-400 text-[10px]">
+        <Badge
+          variant="outline"
+          className="border border-emerald-500/35 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[10px] h-5 px-2 font-semibold shadow-2xs"
+        >
           Verified User
         </Badge>
       ) : null,

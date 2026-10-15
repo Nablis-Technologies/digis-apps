@@ -16,13 +16,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { VenueCombobox } from "@/components/ui/venue-combobox"
 import { cn, normalizeYoutubeUrl, validateYoutubeUrl, mapDateSelection } from "@/lib/utils"
 import { useGetMeQuery } from "@workspace/store/reducers/authApi"
 import { useListOwnerOrganizationsQuery } from "@workspace/store/reducers/organizationsApi"
 import { useActiveOrganization, isOrgSuspendedOrRemoved } from "../../providers/organization-provider"
 import { useListPublicCategoriesQuery } from "@workspace/store/reducers/categoriesApi"
 import { useListPublicVenuesQuery } from "@workspace/store/reducers/venuesApi"
-import { useListArtistsQuery } from "@workspace/store/reducers/artistsApi"
+import { useListPublicArtistsQuery } from "@workspace/store/reducers/artistsApi"
 import { 
   useCreateEventMutation, 
   usePublishEventMutation,
@@ -439,7 +440,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   const { activeOrg, activeOrgId, organizations, isLoading: isLoadingOrgs } = useActiveOrganization()
   const { data: categoriesData } = useListPublicCategoriesQuery()
   const { data: venuesData, isLoading: isLoadingVenues } = useListPublicVenuesQuery({ page: 1, per_page: 100 })
-  const { data: artistsData } = useListArtistsQuery({ per_page: 100 })
+  const { data: artistsData } = useListPublicArtistsQuery({ per_page: 100 })
   
   const [selectedOrgId, setSelectedOrgId] = useState<string>("")
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
@@ -1873,31 +1874,29 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="location" className="text-sm font-semibold">
-                Venue / Location <span className="text-destructive">*</span>
-              </Label>
-              {isLoadingVenues ? (
-                <p className="text-xs text-muted-foreground">Loading venues...</p>
-              ) : venuesData?.data && venuesData.data.length > 0 ? (
-                <Select
-                  value={venueId}
-                  onValueChange={(v) => { setVenueId(v); if (fieldErrors.location) setFieldErrors((p) => ({ ...p, location: undefined })) }}
-                >
-                  <SelectTrigger id="location" className={`h-11 w-full ${fieldErrors.location ? "border-destructive" : ""}`}>
-                    <SelectValue placeholder="Select a venue..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {venuesData.data.map((v) => (
-                      <SelectItem key={v.id} value={v.id}>
-                        {v.name}{v.city ? ` — ${v.city}` : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <p className="text-xs text-muted-foreground">No venues available. Please ask an admin to create one first.</p>
-              )}
-              {fieldErrors.location && <p className="text-destructive text-xs">{fieldErrors.location}</p>}
+              <div className="flex items-center justify-between">
+                <Label htmlFor="location" className="text-sm font-semibold">
+                  Venue / Location <span className="text-destructive">*</span>
+                </Label>
+                <span className="text-[11px] text-muted-foreground">Type to search or select from suggestions</span>
+              </div>
+              <VenueCombobox
+                id="location"
+                venues={venuesData?.data || []}
+                value={venueId}
+                isLoading={isLoadingVenues}
+                error={fieldErrors.location}
+                placeholder="Type to search venue (e.g. Millennium Hall, Sheraton)..."
+                onChange={(newVenueId, venue) => {
+                  setVenueId(newVenueId)
+                  if (fieldErrors.location) {
+                    setFieldErrors((p) => ({ ...p, location: undefined }))
+                  }
+                  if (venue?.capacity && !venueCapacity) {
+                    setVenueCapacity(String(venue.capacity))
+                  }
+                }}
+              />
             </div>
 
             {venueId && (

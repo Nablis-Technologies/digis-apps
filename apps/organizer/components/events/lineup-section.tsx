@@ -35,7 +35,7 @@ import {
   useCreateEventParticipantMutation,
   useDeleteEventParticipantMutation,
 } from "@workspace/store/reducers/organizerEventsApi"
-import { useListArtistsQuery } from "@workspace/store/reducers/artistsApi"
+import { useListPublicArtistsQuery } from "@workspace/store/reducers/artistsApi"
 
 interface LineupSectionProps {
   eventId: string
@@ -44,7 +44,7 @@ interface LineupSectionProps {
 
 export function LineupSection({ eventId, primaryDateId }: LineupSectionProps) {
   const { data: participantsData, isLoading } = useListEventParticipantsQuery({ eventId })
-  const { data: artistsData } = useListArtistsQuery({ per_page: 100 })
+  const { data: artistsData } = useListPublicArtistsQuery({ per_page: 100 })
   const [createParticipant, { isLoading: isCreating }] = useCreateEventParticipantMutation()
   const [deleteParticipant] = useDeleteEventParticipantMutation()
 

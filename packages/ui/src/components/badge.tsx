@@ -4,7 +4,15 @@ import { Slot } from "radix-ui"
 
 import { cn } from "@workspace/ui/lib/utils"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { SmartPhone01Icon, Mail01Icon } from "@hugeicons/core-free-icons"
+import {
+  SmartPhone01Icon,
+  Mail01Icon,
+  CheckmarkCircle01Icon,
+  AlertCircleIcon,
+  GlobeIcon,
+  EyeOffIcon,
+  LockKeyIcon,
+} from "@hugeicons/core-free-icons"
 
 const badgeVariants = cva(
   "group/badge inline-flex h-6 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:bg-red-100 aria-invalid:text-red-700 dark:aria-invalid:bg-red-900/30 dark:aria-invalid:text-red-400 [&>svg]:pointer-events-none [&>svg]:size-3",
@@ -30,7 +38,7 @@ const badgeVariants = cva(
         orange:
           "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 [a]:hover:bg-orange-200/70 dark:[a]:hover:bg-orange-900/40",
         outline:
-          "bg-muted text-muted-foreground [a]:hover:bg-muted/80",
+          "border border-border text-foreground bg-transparent [a]:hover:bg-muted/80",
         ghost:
           "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
         link: "text-primary underline-offset-4 hover:underline",
@@ -347,6 +355,204 @@ export function ChannelBadge({
     >
       <HugeiconsIcon icon={Mail01Icon} size={11} strokeWidth={2} />
       <span>Email</span>
+    </Badge>
+  )
+}
+
+// ─── Role Badge Component & Helper ───────────────────────────────────────────
+
+export function getRoleBadgeClass(role?: string | null): string {
+  const r = (role || "").toLowerCase().trim()
+  switch (r) {
+    case "owner":
+      return "border border-purple-500/35 bg-purple-500/15 text-purple-700 dark:text-purple-300 dark:bg-purple-500/25 dark:border-purple-500/40"
+    case "admin":
+      return "border border-sky-500/35 bg-sky-500/15 text-sky-700 dark:text-sky-300 dark:bg-sky-500/25 dark:border-sky-500/40"
+    case "manager":
+    case "coordinator":
+      return "border border-blue-500/35 bg-blue-500/15 text-blue-700 dark:text-blue-300 dark:bg-blue-500/25 dark:border-blue-500/40"
+    case "staff":
+    case "scanner":
+      return "border border-teal-500/35 bg-teal-500/15 text-teal-700 dark:text-teal-300 dark:bg-teal-500/25 dark:border-teal-500/40"
+    default:
+      return "border border-zinc-500/30 bg-zinc-500/15 text-zinc-700 dark:text-zinc-300 dark:bg-zinc-500/25 dark:border-zinc-500/40"
+  }
+}
+
+export interface RoleBadgeProps extends Omit<React.ComponentProps<typeof Badge>, "role"> {
+  role?: string | null
+}
+
+export function RoleBadge({ role, className, ...props }: RoleBadgeProps) {
+  if (!role) return null
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "h-4 px-1.5 text-[9px] font-semibold capitalize tracking-wide shadow-2xs",
+        getRoleBadgeClass(role),
+        className
+      )}
+      {...props}
+    >
+      {role}
+    </Badge>
+  )
+}
+
+// ─── Verification Badge Component & Helper ────────────────────────────────────
+
+export function getVerificationBadgeClass(verified: boolean): string {
+  return verified
+    ? "border border-emerald-500/35 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 dark:bg-emerald-500/25 dark:border-emerald-500/40"
+    : "border border-amber-500/35 bg-amber-500/15 text-amber-700 dark:text-amber-300 dark:bg-amber-500/25 dark:border-amber-500/40"
+}
+
+export interface VerificationBadgeProps extends React.ComponentProps<typeof Badge> {
+  verified?: boolean
+  unverifiedLabel?: string
+  verifiedLabel?: string
+  showIcon?: boolean
+}
+
+export function VerificationBadge({
+  verified = false,
+  unverifiedLabel = "Not Verified",
+  verifiedLabel = "Verified",
+  showIcon = true,
+  className,
+  ...props
+}: VerificationBadgeProps) {
+  if (verified) {
+    return (
+      <Badge
+        variant="outline"
+        className={cn(
+          "h-4 px-1.5 text-[10px] font-semibold gap-1 shadow-2xs",
+          getVerificationBadgeClass(true),
+          className
+        )}
+        {...props}
+      >
+        {showIcon && (
+          <HugeiconsIcon
+            icon={CheckmarkCircle01Icon}
+            strokeWidth={2.5}
+            className="size-2.5 text-emerald-600 dark:text-emerald-400 shrink-0"
+          />
+        )}
+        <span>{verifiedLabel}</span>
+      </Badge>
+    )
+  }
+
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "h-4 px-1.5 text-[10px] font-semibold gap-1 shadow-2xs",
+        getVerificationBadgeClass(false),
+        className
+      )}
+      {...props}
+    >
+      {showIcon && (
+        <HugeiconsIcon
+          icon={AlertCircleIcon}
+          strokeWidth={2.5}
+          className="size-2.5 text-amber-600 dark:text-amber-400 shrink-0"
+        />
+      )}
+      <span>{unverifiedLabel}</span>
+    </Badge>
+  )
+}
+
+// ─── Visibility Badge Component & Helper ──────────────────────────────────────
+
+export function getVisibilityBadgeClass(visibility?: string | null): string {
+  const v = (visibility || "").toLowerCase().trim()
+  switch (v) {
+    case "public":
+      return "border border-sky-500/35 bg-sky-500/15 text-sky-700 dark:text-sky-300 dark:bg-sky-500/25 dark:border-sky-500/40"
+    case "private":
+      return "border border-violet-500/35 bg-violet-500/15 text-violet-700 dark:text-violet-300 dark:bg-violet-500/25 dark:border-violet-500/40"
+    case "unlisted":
+      return "border border-amber-500/35 bg-amber-500/15 text-amber-700 dark:text-amber-300 dark:bg-amber-500/25 dark:border-amber-500/40"
+    default:
+      return "border border-zinc-500/30 bg-zinc-500/15 text-zinc-700 dark:text-zinc-300 dark:bg-zinc-500/25 dark:border-zinc-500/40"
+  }
+}
+
+export interface VisibilityBadgeProps extends Omit<React.ComponentProps<typeof Badge>, "children"> {
+  visibility?: "public" | "private" | "unlisted" | string | null
+  showIcon?: boolean
+  label?: string
+  children?: React.ReactNode
+}
+
+export function VisibilityBadge({
+  visibility = "public",
+  showIcon = true,
+  label,
+  children,
+  className,
+  ...props
+}: VisibilityBadgeProps) {
+  if (!visibility) return null
+  const normalized = (visibility || "").toLowerCase().trim()
+  const displayLabel = label || children || (normalized.charAt(0).toUpperCase() + normalized.slice(1))
+
+  const renderIcon = () => {
+    if (!showIcon) return null
+    switch (normalized) {
+      case "public":
+        return (
+          <HugeiconsIcon
+            icon={GlobeIcon}
+            strokeWidth={2}
+            className="size-3 text-sky-600 dark:text-sky-400 shrink-0"
+          />
+        )
+      case "private":
+        return (
+          <HugeiconsIcon
+            icon={EyeOffIcon}
+            strokeWidth={2}
+            className="size-3 text-violet-600 dark:text-violet-400 shrink-0"
+          />
+        )
+      case "unlisted":
+        return (
+          <HugeiconsIcon
+            icon={LockKeyIcon}
+            strokeWidth={2}
+            className="size-3 text-amber-600 dark:text-amber-400 shrink-0"
+          />
+        )
+      default:
+        return (
+          <HugeiconsIcon
+            icon={GlobeIcon}
+            strokeWidth={2}
+            className="size-3 shrink-0"
+          />
+        )
+    }
+  }
+
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "h-6 px-2.5 text-[11px] font-semibold gap-1.5 capitalize rounded-full shadow-2xs",
+        getVisibilityBadgeClass(visibility),
+        className
+      )}
+      {...props}
+    >
+      {renderIcon()}
+      <span>{displayLabel}</span>
     </Badge>
   )
 }

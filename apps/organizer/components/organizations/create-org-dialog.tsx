@@ -1,11 +1,11 @@
 "use client"
 
 import * as React from "react"
+import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -36,8 +36,11 @@ import {
   SmileIcon,
   Store01Icon,
   FileValidationIcon,
+  MusicNote01Icon,
+  PartyIcon,
+  ColorsIcon,
+  SecurityCheckIcon,
 } from "@hugeicons/core-free-icons"
-import { Music, PartyPopper, Palette, ShieldCheck } from "lucide-react"
 
 interface CreateOrgDialogProps {
   open: boolean
@@ -74,19 +77,52 @@ const ORGANIZER_TYPES = [
 ]
 
 const CATEGORIES = [
-  { value: "music", label: "Music", icon: Music, iconType: "lucide" as const },
-  { value: "sports", label: "Sports", icon: FootballIcon, iconType: "huge" as const },
-  { value: "conference", label: "Conference", icon: PresentationPodiumIcon, iconType: "huge" as const },
-  { value: "comedy", label: "Comedy", icon: SmileIcon, iconType: "huge" as const },
-  { value: "theater", label: "Theater", icon: TheaterIcon, iconType: "huge" as const },
-  { value: "festival", label: "Festival", icon: PartyPopper, iconType: "lucide" as const },
-  { value: "workshop", label: "Workshop", icon: PencilEdit01Icon, iconType: "huge" as const },
-  { value: "exhibition", label: "Exhibition", icon: Palette, iconType: "lucide" as const },
-  { value: "other", label: "Other", icon: Store01Icon, iconType: "huge" as const },
+  { value: "music", label: "Music", icon: MusicNote01Icon },
+  { value: "sports", label: "Sports", icon: FootballIcon },
+  { value: "conference", label: "Conference", icon: PresentationPodiumIcon },
+  { value: "comedy", label: "Comedy", icon: SmileIcon },
+  { value: "theater", label: "Theater", icon: TheaterIcon },
+  { value: "festival", label: "Festival", icon: PartyIcon },
+  { value: "workshop", label: "Workshop", icon: PencilEdit01Icon },
+  { value: "exhibition", label: "Exhibition", icon: ColorsIcon },
+  { value: "other", label: "Other", icon: Store01Icon },
+]
+
+const AUDIENCE_TIERS = [
+  {
+    value: "under_100",
+    label: "Small (Under 100)",
+    desc: "Intimate gigs, meetups & workshops",
+    instant: true,
+  },
+  {
+    value: "100_500",
+    label: "Medium (100 – 500)",
+    desc: "Club nights, seminars & mid-size concerts",
+    instant: true,
+  },
+  {
+    value: "500_1000",
+    label: "Large (500 – 1,000)",
+    desc: "Conferences, festivals & major halls",
+    instant: false,
+  },
+  {
+    value: "1000_5000",
+    label: "Very Large (1,000 – 5,000)",
+    desc: "Expos, arena events & festivals",
+    instant: false,
+  },
+  {
+    value: "5000_plus",
+    label: "Massive (5,000+)",
+    desc: "Stadium shows & mass gatherings",
+    instant: false,
+  },
 ]
 
 const STEPS = [
-  "Category & Type",
+  "Category & Scale",
   "Organization Info",
   "Contact & Location",
   "Verification",
@@ -104,7 +140,8 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
   // Form State
   const [name, setName] = React.useState("")
   const [organizerType, setOrganizerType] = React.useState("company")
-  const [selectedCategories, setSelectedCategories] = React.useState<string[]>(["music"])
+  const [selectedCategory, setSelectedCategory] = React.useState("music")
+  const [estimatedAudience, setEstimatedAudience] = React.useState("100_500")
   const [contactPhone, setContactPhone] = React.useState("")
   const [contactEmail, setContactEmail] = React.useState("")
   const [city, setCity] = React.useState("")
@@ -121,27 +158,21 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
   const [tinFile, setTinFile] = React.useState<File | null>(null)
 
   const isSubmitting = isCreating || isUploading || isSubmittingVerification
-
-  const toggleCategory = (val: string) => {
-    setSelectedCategories((prev) => {
-      if (prev.includes(val)) {
-        if (prev.length === 1) return prev // keep at least 1 category selected
-        return prev.filter((c) => c !== val)
-      }
-      return [...prev, val]
-    })
-  }
+  const isAutoApproveEligible = estimatedAudience === "under_100" || estimatedAudience === "100_500"
 
   const resetForm = () => {
     setName("")
     setOrganizerType("company")
-    setSelectedCategories(["music"])
+    setSelectedCategory("music")
+    setEstimatedAudience("100_500")
     setContactPhone("")
     setContactEmail("")
     setCity("")
     setRegion("")
     setTinNumber("")
     setDescription("")
+    if (profilePreview) URL.revokeObjectURL(profilePreview)
+    if (bannerPreview) URL.revokeObjectURL(bannerPreview)
     setProfileFile(null)
     setProfilePreview("")
     setBannerFile(null)
@@ -178,7 +209,8 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
         organization: {
           name: name.trim(),
           organizer_type: organizerType as any,
-          category: selectedCategories[0] || "music",
+          category: selectedCategory,
+          estimated_audience: estimatedAudience,
           contact_phone: formattedPhone || undefined,
           contact_email: contactEmail.trim() || undefined,
           city: city.trim() || undefined,
@@ -193,9 +225,10 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
       toast.success("Organization created successfully!")
 
       // If user provided files and didn't skip, upload and submit verification
-      if (!skipDocs && (profileFile || bannerFile || licenseFile || tinFile)) {
+      const hasAnyDocs = Boolean(profileFile || bannerFile || licenseFile || tinFile)
+      if (!skipDocs && hasAnyDocs) {
         try {
-          toast.loading("Uploading verification documents...")
+          toast.loading("Uploading organization documents...")
           const formData = new FormData()
           if (profileFile) formData.append("profile", profileFile)
           if (bannerFile) formData.append("banner", bannerFile)
@@ -205,18 +238,35 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
           await uploadDocs({ id: newOrgId, formData }).unwrap()
           toast.dismiss()
 
-          if (licenseFile && tinFile) {
+          // Backend requires all 4 attachments for submitVerification to pass submission_ready?
+          const hasAllFourDocs = Boolean(profileFile && bannerFile && licenseFile && tinFile)
+          if (hasAllFourDocs) {
             toast.loading("Submitting for verification...")
-            await submitVerification(newOrgId).unwrap()
+            const verifyRes = await submitVerification(newOrgId).unwrap()
             toast.dismiss()
-            toast.success("Organization submitted for verification review!")
-          } else {
-            toast.info("Documents uploaded. You can submit for review anytime in Settings.")
+
+            const isApproved =
+              verifyRes.data?.verification_status === "approved" || verifyRes.data?.verified === true
+
+            if (isApproved) {
+              toast.success("✨ Organization auto-approved!", {
+                description: "Your organization is verified. You can now publish ticketed events immediately.",
+              })
+            } else {
+              toast.success("Organization submitted for review!", {
+                description: "Our compliance team will review your verification documents.",
+              })
+            }
+          } else if (licenseFile || tinFile) {
+            toast.info("Documents uploaded!", {
+              description:
+                "To complete verification, please ensure a Logo and Banner are also provided in Organization Settings.",
+            })
           }
         } catch (docErr: any) {
           toast.dismiss()
-          toast.warning("Organization created, but document upload failed. You can upload them later.", {
-            description: docErr?.data?.message || docErr?.message,
+          toast.warning("Organization created, but document upload encountered an issue.", {
+            description: docErr?.data?.message || docErr?.message || "You can upload documents in Settings.",
           })
         }
       }
@@ -246,124 +296,118 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
         onOpenChange(v)
       }}
     >
-      <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto flex flex-col gap-2.5 p-5 sm:p-6">
-        <DialogHeader className="pb-0">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-lime-500/10 text-lime-600 dark:text-lime-400">
-              <HugeiconsIcon icon={Building02Icon} strokeWidth={2} className="size-4.5" />
-            </div>
-            <DialogTitle className="text-base sm:text-lg">Create New Organization</DialogTitle>
-          </div>
-        </DialogHeader>
-
-        {/* Step indicators with theme lime-500 styling */}
-        <div className="flex items-center gap-1.5 py-1.5 border-y border-border/40">
-          {STEPS.map((s, i) => (
-            <div key={s} className="flex items-center gap-1.5 flex-1">
-              <div className="flex items-center gap-1.5">
-                <div
-                  className={`size-6 rounded-full flex items-center justify-center shrink-0 transition-all ${
-                    i < step
-                      ? "border-2 border-lime-500 bg-lime-500/15 text-lime-600 dark:text-lime-400 font-bold"
-                      : i === step
-                        ? "bg-lime-500 text-zinc-950 shadow-sm font-bold"
-                        : "border border-border bg-background text-muted-foreground"
-                  }`}
-                >
-                  {i < step ? (
-                    <HugeiconsIcon
-                      icon={Tick02Icon}
-                      strokeWidth={3}
-                      className="size-3 text-lime-600 dark:text-lime-400"
-                    />
-                  ) : (
-                    <span className="text-[10px] font-bold">
-                      {i + 1}
-                    </span>
-                  )}
-                </div>
-                <span
-                  className={`text-[11px] font-medium hidden sm:inline ${
-                    i === step
-                      ? "text-foreground font-semibold"
-                      : i < step
-                        ? "text-foreground"
-                        : "text-muted-foreground"
-                  }`}
-                >
-                  {s}
-                </span>
+      <DialogContent className="sm:max-w-[660px] max-h-[88vh] h-[88vh] flex flex-col p-0 overflow-hidden gap-0 rounded-3xl">
+        {/* Pinned Header Section */}
+        <div className="p-5 pb-3 border-b border-border/50 shrink-0 bg-background pr-12">
+          <DialogHeader className="pb-0">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                <HugeiconsIcon icon={Building02Icon} strokeWidth={2} className="size-5" />
               </div>
-              {i < STEPS.length - 1 && (
-                <div
-                  className={`flex-1 h-0.5 rounded-full transition-colors ${
-                    i < step ? "bg-lime-500" : "bg-border"
-                  }`}
-                />
-              )}
+              <div>
+                <DialogTitle className="text-base sm:text-lg">Create New Organization</DialogTitle>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Set up a new organization workspace to manage events and ticket sales
+                </p>
+              </div>
             </div>
-          ))}
+          </DialogHeader>
+
+          {/* Step indicators */}
+          <div className="flex items-center gap-1.5 pt-3">
+            {STEPS.map((s, i) => (
+              <div key={s} className="flex items-center gap-1.5 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <div
+                    className={`size-6 rounded-full flex items-center justify-center shrink-0 transition-all ${
+                      i < step
+                        ? "border-2 border-primary bg-primary/15 text-primary font-bold"
+                        : i === step
+                          ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                          : "border border-border bg-background text-muted-foreground"
+                    }`}
+                  >
+                    {i < step ? (
+                      <HugeiconsIcon
+                        icon={Tick02Icon}
+                        strokeWidth={3}
+                        className="size-3 text-primary"
+                      />
+                    ) : (
+                      <span className="text-[10px] font-bold">
+                        {i + 1}
+                      </span>
+                    )}
+                  </div>
+                  <span
+                    className={`text-[11px] font-medium hidden sm:inline ${
+                      i === step
+                        ? "text-foreground font-semibold"
+                        : i < step
+                          ? "text-foreground"
+                          : "text-muted-foreground"
+                    }`}
+                  >
+                    {s}
+                  </span>
+                </div>
+                {i < STEPS.length - 1 && (
+                  <div
+                    className={`flex-1 h-0.5 rounded-full transition-colors ${
+                      i < step ? "bg-primary" : "bg-border"
+                    }`}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Step Body */}
-        <div className="py-4 flex-1 min-h-[320px]">
+        {/* Scrollable Step Body */}
+        <div className="flex-1 overflow-y-auto min-h-0 p-5 space-y-4">
           <AnimatePresence mode="wait">
-            {/* ─── Step 0: Category & Type ──────────────────────────────────── */}
+            {/* ─── Step 0: Category, Type & Scale ──────────────────────────── */}
             {step === 0 && (
               <motion.div
                 key="dialog-step-0"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.25 }}
-                className="space-y-5"
+                transition={{ duration: 0.2 }}
+                className="space-y-4"
               >
+                {/* Event Category */}
                 <div>
-                  <h3 className="text-base font-bold">What types of events do you organize?</h3>
+                  <h3 className="text-sm font-bold">Primary Event Category</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Select one or more categories that match your events
+                    Select the main category for your organization&apos;s events
                   </p>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2">
                   {CATEGORIES.map((cat) => {
-                    const isSelected = selectedCategories.includes(cat.value)
+                    const isSelected = selectedCategory === cat.value
                     return (
                       <div
                         key={cat.value}
-                        onClick={() => !isSubmitting && toggleCategory(cat.value)}
-                        className={`flex items-center space-x-2 rounded-xl border-2 p-2.5 cursor-pointer transition-all hover:bg-lime-500/5 ${isSelected
-                          ? "border-lime-500 bg-lime-500/10 shadow-sm"
-                          : "border-border/60"
-                          } ${isSubmitting ? "opacity-60 cursor-not-allowed" : ""}`}
+                        onClick={() => !isSubmitting && setSelectedCategory(cat.value)}
+                        className={`flex items-center space-x-2 rounded-xl border-2 p-2.5 cursor-pointer transition-all hover:bg-accent/50 ${
+                          isSelected
+                            ? "border-primary bg-primary/10 shadow-xs"
+                            : "border-border/60"
+                        } ${isSubmitting ? "opacity-60 cursor-not-allowed" : ""}`}
                       >
                         <div
-                          className={`size-3.5 rounded-md border flex items-center justify-center shrink-0 transition-colors ${isSelected
-                            ? "border-lime-500 bg-lime-500 text-zinc-950"
-                            : "border-muted-foreground/40 bg-background"
-                            }`}
+                          className={`p-1 rounded-md shrink-0 transition-colors ${
+                            isSelected ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+                          }`}
                         >
-                          {isSelected && (
-                            <HugeiconsIcon icon={Tick02Icon} strokeWidth={3} className="size-2.5 text-zinc-950" />
-                          )}
-                        </div>
-                        <div
-                          className={`p-1 rounded-md shrink-0 transition-colors ${isSelected ? "bg-lime-500/20 text-lime-700 dark:text-lime-300" : "bg-muted text-muted-foreground"
-                            }`}
-                        >
-                          {cat.iconType === "huge" ? (
-                            <HugeiconsIcon
-                              icon={cat.icon as any}
-                              strokeWidth={2}
-                              className="size-4"
-                            />
-                          ) : (
-                            <cat.icon className="size-4" strokeWidth={2} />
-                          )}
+                          <HugeiconsIcon icon={cat.icon} strokeWidth={2} className="size-4" />
                         </div>
                         <span
-                          className={`text-xs font-medium leading-tight truncate flex-1 ${isSelected ? "text-foreground font-semibold" : "text-muted-foreground"
-                            }`}
+                          className={`text-xs font-medium leading-tight truncate flex-1 ${
+                            isSelected ? "text-foreground font-semibold" : "text-muted-foreground"
+                          }`}
                         >
                           {cat.label}
                         </span>
@@ -372,9 +416,80 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
                   })}
                 </div>
 
-                <div className="space-y-2 pt-2 border-t border-border/40">
-                  <h3 className="text-sm font-bold">Organizer Structure</h3>
+                {/* Expected Audience & Auto-Approval notice */}
+                <div className="space-y-2.5 pt-3 border-t border-border/40">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold">Expected Audience Size</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Typical attendee count per event
+                      </p>
+                    </div>
+                    {isAutoApproveEligible && (
+                      <span className="text-[11px] font-semibold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                        <HugeiconsIcon icon={SecurityCheckIcon} strokeWidth={2} className="size-3" />
+                        Fast-Track Eligible
+                      </span>
+                    )}
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {AUDIENCE_TIERS.map((tier) => {
+                      const isSelected = estimatedAudience === tier.value
+                      return (
+                        <button
+                          key={tier.value}
+                          type="button"
+                          onClick={() => setEstimatedAudience(tier.value)}
+                          className={`text-left p-2.5 rounded-xl border-2 transition-all flex items-start gap-2.5 cursor-pointer ${
+                            isSelected
+                              ? "border-primary bg-primary/10 shadow-xs"
+                              : "border-border/60 hover:border-border bg-card"
+                          }`}
+                        >
+                          <div
+                            className={`size-3.5 rounded-full border flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                              isSelected
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-muted-foreground/50"
+                            }`}
+                          >
+                            {isSelected && <div className="size-1 rounded-full bg-primary-foreground" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="text-xs font-semibold">{tier.label}</span>
+                              {tier.instant ? (
+                                <span className="text-[10px] text-primary font-medium">Auto-Approve</span>
+                              ) : (
+                                <span className="text-[10px] text-muted-foreground">Admin Review</span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-muted-foreground truncate">{tier.desc}</div>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {/* Informational banner about auto-approval threshold */}
+                  <div className="p-3 rounded-xl bg-primary/5 border border-primary/15 text-xs text-muted-foreground flex items-start gap-2.5">
+                    <HugeiconsIcon icon={SecurityCheckIcon} strokeWidth={2} className="size-4 text-primary shrink-0 mt-0.5" />
+                    <p className="leading-relaxed">
+                      Organizations planning events for <strong className="text-foreground">under 500 attendees</strong> qualify for instant verification upon document submission, enabling immediate ticket publication.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Organizer Structure */}
+                <div className="space-y-2.5 pt-3 border-t border-border/40">
+                  <div>
+                    <h3 className="text-sm font-bold">Organizer Structure</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Legal entity or organizational structure
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-2">
                     {ORGANIZER_TYPES.map((t) => {
                       const isSelected = organizerType === t.value
                       return (
@@ -382,18 +497,20 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
                           key={t.value}
                           type="button"
                           onClick={() => setOrganizerType(t.value)}
-                          className={`text-left p-2.5 rounded-xl border-2 transition-all flex items-start gap-2.5 ${isSelected
-                            ? "border-lime-500 bg-lime-500/10 shadow-sm"
-                            : "border-border/60 hover:border-border bg-card"
-                            }`}
+                          className={`text-left p-2.5 rounded-xl border-2 transition-all flex items-start gap-2.5 cursor-pointer ${
+                            isSelected
+                              ? "border-primary bg-primary/10 shadow-xs"
+                              : "border-border/60 hover:border-border bg-card"
+                          }`}
                         >
                           <div
-                            className={`size-3.5 rounded-full border flex items-center justify-center shrink-0 mt-0.5 transition-colors ${isSelected
-                              ? "border-lime-500 bg-lime-500 text-zinc-950"
-                              : "border-muted-foreground/50"
-                              }`}
+                            className={`size-3.5 rounded-full border flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                              isSelected
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-muted-foreground/50"
+                            }`}
                           >
-                            {isSelected && <div className="size-1 rounded-full bg-zinc-950" />}
+                            {isSelected && <div className="size-1 rounded-full bg-primary-foreground" />}
                           </div>
                           <div>
                             <div className="text-xs font-semibold">{t.label}</div>
@@ -414,7 +531,7 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.25 }}
+                transition={{ duration: 0.2 }}
                 className="space-y-4"
               >
                 <div>
@@ -461,7 +578,7 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
                   <div className="p-3 rounded-xl border border-border/60 bg-muted/20 space-y-2">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                        Logo
+                        Logo (Profile)
                       </Label>
                       {profilePreview && (
                         <button
@@ -471,7 +588,7 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
                             setProfilePreview("")
                             setProfileFile(null)
                           }}
-                          className="text-[11px] text-destructive hover:underline"
+                          className="text-[11px] text-destructive hover:underline cursor-pointer"
                         >
                           Remove
                         </button>
@@ -479,8 +596,15 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
                     </div>
                     <div className="flex items-center gap-2.5">
                       {profilePreview ? (
-                        <div className="size-10 rounded-full overflow-hidden border border-border bg-card shrink-0">
-                          <img src={profilePreview} alt="Logo" className="w-full h-full object-cover" />
+                        <div className="size-10 rounded-full overflow-hidden border border-border bg-card shrink-0 relative">
+                          <Image
+                            src={profilePreview}
+                            alt="Logo preview"
+                            width={40}
+                            height={40}
+                            unoptimized
+                            className="w-full h-full object-cover"
+                          />
                         </div>
                       ) : (
                         <div className="size-10 rounded-full border-2 border-dashed border-border flex items-center justify-center bg-card text-muted-foreground shrink-0">
@@ -525,7 +649,7 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
                             setBannerPreview("")
                             setBannerFile(null)
                           }}
-                          className="text-[11px] text-destructive hover:underline"
+                          className="text-[11px] text-destructive hover:underline cursor-pointer"
                         >
                           Remove
                         </button>
@@ -533,8 +657,15 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
                     </div>
                     <div className="flex items-center gap-2.5">
                       {bannerPreview ? (
-                        <div className="h-10 w-16 rounded-md overflow-hidden border border-border bg-card shrink-0">
-                          <img src={bannerPreview} alt="Banner" className="w-full h-full object-cover" />
+                        <div className="h-10 w-16 rounded-md overflow-hidden border border-border bg-card shrink-0 relative">
+                          <Image
+                            src={bannerPreview}
+                            alt="Banner preview"
+                            width={64}
+                            height={40}
+                            unoptimized
+                            className="w-full h-full object-cover"
+                          />
                         </div>
                       ) : (
                         <div className="h-10 w-16 rounded-md border-2 border-dashed border-border flex items-center justify-center bg-card text-muted-foreground shrink-0">
@@ -575,7 +706,7 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.25 }}
+                transition={{ duration: 0.2 }}
                 className="space-y-4"
               >
                 <div>
@@ -667,27 +798,35 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.25 }}
+                transition={{ duration: 0.2 }}
                 className="space-y-4"
               >
                 <div>
                   <h3 className="text-base font-bold">Verification Documents (Optional)</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Upload documents now or complete later in settings
+                    Upload documents now or complete later in organization settings
                   </p>
                 </div>
 
-                <div className="p-3 rounded-xl bg-lime-500/10 border border-lime-500/20 text-xs text-lime-950 dark:text-lime-200 flex items-start gap-2.5">
-                  <ShieldCheck className="size-4 text-lime-600 dark:text-lime-400 shrink-0 mt-0.5" />
-                  <div>
-                    Uploading your business license & TIN certificate submits your organization for verification review so you can publish paid events immediately.
+                <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-xs text-foreground flex items-start gap-2.5">
+                  <HugeiconsIcon icon={SecurityCheckIcon} strokeWidth={2} className="size-4 text-primary shrink-0 mt-0.5" />
+                  <div className="leading-relaxed">
+                    {isAutoApproveEligible ? (
+                      <>
+                        <strong className="font-semibold text-primary">⚡ Fast-Track Instant Verification:</strong> Since your event scale is under 500 attendees, providing your Business License, TIN Certificate, Logo, and Banner will verify your organization <strong>immediately</strong> upon submission.
+                      </>
+                    ) : (
+                      <>
+                        <strong className="font-semibold text-primary">Priority Compliance Review:</strong> For organizations with 500+ attendees, documents are submitted for priority compliance review. You can create draft events while review is in progress.
+                      </>
+                    )}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-2 p-3 rounded-xl border border-border/60 bg-muted/20">
                     <div className="flex items-center gap-2">
-                      <HugeiconsIcon icon={FileValidationIcon} strokeWidth={2} className="size-4 text-lime-600 dark:text-lime-400" />
+                      <HugeiconsIcon icon={FileValidationIcon} strokeWidth={2} className="size-4 text-primary" />
                       <Label className="text-xs font-semibold uppercase text-muted-foreground">
                         Business License
                       </Label>
@@ -707,13 +846,13 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
                       {licenseFile ? licenseFile.name : "Upload PDF or Image"}
                     </Label>
                     {licenseFile && (
-                      <p className="text-xs text-lime-600 dark:text-lime-400 truncate">✓ Ready: {licenseFile.name}</p>
+                      <p className="text-xs text-primary truncate">✓ Ready: {licenseFile.name}</p>
                     )}
                   </div>
 
                   <div className="space-y-2 p-3 rounded-xl border border-border/60 bg-muted/20">
                     <div className="flex items-center gap-2">
-                      <HugeiconsIcon icon={FileValidationIcon} strokeWidth={2} className="size-4 text-lime-600 dark:text-lime-400" />
+                      <HugeiconsIcon icon={FileValidationIcon} strokeWidth={2} className="size-4 text-primary" />
                       <Label className="text-xs font-semibold uppercase text-muted-foreground">
                         TIN Certificate
                       </Label>
@@ -733,22 +872,28 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
                       {tinFile ? tinFile.name : "Upload PDF or Image"}
                     </Label>
                     {tinFile && (
-                      <p className="text-xs text-lime-600 dark:text-lime-400 truncate">✓ Ready: {tinFile.name}</p>
+                      <p className="text-xs text-primary truncate">✓ Ready: {tinFile.name}</p>
                     )}
                   </div>
                 </div>
+
+                {(!profileFile || !bannerFile) && (licenseFile || tinFile) && (
+                  <p className="text-[11px] text-muted-foreground bg-muted/40 p-2.5 rounded-lg border border-border/40 leading-relaxed">
+                    💡 <em>Tip:</em> For instant verification upon creation, ensure you have also chosen a Logo and Banner in Step 2. Otherwise, you can upload them anytime in Settings.
+                  </p>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
-        {/* Footer Navigation referencing event creation */}
-        <div className="pt-3 border-t border-border/60 space-y-2">
-          {error && <p className="text-destructive text-xs font-medium">{error}</p>}
+        {/* Pinned Footer Navigation */}
+        <div className="p-4 border-t border-border/60 bg-background shrink-0">
+          {error && <p className="text-destructive text-xs font-medium mb-2">{error}</p>}
 
           {step === 0 && (
             <Button
-              className="w-full gap-2 shadow-xs"
+              className="w-full gap-2 shadow-xs cursor-pointer h-10"
               onClick={() => {
                 setError("")
                 setStep(1)
@@ -763,7 +908,7 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                className="flex-1 gap-1.5"
+                className="flex-1 gap-1.5 cursor-pointer h-10"
                 onClick={() => {
                   setError("")
                   setStep(0)
@@ -772,7 +917,7 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
                 <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4" /> Back
               </Button>
               <Button
-                className="flex-1 gap-2 shadow-xs"
+                className="flex-1 gap-2 shadow-xs cursor-pointer h-10"
                 onClick={() => {
                   if (!name.trim()) {
                     setError("Organization name is required")
@@ -792,7 +937,7 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                className="flex-1 gap-1.5"
+                className="flex-1 gap-1.5 cursor-pointer h-10"
                 onClick={() => {
                   setError("")
                   setStep(1)
@@ -801,7 +946,7 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
                 <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4" /> Back
               </Button>
               <Button
-                className="flex-1 gap-2 shadow-xs"
+                className="flex-1 gap-2 shadow-xs cursor-pointer h-10"
                 onClick={() => {
                   setError("")
                   setStep(3)
@@ -818,7 +963,7 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
               <div className="flex gap-2">
                 <Button
                   variant="outline"
-                  className="flex-1 gap-1.5"
+                  className="flex-1 gap-1.5 cursor-pointer h-10"
                   onClick={() => {
                     setError("")
                     setStep(2)
@@ -829,7 +974,7 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
                 </Button>
                 <Button
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 cursor-pointer h-10"
                   onClick={() => handleCreate(true)}
                   disabled={isSubmitting}
                 >
@@ -837,7 +982,7 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
                 </Button>
               </div>
               <Button
-                className="w-full gap-2 shadow-xs"
+                className="w-full gap-2 shadow-xs cursor-pointer h-10"
                 onClick={() => handleCreate(false)}
                 disabled={isSubmitting}
               >
@@ -849,7 +994,9 @@ export function CreateOrgDialog({ open, onOpenChange, onCreated }: CreateOrgDial
                 ) : (
                   <>
                     <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-4" />
-                    {licenseFile && tinFile ? "Create & Submit for Verification" : "Create Organization"}
+                    {licenseFile && tinFile && profileFile && bannerFile
+                      ? (isAutoApproveEligible ? "Create & Verify Instantly" : "Create & Submit for Review")
+                      : "Create Organization"}
                   </>
                 )}
               </Button>

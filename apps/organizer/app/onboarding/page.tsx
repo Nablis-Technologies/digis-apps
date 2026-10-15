@@ -260,6 +260,7 @@ export default function OnboardingPage() {
               password: data.password,
               password_confirmation: data.password,
             },
+            verification_token: data.verification_token,
           }
           
           console.log("Signup payload:", signupPayload)
