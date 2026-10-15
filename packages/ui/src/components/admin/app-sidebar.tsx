@@ -90,6 +90,8 @@ export function AppSidebar({
           user={{
             email: me?.email ?? "",
             phone: me?.phone ?? "",
+            name: me?.name,
+            profile: me?.profile,
           }}
         />
       </SidebarFooter>

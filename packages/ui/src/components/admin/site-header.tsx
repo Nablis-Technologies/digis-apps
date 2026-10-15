@@ -18,7 +18,7 @@ import { useTheme } from "next-themes"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   SidebarLeftIcon,
-  Moon01Icon,
+  Moon02Icon,
   Sun02Icon,
 } from "@hugeicons/core-free-icons"
 
@@ -95,7 +95,7 @@ export function SiteHeader() {
             onClick={() => setTheme(isDark ? "light" : "dark")}
           >
             <HugeiconsIcon
-              icon={isDark ? Sun02Icon : Moon01Icon}
+              icon={isDark ? Sun02Icon : Moon02Icon}
               strokeWidth={2}
             />
           </Button>

@@ -403,7 +403,11 @@ export function AccessCodesTab({ eventId, eventProducts }: AccessCodesTabProps) 
                           <span className="font-semibold text-sm text-foreground">
                             {invite.name}
                           </span>
-                          <StatusBadge status={invite.status} className="h-5 text-[10px]" />
+                          <StatusBadge
+                            status={invite.status || (isRevoked ? "revoked" : "pending")}
+                            variant={isRevoked ? "destructive" : undefined}
+                            className="h-5 text-[10px]"
+                          />
                         </div>
                         <p className="text-xs text-muted-foreground">
                           {invite.allowed_quantity} {invite.allowed_quantity === 1 ? "ticket" : "tickets"}

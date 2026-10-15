@@ -1,5 +1,5 @@
 import { createApi } from "@reduxjs/toolkit/query/react"
-import { baseQueryWithReauth } from "../api"
+import { baseQueryWithReauth, generateIdempotencyKey } from "../api"
 
 // ─── Event Dates ─────────────────────────────────────────────────────────────
 
@@ -53,6 +53,13 @@ export interface EventOrganization {
   status: string
   organization_id: string
   event_id: string
+  organization?: {
+    id: string
+    name: string
+    slug?: string
+    logo_url?: string | null
+    verified?: boolean
+  }
   created_at: string
   updated_at: string
 }
@@ -99,6 +106,84 @@ interface CreateStaffPayload {
     user_id: string
     role: string
   }
+}
+
+export interface StaffInvitation {
+  id: string
+  event_id: string
+  role: "manager" | "staff" | "contractor"
+  contact_type: "phone" | "email"
+  masked_contact: string
+  status: "pending" | "accepted" | "revoked" | "expired"
+  delivery_status: string
+  delivery_revision: number
+  expires_at: string
+  assignment_expires_at?: string | null
+  accepted_at?: string | null
+  revoked_at?: string | null
+  expired_at?: string | null
+  created_at: string
+}
+
+export interface StaffRosterData {
+  assignments: {
+    data: EventStaffAssignment[]
+    pagination: {
+      current_page: number
+      total_pages: number
+      total_count: number
+      per_page?: number
+    }
+  }
+  invitations: {
+    data: StaffInvitation[]
+    pagination: {
+      current_page: number
+      total_pages: number
+      total_count: number
+      per_page?: number
+    }
+  }
+}
+
+export interface StaffRosterParams {
+  assignments_page?: number
+  assignments_per_page?: number
+  invitations_page?: number
+  invitations_per_page?: number
+}
+
+export interface CreateStaffInvitationPayload {
+  staff_invitation: {
+    phone: string
+    role: "manager" | "staff" | "contractor"
+    assignment_expires_at?: string
+    email?: string
+  }
+}
+
+export interface CreateStaffInvitationResponse {
+  invitation: StaffInvitation
+  claim_url?: string
+}
+
+export interface StaffInvitationPreview {
+  event: {
+    id: string
+    title: string
+  }
+  role: "manager" | "staff" | "contractor"
+  inviter?: {
+    email?: string
+  }
+  masked_contact: string
+  expires_at: string
+  assignment_expires_at?: string | null
+}
+
+export interface ClaimStaffInvitationResponse {
+  assignment: EventStaffAssignment
+  already_assigned: boolean
 }
 
 // ─── Access Zones ────────────────────────────────────────────────────────────
@@ -364,6 +449,92 @@ export const eventScheduleApi = createApi({
       ],
     }),
 
+    // ── Staff Roster & Invitations (Unified Phone-First Model) ───────────────
+    getEventStaffRoster: builder.query<
+      SingleResponse<StaffRosterData>,
+      { eventId: string; params?: StaffRosterParams }
+    >({
+      query: ({ eventId, params }) => ({
+        url: `/events/${eventId}/staff_roster`,
+        params,
+      }),
+      providesTags: (_result, _error, { eventId }) => [
+        { type: "StaffAssignments", id: `ROSTER-${eventId}` },
+        { type: "StaffAssignments", id: `LIST-${eventId}` },
+      ],
+    }),
+    createStaffInvitation: builder.mutation<
+      SingleResponse<CreateStaffInvitationResponse>,
+      { eventId: string; body: CreateStaffInvitationPayload; idempotencyKey?: string }
+    >({
+      query: ({ eventId, body, idempotencyKey }) => ({
+        url: `/events/${eventId}/staff_invitations`,
+        method: "POST",
+        body,
+        headers: {
+          "Idempotency-Key": idempotencyKey || generateIdempotencyKey(),
+        },
+      }),
+      invalidatesTags: (_result, _error, { eventId }) => [
+        { type: "StaffAssignments", id: `ROSTER-${eventId}` },
+        { type: "StaffAssignments", id: `LIST-${eventId}` },
+      ],
+    }),
+    resendStaffInvitation: builder.mutation<
+      SingleResponse<CreateStaffInvitationResponse>,
+      { eventId: string; id: string; idempotencyKey?: string }
+    >({
+      query: ({ eventId, id, idempotencyKey }) => ({
+        url: `/events/${eventId}/staff_invitations/${id}/resend`,
+        method: "POST",
+        headers: {
+          "Idempotency-Key": idempotencyKey || generateIdempotencyKey(),
+        },
+      }),
+      invalidatesTags: (_result, _error, { eventId }) => [
+        { type: "StaffAssignments", id: `ROSTER-${eventId}` },
+      ],
+    }),
+    revokeStaffInvitation: builder.mutation<
+      SingleResponse<{ invitation: StaffInvitation }>,
+      { eventId: string; id: string; idempotencyKey?: string }
+    >({
+      query: ({ eventId, id, idempotencyKey }) => ({
+        url: `/events/${eventId}/staff_invitations/${id}/revoke`,
+        method: "POST",
+        headers: {
+          "Idempotency-Key": idempotencyKey || generateIdempotencyKey(),
+        },
+      }),
+      invalidatesTags: (_result, _error, { eventId }) => [
+        { type: "StaffAssignments", id: `ROSTER-${eventId}` },
+      ],
+    }),
+    previewStaffInvitation: builder.mutation<
+      SingleResponse<StaffInvitationPreview>,
+      { token: string }
+    >({
+      query: ({ token }) => ({
+        url: `/events/staff_invitations/preview`,
+        method: "POST",
+        body: { token },
+      }),
+    }),
+    claimStaffInvitation: builder.mutation<
+      SingleResponse<ClaimStaffInvitationResponse>,
+      { token: string; idempotencyKey?: string }
+    >({
+      query: ({ token, idempotencyKey }) => ({
+        url: `/events/staff_invitations/claim`,
+        method: "POST",
+        body: { token },
+        headers: {
+          "Idempotency-Key": idempotencyKey || generateIdempotencyKey(),
+        },
+      }),
+      invalidatesTags: () => [{ type: "StaffAssignments" }],
+    }),
+
     // ── Access Zones ──
     listAccessZones: builder.query<
       PaginatedResponse<AccessZone>,
@@ -438,4 +609,10 @@ export const {
   useCreateAccessZoneMutation,
   useUpdateAccessZoneMutation,
   useDeleteAccessZoneMutation,
+  useGetEventStaffRosterQuery,
+  useCreateStaffInvitationMutation,
+  useResendStaffInvitationMutation,
+  useRevokeStaffInvitationMutation,
+  usePreviewStaffInvitationMutation,
+  useClaimStaffInvitationMutation,
 } = eventScheduleApi

@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation"
 import { useActiveOrganization } from "../providers/organization-provider"
 import { useLogoutMutation } from "@workspace/store/reducers/authApi"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { Badge, RoleBadge } from "@/components/ui/badge"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   AlertCircleIcon,
@@ -102,20 +102,18 @@ export function OrganizerGuard({ children }: { children: React.ReactNode }) {
 
                   <div className="flex items-center gap-2 shrink-0">
                     {org.membership_role && (
-                      <span className="capitalize text-[10px] text-muted-foreground">
-                        {org.membership_role}
-                      </span>
+                      <RoleBadge role={org.membership_role} />
                     )}
                     {isArchived ? (
-                      <Badge variant="outline" className="text-[10px] border-zinc-500/30 text-zinc-500">
+                      <Badge variant="outline" className="text-[10px] border border-zinc-500/35 bg-zinc-500/15 text-zinc-600 dark:text-zinc-400">
                         Archived
                       </Badge>
                     ) : isSuspended ? (
-                      <Badge variant="destructive" className="text-[10px]">
+                      <Badge variant="destructive" className="text-[10px] border border-red-500/35 bg-red-500/15 text-red-600 dark:text-red-400">
                         Suspended
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="text-[10px]">
+                      <Badge variant="outline" className="text-[10px] border border-amber-500/35 bg-amber-500/15 text-amber-700 dark:text-amber-300">
                         Restricted
                       </Badge>
                     )}

@@ -4,10 +4,12 @@ import { baseQueryWithReauth } from "../api"
 export interface Artist {
   id: string
   name: string
+  slug?: string
   description: string | null
   genres: string[]
   verified: boolean
   active: boolean
+  profile_url?: string | null
   created_at?: string
   updated_at?: string
 }
@@ -17,6 +19,9 @@ interface ListArtistsParams {
   per_page?: number
   order_by?: string
   order_direction?: "asc" | "desc"
+  genre?: string
+  verified?: boolean
+  search?: string
 }
 
 interface PaginatedResponse<T> {
@@ -54,6 +59,29 @@ export const artistsApi = createApi({
   baseQuery: baseQueryWithReauth,
   tagTypes: ["Artists"],
   endpoints: (builder) => ({
+    listPublicArtists: builder.query<
+      PaginatedResponse<Artist>,
+      ListArtistsParams | void
+    >({
+      query: (params) => ({
+        url: "/artists",
+        params: params ?? undefined,
+      }),
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.data.map(({ id }) => ({
+                type: "Artists" as const,
+                id,
+              })),
+              { type: "Artists", id: "PUBLIC_LIST" },
+            ]
+          : [{ type: "Artists", id: "PUBLIC_LIST" }],
+    }),
+    getPublicArtist: builder.query<SingleResponse<Artist>, string>({
+      query: (id) => `/artists/${id}`,
+      providesTags: (_result, _error, id) => [{ type: "Artists", id }],
+    }),
     listArtists: builder.query<
       PaginatedResponse<Artist>,
       ListArtistsParams | void
@@ -109,6 +137,8 @@ export const artistsApi = createApi({
 })
 
 export const {
+  useListPublicArtistsQuery,
+  useGetPublicArtistQuery,
   useListArtistsQuery,
   useGetArtistQuery,
   useCreateArtistMutation,
