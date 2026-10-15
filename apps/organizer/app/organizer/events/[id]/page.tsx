@@ -5,7 +5,7 @@ import Link from "next/link"
 import { motion } from "framer-motion"
 import { notFound, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { Badge, VisibilityBadge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { DataTable, type Column } from "@/components/ui/data-table"
 import { TabsContent } from "@/components/ui/tabs"
@@ -526,9 +526,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               </h1>
               {getStatusBadge(event.status)}
               {event.visibility && (
-                <Badge variant="outline" className="text-[10px] capitalize text-muted-foreground font-normal">
-                  {event.visibility}
-                </Badge>
+                <VisibilityBadge visibility={event.visibility} />
               )}
             </div>
 

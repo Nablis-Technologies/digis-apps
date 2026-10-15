@@ -299,4 +299,22 @@ export const formatApiErrorMessage = (err: any, fallback = "An unexpected error 
   return err?.data?.message || err?.data?.error || err?.message || fallback
 }
 
-
+/**
+ * Normalizes a claim URL returned from the backend so that its origin
+ * always matches the current frontend host/port (e.g. localhost:3001),
+ * preventing routing errors when backend returns localhost:3000.
+ */
+export function normalizeClaimUrl(url?: string | null): string | undefined {
+  if (!url) return undefined
+  if (typeof window !== "undefined") {
+    try {
+      const parsed = new URL(url)
+      return `${window.location.origin}${parsed.pathname}${parsed.search}${parsed.hash}`
+    } catch {
+      if (url.startsWith("/")) {
+        return `${window.location.origin}${url}`
+      }
+    }
+  }
+  return url || undefined
+}

@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@workspace/ui/components/select"
+import { VenueCombobox } from "@workspace/ui/components/venue-combobox"
 import { toastSuccess, toastError } from "@workspace/ui/lib/toast"
 import {
   useCreateEventDateMutation,
@@ -159,22 +160,20 @@ export function EventDateDialog({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="venue_id">Venue</Label>
-                {venuesLoading ? (
-                  <p className="text-sm text-muted-foreground">Loading venues...</p>
-                ) : (
-                  <Select value={form.venue_id} onValueChange={(v) => update("venue_id", v)}>
-                    <SelectTrigger id="venue_id" className="w-full">
-                      <SelectValue placeholder="Select a venue..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {venues.map((v) => (
-                        <SelectItem key={v.id} value={v.id}>
-                          {v.name}{v.city ? ` — ${v.city}` : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+                <VenueCombobox
+                  id="venue_id"
+                  venues={venues}
+                  value={form.venue_id}
+                  isLoading={venuesLoading}
+                  placeholder="Type to search venue (e.g. Millennium Hall)..."
+                  showSummaryCard={false}
+                  onChange={(v, venue) => {
+                    update("venue_id", v)
+                    if (venue?.capacity && !form.venue_capacity) {
+                      update("venue_capacity", String(venue.capacity))
+                    }
+                  }}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="venue_capacity">Venue capacity</Label>

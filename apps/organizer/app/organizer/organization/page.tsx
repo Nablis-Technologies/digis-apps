@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PhoneInput, stripCountryCode, normalizeEthiopianPhone } from "@/components/ui/phone-input"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
+import { Badge, VerificationBadge } from "@/components/ui/badge"
 import { TabsContent } from "@/components/ui/tabs"
 import { PageTabs } from "@/components/page-tabs"
 import { toast } from "sonner"
@@ -425,17 +425,11 @@ export default function OrganizationPage() {
                   <h1 className="text-xl sm:text-2xl font-bold text-foreground">
                     {org?.name || "Organization"}
                   </h1>
-                  {isVerified ? (
-                    <Badge variant="outline" className="border-lime-500/30 bg-lime-500/10 text-lime-600 dark:text-lime-400 gap-1 font-semibold">
-                      <HugeiconsIcon icon={CheckmarkBadge01Icon} className="size-3.5" />
-                      Verified
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 gap-1 font-semibold">
-                      <HugeiconsIcon icon={AlertCircleIcon} className="size-3.5" />
-                      Unverified
-                    </Badge>
-                  )}
+                  <VerificationBadge
+                    verified={Boolean(isVerified)}
+                    unverifiedLabel="Unverified"
+                    className="h-6 px-2.5 text-xs font-semibold gap-1.5"
+                  />
                 </div>
                 <p className="text-xs text-muted-foreground capitalize">
                   {org?.organizer_type || "organization"} • {org?.category || "general"}
@@ -930,8 +924,8 @@ export default function OrganizationPage() {
                           Business License / Registration
                         </Label>
                         {org?.has_business_license && (
-                          <Badge variant="outline" className="border-lime-500/30 text-lime-600 dark:text-lime-400 text-[10px] gap-1 py-0">
-                            <HugeiconsIcon icon={CheckmarkCircle01Icon} className="size-2.5" /> On File
+                          <Badge variant="outline" className="border-emerald-500/35 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[10px] gap-1 py-0 shadow-2xs">
+                            <HugeiconsIcon icon={CheckmarkCircle01Icon} className="size-2.5 text-emerald-600 dark:text-emerald-400" /> On File
                           </Badge>
                         )}
                       </div>
@@ -1008,8 +1002,8 @@ export default function OrganizationPage() {
                           TIN Certificate
                         </Label>
                         {org?.has_tin_certificate && (
-                          <Badge variant="outline" className="border-lime-500/30 text-lime-600 dark:text-lime-400 text-[10px] gap-1 py-0">
-                            <HugeiconsIcon icon={CheckmarkCircle01Icon} className="size-2.5" /> On File
+                          <Badge variant="outline" className="border-emerald-500/35 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[10px] gap-1 py-0 shadow-2xs">
+                            <HugeiconsIcon icon={CheckmarkCircle01Icon} className="size-2.5 text-emerald-600 dark:text-emerald-400" /> On File
                           </Badge>
                         )}
                       </div>

@@ -61,7 +61,7 @@ import {
   type EventStaffAssignment,
   type StaffInvitation,
 } from "@workspace/store/reducers/eventScheduleApi"
-import { formatDate, formatApiErrorMessage } from "@/lib/utils"
+import { formatDate, formatApiErrorMessage, normalizeClaimUrl } from "@/lib/utils"
 
 interface StaffTabProps {
   eventId: string
@@ -169,7 +169,7 @@ export function StaffTab({ eventId }: StaffTabProps) {
         },
       }).unwrap()
 
-      const claimUrl = res?.data?.claim_url
+      const claimUrl = normalizeClaimUrl(res?.data?.claim_url)
       const masked = res?.data?.invitation?.masked_contact || normalized
 
       setDialogOpen(false)
@@ -205,7 +205,7 @@ export function StaffTab({ eventId }: StaffTabProps) {
 
       setResendResult({
         maskedContact: invitation.masked_contact,
-        claimUrl: res?.data?.claim_url,
+        claimUrl: normalizeClaimUrl(res?.data?.claim_url),
       })
       refetch()
       toast.success("Staff invitation resent", {

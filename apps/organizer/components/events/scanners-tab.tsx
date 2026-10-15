@@ -977,28 +977,28 @@ export function ScannersTab({ eventId, organizationId }: ScannersTabProps) {
 
       {/* ─── MODAL 2: PAIRING SUCCESS (CRUCIAL UX!) ─────────────────────────── */}
       <Dialog open={pairingModalOpen} onOpenChange={setPairingModalOpen}>
-        <DialogContent className="sm:max-w-md text-center">
-          <DialogHeader className="text-center sm:text-center">
-            <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary mb-2">
-              <HugeiconsIcon icon={QrCodeIcon} size={26} strokeWidth={2.2} />
+        <DialogContent className="sm:max-w-md text-center p-5 sm:p-6 gap-3.5 sm:gap-4 max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain">
+          <DialogHeader className="text-center sm:text-center gap-1">
+            <div className="mx-auto flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary mb-1">
+              <HugeiconsIcon icon={QrCodeIcon} size={22} strokeWidth={2.2} />
             </div>
-            <DialogTitle className="text-lg font-bold">Ready for Gate Pairing</DialogTitle>
+            <DialogTitle className="text-base sm:text-lg font-bold">Ready for Gate Pairing</DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
               {pairingLabel ? <span>Pairing for <strong>{pairingLabel}</strong> ({pairingPhone})</span> : "Hold up this screen for gate staff to pair in 2 seconds"}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-col items-center gap-4 py-2">
+          <div className="flex flex-col items-center gap-3 py-1">
             {/* On-screen QR code container */}
-            <div className="relative p-3 bg-white rounded-2xl border-2 border-primary/20 shadow-lg">
+            <div className="relative p-2.5 bg-white rounded-2xl border-2 border-primary/20 shadow-md">
               {qrDataUrl ? (
                 <img
                   src={qrDataUrl}
                   alt="Scanner Pairing QR Code"
-                  className="size-56 rounded-lg object-contain"
+                  className="size-44 sm:size-48 rounded-lg object-contain"
                 />
               ) : (
-                <div className="size-56 flex items-center justify-center text-xs text-muted-foreground">
+                <div className="size-44 sm:size-48 flex items-center justify-center text-xs text-muted-foreground">
                   <HugeiconsIcon icon={RefreshIcon} className="size-8 animate-spin text-primary" />
                 </div>
               )}
@@ -1006,18 +1006,18 @@ export function ScannersTab({ eventId, organizationId }: ScannersTabProps) {
 
             {/* 6-Digit Short Code */}
             {activePairingMaterial?.pairing_code && (
-              <div className="w-full space-y-1.5">
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+              <div className="w-full space-y-1">
+                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
                   Or Enter 6-Digit Short Code
                 </p>
                 <div className="flex items-center justify-center gap-2">
-                  <div className="px-4 py-2 rounded-xl bg-muted/60 border font-mono text-3xl font-black tracking-widest text-foreground select-all">
+                  <div className="px-3.5 py-1.5 rounded-xl bg-muted/60 border font-mono text-2xl sm:text-3xl font-black tracking-widest text-foreground select-all">
                     {formatShortCode(activePairingMaterial.pairing_code)}
                   </div>
                   <Button
                     size="icon"
                     variant="outline"
-                    className="size-11 rounded-xl shrink-0"
+                    className="size-10 rounded-xl shrink-0"
                     onClick={handleCopyCode}
                     title="Copy 6-digit code"
                   >
@@ -1032,8 +1032,8 @@ export function ScannersTab({ eventId, organizationId }: ScannersTabProps) {
             )}
 
             {/* Active Countdown Timer */}
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 text-xs font-semibold">
-              <HugeiconsIcon icon={Clock01Icon} size={14} />
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 text-xs font-semibold">
+              <HugeiconsIcon icon={Clock01Icon} size={13} />
               <span>Code expires in {formatCountdown(countdownSeconds)}</span>
             </div>
 
@@ -1043,17 +1043,17 @@ export function ScannersTab({ eventId, organizationId }: ScannersTabProps) {
             </div>
           </div>
 
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogFooter className="flex-col sm:flex-row gap-2 pt-2 sticky bottom-0 bg-popover/95 backdrop-blur-xs">
             <Button
               variant="outline"
-              className="w-full sm:w-auto flex-1 text-xs gap-1.5"
+              className="w-full sm:w-auto flex-1 text-xs gap-1.5 h-9"
               onClick={handleCopyLink}
             >
               <HugeiconsIcon icon={copiedLink ? CheckmarkCircle01Icon : Share01Icon} size={14} />
               {copiedLink ? "Link Copied" : "Copy Pairing Link"}
             </Button>
             <Button
-              className="w-full sm:w-auto flex-1 text-xs shadow-xs"
+              className="w-full sm:w-auto flex-1 text-xs shadow-xs h-9"
               onClick={() => setPairingModalOpen(false)}
             >
               Done & Return to Roster

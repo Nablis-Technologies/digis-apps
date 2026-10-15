@@ -18,6 +18,11 @@ export const profileSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   confirmPassword: z.string(),
+  verification_token: z
+    .string({
+      required_error: "Phone number verification is required",
+    })
+    .min(1, "Phone number verification is required"),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],

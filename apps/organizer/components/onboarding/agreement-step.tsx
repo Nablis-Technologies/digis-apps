@@ -6,6 +6,8 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Checkbox } from "@/components/ui/checkbox"
 import { agreementSchema, type AgreementFormData } from "@/lib/schemas"
 import { SERVICE_FEE_PERCENTAGE, PLATFORM_FEE_PERCENTAGE } from "@/lib/constants"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Coins01Icon } from "@hugeicons/core-free-icons"
 
 interface AgreementStepProps {
   onNext: (data: AgreementFormData) => void
@@ -46,8 +48,8 @@ export function AgreementStep({ onNext, initialData }: AgreementStepProps) {
         {/* Service Information */}
         <div className="rounded-2xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-lime-500/5 p-6">
           <h3 className="mb-3 text-lg font-bold text-foreground flex items-center gap-2">
-            <span className="inline-flex items-center justify-center size-8 rounded-lg bg-primary/10">
-              💰
+            <span className="inline-flex items-center justify-center size-8 rounded-lg bg-primary/10 text-primary">
+              <HugeiconsIcon icon={Coins01Icon} strokeWidth={2} className="size-4" />
             </span>
             Service Fees
           </h3>

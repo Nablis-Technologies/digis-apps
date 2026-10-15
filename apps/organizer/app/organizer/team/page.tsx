@@ -19,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
+import { Badge, RoleBadge } from "@/components/ui/badge"
 import {
   Dialog,
   DialogContent,
@@ -29,6 +29,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { PhoneInput, normalizeEthiopianPhone } from "@/components/ui/phone-input"
+import { cn, normalizeClaimUrl } from "@/lib/utils"
 import { toast } from "sonner"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -54,8 +55,9 @@ import {
 } from "@hugeicons/core-free-icons"
 
 const ROLE_WEIGHT: Record<string, number> = {
-  owner: 3,
-  admin: 2,
+  owner: 4,
+  admin: 3,
+  manager: 2,
   staff: 1,
   member: 1,
 }
@@ -117,15 +119,20 @@ export default function TeamPage() {
   const currentMembership = memberships.find(
     (m) => (m.user_id || m.user?.id) === currentUserId
   )
-  const currentUserRole = currentMembership?.role ?? "staff"
-  const isCurrentUserOwner = currentUserRole === "owner"
+  const isCurrentUserOwner =
+    currentMembership?.role === "owner" ||
+    (Boolean(activeOrg?.owner_id) && activeOrg?.owner_id === currentUserId)
+  const currentUserRole = isCurrentUserOwner ? "owner" : (currentMembership?.role ?? "staff")
   const isCurrentUserAdmin = currentUserRole === "admin"
   const canAddMembers = isCurrentUserOwner || isCurrentUserAdmin
 
   const canManageMember = (targetMember: Membership) => {
     const targetUserId = targetMember.user_id || targetMember.user?.id
     if (targetUserId && targetUserId === currentUserId) return false
-    if (targetMember.role === "owner") return false
+    const targetIsOwner =
+      targetMember.role === "owner" ||
+      (Boolean(activeOrg?.owner_id) && targetUserId === activeOrg?.owner_id)
+    if (targetIsOwner) return false
     const actorWeight = ROLE_WEIGHT[currentUserRole] ?? 0
     const targetWeight = ROLE_WEIGHT[targetMember.role] ?? 0
     return actorWeight > targetWeight
@@ -184,7 +191,7 @@ export default function TeamPage() {
         },
       }).unwrap()
 
-      const claimUrl = res?.data?.claim_url
+      const claimUrl = normalizeClaimUrl(res?.data?.claim_url)
       const masked = res?.data?.invitation?.masked_contact || normalized
 
       setAddDialogOpen(false)
@@ -221,7 +228,7 @@ export default function TeamPage() {
         id: invitation.id,
       }).unwrap()
 
-      const newClaimUrl = res?.data?.claim_url
+      const newClaimUrl = normalizeClaimUrl(res?.data?.claim_url)
       setResendResult({
         maskedContact: invitation.masked_contact,
         claimUrl: newClaimUrl,
@@ -258,7 +265,11 @@ export default function TeamPage() {
   }
 
   const handleToggleRole = async (member: Membership) => {
-    if (!activeOrgId || member.role === "owner") return
+    const targetUserId = member.user_id || member.user?.id
+    const targetIsOwner =
+      member.role === "owner" ||
+      (Boolean(activeOrg?.owner_id) && targetUserId === activeOrg?.owner_id)
+    if (!activeOrgId || targetIsOwner) return
     const newRole: "admin" | "staff" = member.role === "admin" ? "staff" : "admin"
 
     try {
@@ -278,7 +289,11 @@ export default function TeamPage() {
   }
 
   const handleToggleStatus = async (member: Membership) => {
-    if (!activeOrgId || member.role === "owner") return
+    const targetUserId = member.user_id || member.user?.id
+    const targetIsOwner =
+      member.role === "owner" ||
+      (Boolean(activeOrg?.owner_id) && targetUserId === activeOrg?.owner_id)
+    if (!activeOrgId || targetIsOwner) return
     const isSuspended = member.status === "suspended" || member.suspended
 
     try {
@@ -312,40 +327,99 @@ export default function TeamPage() {
     }
   }
 
-  // Filtered lists
+  // Filtered and sorted lists
   const filteredMembers = React.useMemo(() => {
-    return memberships.filter((member) => {
-      if (roleFilter !== "all" && member.role !== roleFilter) return false
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase().trim()
-        const email = member.user?.email?.toLowerCase() || ""
-        const phone = member.user?.phone?.toLowerCase() || ""
-        const name = (member.user?.name as string)?.toLowerCase() || ""
-        const id = (member.user_id || member.id).toLowerCase()
-        const role = member.role.toLowerCase()
+    return memberships
+      .filter((member) => {
+        const isOwner =
+          member.role === "owner" ||
+          (Boolean(activeOrg?.owner_id) &&
+            (member.user_id === activeOrg?.owner_id || member.user?.id === activeOrg?.owner_id))
 
-        if (!email.includes(query) && !phone.includes(query) && !name.includes(query) && !id.includes(query) && !role.includes(query)) {
-          return false
+        if (roleFilter !== "all") {
+          if (roleFilter === "owner") {
+            if (!isOwner) return false
+          } else if (member.role !== roleFilter) {
+            return false
+          }
         }
-      }
-      return true
-    })
-  }, [memberships, roleFilter, searchQuery])
+
+        if (searchQuery.trim()) {
+          const query = searchQuery.toLowerCase().trim()
+          const email = member.user?.email?.toLowerCase() || ""
+          const phone = member.user?.phone?.toLowerCase() || ""
+          const name = (member.user?.name as string)?.toLowerCase() || ""
+          const id = (member.user_id || member.id).toLowerCase()
+          const role = member.role.toLowerCase()
+
+          if (
+            !email.includes(query) &&
+            !phone.includes(query) &&
+            !name.includes(query) &&
+            !id.includes(query) &&
+            !role.includes(query)
+          ) {
+            return false
+          }
+        }
+        return true
+      })
+      .sort((a, b) => {
+        // 1. Owner MUST ALWAYS be at the very top of the list
+        const aIsOwner =
+          a.role === "owner" ||
+          (Boolean(activeOrg?.owner_id) &&
+            (a.user_id === activeOrg?.owner_id || a.user?.id === activeOrg?.owner_id))
+        const bIsOwner =
+          b.role === "owner" ||
+          (Boolean(activeOrg?.owner_id) &&
+            (b.user_id === activeOrg?.owner_id || b.user?.id === activeOrg?.owner_id))
+
+        if (aIsOwner && !bIsOwner) return -1
+        if (!aIsOwner && bIsOwner) return 1
+
+        // 2. Next by role hierarchy (Admin -> Manager -> Staff -> Member)
+        const weightDiff = (ROLE_WEIGHT[b.role] ?? 0) - (ROLE_WEIGHT[a.role] ?? 0)
+        if (weightDiff !== 0) return weightDiff
+
+        // 3. Current logged-in user next within the same role tier
+        const aIsSelf = (a.user_id || a.user?.id) === currentUserId
+        const bIsSelf = (b.user_id || b.user?.id) === currentUserId
+        if (aIsSelf && !bIsSelf) return -1
+        if (!aIsSelf && bIsSelf) return 1
+
+        // 4. Alphabetical secondary sort
+        const aName = ((a.user?.name as string) || a.user?.phone || a.user?.email || a.id).toLowerCase()
+        const bName = ((b.user?.name as string) || b.user?.phone || b.user?.email || b.id).toLowerCase()
+        return aName.localeCompare(bName)
+      })
+  }, [memberships, roleFilter, searchQuery, activeOrg?.owner_id, currentUserId])
 
   const filteredInvitations = React.useMemo(() => {
-    return invitations.filter((inv) => {
-      if (roleFilter !== "all" && inv.role !== roleFilter) return false
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase().trim()
-        const contact = inv.masked_contact.toLowerCase()
-        const role = inv.role.toLowerCase()
-        const status = inv.status.toLowerCase()
-        if (!contact.includes(query) && !role.includes(query) && !status.includes(query)) {
-          return false
+    return invitations
+      .filter((inv) => {
+        if (roleFilter !== "all" && inv.role !== roleFilter) return false
+        if (searchQuery.trim()) {
+          const query = searchQuery.toLowerCase().trim()
+          const contact = inv.masked_contact.toLowerCase()
+          const role = inv.role.toLowerCase()
+          const status = inv.status.toLowerCase()
+          if (!contact.includes(query) && !role.includes(query) && !status.includes(query)) {
+            return false
+          }
         }
-      }
-      return true
-    })
+        return true
+      })
+      .sort((a, b) => {
+        const aPending = a.status === "pending" ? 1 : 0
+        const bPending = b.status === "pending" ? 1 : 0
+        if (aPending !== bPending) return bPending - aPending
+
+        const weightDiff = (ROLE_WEIGHT[b.role] ?? 0) - (ROLE_WEIGHT[a.role] ?? 0)
+        if (weightDiff !== 0) return weightDiff
+
+        return (b.created_at || "").localeCompare(a.created_at || "")
+      })
   }, [invitations, roleFilter, searchQuery])
 
   if (!activeOrgId) {
@@ -395,13 +469,13 @@ export default function TeamPage() {
         </div>
         <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-xs space-y-1">
           <span className="text-xs font-medium text-muted-foreground">Admins</span>
-          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+          <p className="text-2xl font-bold text-sky-600 dark:text-sky-400">
             {memberships.filter((m) => m.role === "admin").length}
           </p>
         </div>
         <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-xs space-y-1">
           <span className="text-xs font-medium text-muted-foreground">Staff Members</span>
-          <p className="text-2xl font-bold text-foreground">
+          <p className="text-2xl font-bold text-teal-600 dark:text-teal-400">
             {memberships.filter((m) => m.role === "staff").length}
           </p>
         </div>
@@ -423,7 +497,7 @@ export default function TeamPage() {
             >
               <HugeiconsIcon icon={UserGroupIcon} className="size-3.5" />
               <span>Active Members</span>
-              <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-muted font-mono">
+              <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-primary/15 text-primary font-mono font-bold">
                 {memberships.length}
               </span>
             </button>
@@ -479,9 +553,17 @@ export default function TeamPage() {
                 All
               </button>
               <button
+                onClick={() => setRoleFilter("owner")}
+                className={`px-2.5 py-1 rounded-md transition-colors font-medium ${
+                  roleFilter === "owner" ? "bg-card text-purple-700 dark:text-purple-300 shadow-xs font-semibold" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Owner
+              </button>
+              <button
                 onClick={() => setRoleFilter("admin")}
                 className={`px-2.5 py-1 rounded-md transition-colors font-medium ${
-                  roleFilter === "admin" ? "bg-card text-foreground shadow-xs font-semibold" : "text-muted-foreground hover:text-foreground"
+                  roleFilter === "admin" ? "bg-card text-sky-700 dark:text-sky-300 shadow-xs font-semibold" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 Admin
@@ -489,7 +571,7 @@ export default function TeamPage() {
               <button
                 onClick={() => setRoleFilter("staff")}
                 className={`px-2.5 py-1 rounded-md transition-colors font-medium ${
-                  roleFilter === "staff" ? "bg-card text-foreground shadow-xs font-semibold" : "text-muted-foreground hover:text-foreground"
+                  roleFilter === "staff" ? "bg-card text-teal-700 dark:text-teal-300 shadow-xs font-semibold" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 Staff
@@ -533,9 +615,14 @@ export default function TeamPage() {
             ) : (
               <div className="divide-y divide-border/60">
                 {filteredMembers.map((member) => {
-                  const isOwner = member.role === "owner"
+                  const targetUserId = member.user_id || member.user?.id
+                  const isOwner =
+                    member.role === "owner" ||
+                    (Boolean(activeOrg?.owner_id) &&
+                      Boolean(targetUserId) &&
+                      targetUserId === activeOrg?.owner_id)
                   const isSuspended = member.status === "suspended" || member.suspended
-                  const isCurrentMember = (member.user_id || member.user?.id) === currentUserId
+                  const isCurrentMember = targetUserId === currentUserId
                   const canManage = canManageMember(member)
                   const displayPhone = member.user?.phone
                   const displayEmail = member.user?.email
@@ -549,11 +636,11 @@ export default function TeamPage() {
                       <div className="flex items-center gap-3.5 min-w-0">
                         <div className="size-11 rounded-full bg-muted border border-border flex items-center justify-center text-xs font-bold text-foreground shrink-0">
                           {isOwner ? (
-                            <HugeiconsIcon icon={Shield01Icon} className="size-5 text-amber-500" />
+                            <HugeiconsIcon icon={Shield01Icon} className="size-5 text-purple-600 dark:text-purple-400" />
                           ) : member.role === "admin" ? (
-                            <HugeiconsIcon icon={SecurityCheckIcon} className="size-5 text-blue-500" />
+                            <HugeiconsIcon icon={SecurityCheckIcon} className="size-5 text-sky-600 dark:text-sky-400" />
                           ) : (
-                            <HugeiconsIcon icon={UserCircleIcon} className="size-5 text-muted-foreground" />
+                            <HugeiconsIcon icon={UserCircleIcon} className="size-5 text-teal-600 dark:text-teal-400" />
                           )}
                         </div>
 
@@ -564,31 +651,31 @@ export default function TeamPage() {
                             </span>
 
                             {isCurrentMember && (
-                              <Badge variant="outline" className="text-[10px] border-primary/40 bg-primary/5 text-primary font-semibold">
+                              <Badge
+                                variant="outline"
+                                className="h-5 px-2 text-[10px] font-semibold border-indigo-500/35 bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 dark:bg-indigo-500/25 shadow-2xs"
+                              >
                                 You
                               </Badge>
                             )}
 
-                            {isOwner ? (
-                              <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 text-[10px] font-bold">
-                                Owner
-                              </Badge>
-                            ) : member.role === "admin" ? (
-                              <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30 text-[10px] font-bold">
-                                Admin
-                              </Badge>
-                            ) : (
-                              <Badge variant="secondary" className="text-[10px] font-bold">
-                                Staff
-                              </Badge>
-                            )}
+                            <RoleBadge
+                              role={isOwner ? "owner" : member.role}
+                              className="h-5 px-2.5 text-[10px] font-bold shadow-2xs"
+                            />
 
                             {isSuspended ? (
-                              <Badge variant="destructive" className="text-[10px]">
+                              <Badge
+                                variant="outline"
+                                className="h-5 px-2 text-[10px] font-semibold border-red-500/35 bg-red-500/15 text-red-700 dark:text-red-300 dark:bg-red-500/25 shadow-2xs"
+                              >
                                 Suspended
                               </Badge>
                             ) : (
-                              <Badge variant="outline" className="border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-[10px]">
+                              <Badge
+                                variant="outline"
+                                className="h-5 px-2 text-[10px] font-semibold border-emerald-500/35 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 dark:bg-emerald-500/25 shadow-2xs"
+                              >
                                 Active
                               </Badge>
                             )}
@@ -653,9 +740,14 @@ export default function TeamPage() {
                             </Button>
                           </>
                         ) : isOwner ? (
-                          <span className="text-xs text-muted-foreground italic px-2">Primary Workspace Owner</span>
+                          <span className="text-xs font-semibold text-purple-700 dark:text-purple-300 px-2.5 py-1 rounded-md bg-purple-500/10 border border-purple-500/20 flex items-center gap-1.5">
+                            <HugeiconsIcon icon={Shield01Icon} className="size-3.5 text-purple-600 dark:text-purple-400" />
+                            Primary Workspace Owner
+                          </span>
                         ) : isCurrentMember ? (
-                          <span className="text-xs text-muted-foreground italic px-2">Signed-in Account</span>
+                          <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-md bg-indigo-500/10 border border-indigo-500/20">
+                            Signed-in Account
+                          </span>
                         ) : null}
                       </div>
                     </div>
@@ -710,32 +802,53 @@ export default function TeamPage() {
                               {invitation.masked_contact}
                             </span>
 
-                            {invitation.role === "admin" ? (
-                              <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30 text-[10px] font-bold">
-                                Invited as Admin
-                              </Badge>
-                            ) : (
-                              <Badge variant="secondary" className="text-[10px] font-bold">
-                                Invited as Staff
-                              </Badge>
-                            )}
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "h-5 px-2.5 text-[10px] font-bold shadow-2xs",
+                                invitation.role === "admin"
+                                  ? "border-sky-500/35 bg-sky-500/15 text-sky-700 dark:text-sky-300 dark:bg-sky-500/25"
+                                  : "border-teal-500/35 bg-teal-500/15 text-teal-700 dark:text-teal-300 dark:bg-teal-500/25"
+                              )}
+                            >
+                              Invited as {invitation.role === "admin" ? "Admin" : "Staff"}
+                            </Badge>
 
                             {isRevoked ? (
-                              <Badge variant="destructive" className="text-[10px]">
+                              <Badge
+                                variant="outline"
+                                className="h-5 px-2 text-[10px] font-semibold border-red-500/35 bg-red-500/15 text-red-700 dark:text-red-300 dark:bg-red-500/25 shadow-2xs"
+                              >
                                 Revoked
                               </Badge>
                             ) : isExpired ? (
-                              <Badge variant="outline" className="border-muted text-muted-foreground text-[10px]">
+                              <Badge
+                                variant="outline"
+                                className="h-5 px-2 text-[10px] font-semibold border-zinc-500/35 bg-zinc-500/15 text-zinc-700 dark:text-zinc-300 dark:bg-zinc-500/25 shadow-2xs"
+                              >
                                 Expired
                               </Badge>
                             ) : (
-                              <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 text-[10px]">
+                              <Badge
+                                variant="outline"
+                                className="h-5 px-2 text-[10px] font-semibold border-amber-500/35 bg-amber-500/15 text-amber-700 dark:text-amber-400 dark:bg-amber-500/25 shadow-2xs"
+                              >
                                 Pending Claim
                               </Badge>
                             )}
 
                             {invitation.delivery_status && (
-                              <Badge variant="outline" className="text-[10px] text-muted-foreground uppercase font-mono">
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "h-5 px-2 text-[10px] uppercase font-mono font-semibold shadow-2xs",
+                                  invitation.delivery_status === "delivered" || invitation.delivery_status === "sent"
+                                    ? "border-emerald-500/35 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 dark:bg-emerald-500/25"
+                                    : invitation.delivery_status === "failed" || invitation.delivery_status === "undelivered"
+                                    ? "border-red-500/35 bg-red-500/15 text-red-700 dark:text-red-300 dark:bg-red-500/25"
+                                    : "border-sky-500/35 bg-sky-500/15 text-sky-700 dark:text-sky-300 dark:bg-sky-500/25"
+                                )}
+                              >
                                 {invitation.delivery_status}
                               </Badge>
                             )}
@@ -801,10 +914,10 @@ export default function TeamPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="rounded-xl border border-border/50 bg-muted/20 p-4 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+              <span className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">
                 Owner
               </span>
-              <Badge variant="outline" className="text-[10px] border-amber-500/30 text-amber-600">
+              <Badge variant="outline" className="text-[10px] border-purple-500/35 bg-purple-500/15 text-purple-700 dark:text-purple-300 font-semibold shadow-2xs">
                 Workspace Lead
               </Badge>
             </div>
@@ -815,10 +928,10 @@ export default function TeamPage() {
 
           <div className="rounded-xl border border-border/50 bg-muted/20 p-4 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+              <span className="text-xs font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wider">
                 Admin
               </span>
-              <Badge variant="outline" className="text-[10px] border-blue-500/30 text-blue-600">
+              <Badge variant="outline" className="text-[10px] border-sky-500/35 bg-sky-500/15 text-sky-700 dark:text-sky-300 font-semibold shadow-2xs">
                 Operations & Events
               </Badge>
             </div>
@@ -829,10 +942,10 @@ export default function TeamPage() {
 
           <div className="rounded-xl border border-border/50 bg-muted/20 p-4 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+              <span className="text-xs font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wider">
                 Staff
               </span>
-              <Badge variant="outline" className="text-[10px]">
+              <Badge variant="outline" className="text-[10px] border-teal-500/35 bg-teal-500/15 text-teal-700 dark:text-teal-300 font-semibold shadow-2xs">
                 Gate & Check-in
               </Badge>
             </div>
@@ -884,13 +997,13 @@ export default function TeamPage() {
                   onClick={() => setRoleInput("staff")}
                   className={`p-3 rounded-xl border cursor-pointer transition-all space-y-1 ${
                     roleInput === "staff"
-                      ? "border-primary bg-primary/5 ring-1 ring-primary/40 shadow-xs"
+                      ? "border-teal-500/50 bg-teal-500/10 ring-1 ring-teal-500/40 shadow-xs"
                       : "border-border/70 bg-card hover:bg-muted/40"
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-xs text-foreground">Staff</span>
-                    <Badge variant="secondary" className="text-[10px]">
+                    <Badge variant="outline" className="text-[10px] border-teal-500/35 bg-teal-500/15 text-teal-700 dark:text-teal-300 font-semibold shadow-2xs">
                       Default
                     </Badge>
                   </div>
@@ -903,13 +1016,13 @@ export default function TeamPage() {
                   onClick={() => setRoleInput("admin")}
                   className={`p-3 rounded-xl border cursor-pointer transition-all space-y-1 ${
                     roleInput === "admin"
-                      ? "border-primary bg-primary/5 ring-1 ring-primary/40 shadow-xs"
+                      ? "border-sky-500/50 bg-sky-500/10 ring-1 ring-sky-500/40 shadow-xs"
                       : "border-border/70 bg-card hover:bg-muted/40"
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-xs text-foreground">Admin</span>
-                    <Badge variant="outline" className="text-[10px] border-blue-500/30 text-blue-600">
+                    <Badge variant="outline" className="text-[10px] border-sky-500/35 bg-sky-500/15 text-sky-700 dark:text-sky-300 font-semibold shadow-2xs">
                       Manage
                     </Badge>
                   </div>
@@ -1095,10 +1208,10 @@ export default function TeamPage() {
             <p className="font-semibold text-foreground">
               {deleteTarget?.user?.name || deleteTarget?.user?.phone || deleteTarget?.user?.email || `Member: ${deleteTarget?.id}`}
             </p>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <span className="capitalize">Role: {deleteTarget?.role}</span>
-              <span>•</span>
-              <span className="font-mono text-[11px]">ID: {deleteTarget?.user_id || deleteTarget?.id}</span>
+            <div className="flex items-center gap-2">
+              <RoleBadge role={deleteTarget?.role} className="h-4 text-[9px]" />
+              <span className="text-muted-foreground">•</span>
+              <span className="font-mono text-[11px] text-muted-foreground">ID: {deleteTarget?.user_id || deleteTarget?.id}</span>
             </div>
           </div>
 

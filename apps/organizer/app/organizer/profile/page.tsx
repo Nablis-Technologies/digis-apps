@@ -13,7 +13,7 @@ import { useListOwnerOrganizationsQuery } from "@workspace/store/reducers/organi
 import { useActiveOrganization } from "../../../providers/organization-provider"
 import { CreateOrgDialog } from "../../../components/organizations/create-org-dialog"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { Badge, RoleBadge, VerificationBadge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { UserAvatar } from "@workspace/ui/components/admin/user-avatar"
 import { generateIdempotencyKey } from "@workspace/store/api"
@@ -289,16 +289,11 @@ export default function ProfilePage() {
                   <h2 className="text-xl font-bold text-foreground">
                     {computedDisplayName}
                   </h2>
-                  {user?.verified_at ? (
-                    <Badge variant="outline" className="border-lime-500/30 bg-lime-500/10 text-lime-600 dark:text-lime-400 gap-1 font-medium">
-                      <HugeiconsIcon icon={CheckmarkCircle01Icon} className="size-3.5" />
-                      Verified
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium">
-                      Unverified
-                    </Badge>
-                  )}
+                  <VerificationBadge
+                    verified={Boolean(user?.verified_at)}
+                    unverifiedLabel="Unverified"
+                    className="h-6 px-2.5 text-xs font-semibold gap-1.5"
+                  />
                 </div>
                 <p className="text-xs text-muted-foreground font-mono">{user?.email}</p>
               </div>
@@ -642,28 +637,24 @@ export default function ProfilePage() {
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-semibold text-sm truncate">{org.name}</span>
                             {isActive && (
-                              <Badge className="bg-primary/15 text-primary border border-primary/30 text-[10px] font-semibold px-2 py-0.5">
+                              <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/35 text-[10px] font-semibold px-2 py-0.5 shadow-2xs">
                                 Active Workspace
                               </Badge>
                             )}
                             {org.membership_role && (
-                              <Badge variant="outline" className="border-primary/30 text-primary text-[10px] px-1.5 py-0 capitalize font-semibold">
-                                {org.membership_role}
-                              </Badge>
+                              <RoleBadge role={org.membership_role} className="text-[10px] px-1.5 py-0 h-4" />
                             )}
                             {org.archived ? (
-                              <Badge variant="outline" className="border-zinc-500/30 text-zinc-500 text-[10px] px-1.5 py-0">
+                              <Badge variant="outline" className="border border-zinc-500/35 bg-zinc-500/15 text-zinc-600 dark:text-zinc-400 text-[10px] px-1.5 py-0 shadow-2xs">
                                 Archived
                               </Badge>
                             ) : org.membership_status === "suspended" ? (
-                              <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                              <Badge variant="destructive" className="text-[10px] px-1.5 py-0 shadow-2xs">
                                 Suspended
                               </Badge>
-                            ) : org.verified ? (
-                              <Badge variant="outline" className="border-lime-500/30 text-lime-600 dark:text-lime-400 text-[10px] px-1.5 py-0">
-                                Verified
-                              </Badge>
-                            ) : null}
+                            ) : (
+                              <VerificationBadge verified={Boolean(org.verified)} className="text-[10px] px-1.5 py-0 h-4" />
+                            )}
                           </div>
                           <p className="text-xs text-muted-foreground capitalize">
                             {org.organizer_type} • {org.category || "General"}
@@ -729,9 +720,10 @@ export default function ProfilePage() {
               <div>
                 <span className="text-xs text-muted-foreground">Active Workspace Role</span>
                 <div className="mt-1">
-                  <Badge variant="outline" className="text-xs capitalize font-semibold border-primary/30 text-primary">
-                    {activeOrg?.membership_role || "Member"} ({activeOrg?.name || "Active Workspace"})
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <RoleBadge role={activeOrg?.membership_role || "Member"} className="text-xs px-2.5 py-1 h-auto font-semibold" />
+                    <span className="text-xs text-muted-foreground">({activeOrg?.name || "Active Workspace"})</span>
+                  </div>
                 </div>
               </div>
 
